@@ -56,9 +56,8 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // Always listen on the port provided by the host (Azure sets PORT).
-  // If it's missing, default to 8080 (Azure's common default).
-  const port = Number(process.env.PORT) || 8080;
+  // Use port 5000 for Replit compatibility
+  const port = 5000;
 
   server.listen(
     {

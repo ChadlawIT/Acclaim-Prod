@@ -360,8 +360,8 @@ export class DatabaseStorage implements IStorage {
     const PostgresSessionStore = connectPg(session);
     this.sessionStore = new PostgresSessionStore({
       conString: process.env.DATABASE_URL,
-      createTableIfMissing: true,
-      tableName: 'user_sessions', // Use different table name to avoid conflicts
+      createTableIfMissing: false,
+      tableName: 'sessions',
     });
   }
 
