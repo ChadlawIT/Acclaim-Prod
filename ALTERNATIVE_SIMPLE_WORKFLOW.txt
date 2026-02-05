@@ -1,0 +1,39 @@
+# SOSFLOW 1.4 - ALTERNATIVE SIMPLE WORKFLOW
+# Multiple content type options for HTML card
+
+# Option 1: text/plain content type
+HTMLWebRequest HTMLWebRequest1
+	URL url
+	Method POST
+	PostData form_data
+	ContentType text/plain
+	ResponseVariable response_text
+	StatusCodeVariable status_code
+
+# Option 2: multipart/form-data content type  
+HTMLWebRequest HTMLWebRequest2
+	URL url
+	Method POST
+	PostData form_data
+	ContentType multipart/form-data
+	ResponseVariable response_text
+	StatusCodeVariable status_code
+
+# Option 3: application/json content type (if API supports it)
+HTMLWebRequest HTMLWebRequest3
+	URL url
+	Method POST
+	PostData '{"externalRef":"' + external_ref + '","organisationExternalRef":"' + org_ref + '","accountNumber":"' + acc_num + '","caseName":"' + case_nm + '","debtorType":"' + debt_type + '","status":"' + case_status + '","stage":"' + case_stage + '","assignedTo":"' + assigned + '"}'
+	ContentType application/json
+	ResponseVariable response_text
+	StatusCodeVariable status_code
+
+# Option 4: No content type specified (let SOS decide)
+HTMLWebRequest HTMLWebRequest4
+	URL url
+	Method POST
+	PostData form_data
+	ResponseVariable response_text
+	StatusCodeVariable status_code
+
+# Recommended: Try text/plain first as it may bypass form-data parsing issues

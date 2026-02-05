@@ -1,0 +1,366 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(0, 0%, 100%);
+  --foreground: hsl(20, 14.3%, 4.1%);
+  --muted: hsl(60, 4.8%, 95.9%);
+  --muted-foreground: hsl(25, 5.3%, 44.7%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(20, 14.3%, 4.1%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(20, 14.3%, 4.1%);
+  --border: hsl(20, 5.9%, 90%);
+  --input: hsl(20, 5.9%, 90%);
+  --primary: hsl(174, 100%, 27%);
+  --primary-foreground: hsl(0, 0%, 100%);
+  --secondary: hsl(60, 4.8%, 95.9%);
+  --secondary-foreground: hsl(24, 9.8%, 10%);
+  --accent: hsl(60, 4.8%, 95.9%);
+  --accent-foreground: hsl(24, 9.8%, 10%);
+  --destructive: hsl(0, 84.2%, 60.2%);
+  --destructive-foreground: hsl(60, 9.1%, 97.8%);
+  --ring: hsl(20, 14.3%, 4.1%);
+  --radius: 0.5rem;
+  
+  /* Custom Acclaim colors - Brand Specific */
+  --acclaim-teal: hsl(180, 100%, 27%); /* #008b8b */
+  --acclaim-blue: hsl(207, 100%, 32%); /* #005f99 */
+  --acclaim-light: hsl(0, 0%, 88%); /* #e0e0e0 */
+}
+
+.dark {
+  --background: hsl(220, 25%, 8%);
+  --foreground: hsl(210, 20%, 92%);
+  --muted: hsl(220, 20%, 14%);
+  --muted-foreground: hsl(215, 15%, 60%);
+  --popover: hsl(220, 25%, 10%);
+  --popover-foreground: hsl(210, 20%, 92%);
+  --card: hsl(220, 22%, 11%);
+  --card-foreground: hsl(210, 20%, 92%);
+  --border: hsl(220, 18%, 20%);
+  --input: hsl(220, 20%, 16%);
+  --primary: hsl(174, 65%, 42%);
+  --primary-foreground: hsl(0, 0%, 100%);
+  --secondary: hsl(220, 18%, 16%);
+  --secondary-foreground: hsl(210, 20%, 92%);
+  --accent: hsl(220, 18%, 18%);
+  --accent-foreground: hsl(210, 20%, 92%);
+  --destructive: hsl(0, 65%, 50%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --ring: hsl(174, 65%, 42%);
+  --radius: 0.5rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
+
+/* Custom utility classes */
+.bg-acclaim-teal {
+  background-color: var(--acclaim-teal);
+}
+
+.text-acclaim-teal {
+  color: var(--acclaim-teal);
+}
+
+.bg-acclaim-blue {
+  background-color: var(--acclaim-blue);
+}
+
+.text-acclaim-blue {
+  color: var(--acclaim-blue);
+}
+
+.border-acclaim-teal {
+  border-color: var(--acclaim-teal);
+}
+
+.hover\:bg-acclaim-teal:hover {
+  background-color: var(--acclaim-teal);
+}
+
+.hover\:text-acclaim-teal:hover {
+  color: var(--acclaim-teal);
+}
+
+/* Dark mode utility overrides for common gray patterns */
+.dark .bg-gray-50 {
+  background-color: hsl(220, 20%, 14%);
+}
+
+.dark .bg-gray-100 {
+  background-color: hsl(220, 20%, 16%);
+}
+
+.dark .text-gray-400 {
+  color: hsl(215, 15%, 55%);
+}
+
+.dark .text-gray-500 {
+  color: hsl(215, 15%, 58%);
+}
+
+.dark .text-gray-600 {
+  color: hsl(215, 12%, 65%);
+}
+
+.dark .text-gray-700 {
+  color: hsl(210, 12%, 75%);
+}
+
+.dark .text-gray-800 {
+  color: hsl(210, 12%, 82%);
+}
+
+.dark .text-gray-900 {
+  color: hsl(210, 15%, 90%);
+}
+
+.dark .border-gray-200 {
+  border-color: hsl(220, 18%, 22%);
+}
+
+.dark .border-gray-300 {
+  border-color: hsl(220, 18%, 25%);
+}
+
+.dark .hover\:bg-gray-100:hover {
+  background-color: hsl(220, 20%, 18%);
+}
+
+.dark .border-dashed {
+  border-color: hsl(220, 18%, 28%);
+}
+
+/* Keep sidebar teal consistent in dark mode */
+.dark .bg-acclaim-teal {
+  background-color: hsl(180, 100%, 27%);
+}
+
+/* Improve coloured backgrounds in dark mode */
+.dark .bg-blue-50 {
+  background-color: hsl(215, 35%, 16%);
+}
+
+.dark .bg-blue-100 {
+  background-color: hsl(215, 35%, 18%);
+}
+
+.dark .text-blue-700,
+.dark .text-blue-800 {
+  color: hsl(210, 85%, 72%);
+}
+
+.dark .border-blue-500 {
+  border-color: hsl(210, 65%, 50%);
+}
+
+.dark .bg-amber-50 {
+  background-color: hsl(35, 35%, 14%);
+}
+
+.dark .text-amber-700,
+.dark .text-amber-800 {
+  color: hsl(40, 85%, 68%);
+}
+
+.dark .border-amber-200 {
+  border-color: hsl(40, 50%, 35%);
+}
+
+.dark .border-amber-500 {
+  border-color: hsl(40, 60%, 45%);
+}
+
+.dark .bg-purple-50 {
+  background-color: hsl(265, 30%, 16%);
+}
+
+.dark .text-purple-700 {
+  color: hsl(265, 75%, 72%);
+}
+
+.dark .border-purple-500 {
+  border-color: hsl(265, 55%, 52%);
+}
+
+.dark .bg-teal-50 {
+  background-color: hsl(174, 30%, 14%);
+}
+
+.dark .text-teal-700 {
+  color: hsl(174, 65%, 52%);
+}
+
+.dark .border-teal-500 {
+  border-color: hsl(174, 55%, 40%);
+}
+
+.dark .bg-green-50,
+.dark .bg-green-100 {
+  background-color: hsl(140, 28%, 14%);
+}
+
+.dark .text-green-700,
+.dark .text-green-800 {
+  color: hsl(140, 65%, 58%);
+}
+
+.dark .bg-red-50 {
+  background-color: hsl(0, 32%, 15%);
+}
+
+.dark .text-red-700 {
+  color: hsl(0, 75%, 68%);
+}
+
+/* Dark mode input fields */
+.dark input,
+.dark textarea,
+.dark select {
+  background-color: hsl(220, 20%, 12%);
+  color: hsl(210, 15%, 90%);
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: hsl(215, 12%, 50%);
+}
+
+/* Dark mode for white backgrounds */
+.dark .bg-white {
+  background-color: hsl(220, 22%, 11%);
+}
+
+/* Dark mode text color fixes */
+.dark .text-black {
+  color: hsl(210, 15%, 90%);
+}
+
+.dark .text-slate-900,
+.dark .text-zinc-900,
+.dark .text-neutral-900 {
+  color: hsl(210, 15%, 90%);
+}
+
+.dark .text-slate-800,
+.dark .text-zinc-800,
+.dark .text-neutral-800 {
+  color: hsl(210, 12%, 85%);
+}
+
+.dark .text-slate-700,
+.dark .text-zinc-700,
+.dark .text-neutral-700 {
+  color: hsl(210, 12%, 78%);
+}
+
+.dark .text-slate-600,
+.dark .text-zinc-600,
+.dark .text-neutral-600 {
+  color: hsl(215, 12%, 65%);
+}
+
+.dark .text-slate-500,
+.dark .text-zinc-500,
+.dark .text-neutral-500 {
+  color: hsl(215, 12%, 58%);
+}
+
+/* Improve text-acclaim-teal visibility in dark mode */
+.dark .text-acclaim-teal {
+  color: hsl(174, 70%, 50%);
+}
+
+/* Fix red text colors */
+.dark .text-red-500,
+.dark .text-red-600 {
+  color: hsl(0, 75%, 65%);
+}
+
+/* Fix blue text colors */
+.dark .text-blue-500,
+.dark .text-blue-600 {
+  color: hsl(210, 85%, 68%);
+}
+
+/* Fix green text colors */
+.dark .text-green-500,
+.dark .text-green-600 {
+  color: hsl(140, 65%, 55%);
+}
+
+/* Fix emerald text/bg */
+.dark .text-emerald-600,
+.dark .text-emerald-700 {
+  color: hsl(160, 65%, 55%);
+}
+
+.dark .bg-emerald-600 {
+  background-color: hsl(160, 60%, 40%);
+}
+
+/* Fix orange colors */
+.dark .text-orange-500,
+.dark .text-orange-600 {
+  color: hsl(25, 85%, 60%);
+}
+
+.dark .bg-orange-600 {
+  background-color: hsl(25, 75%, 45%);
+}
+
+/* Table styles for dark mode */
+.dark table {
+  border-color: hsl(220, 18%, 22%);
+}
+
+.dark th {
+  background-color: hsl(220, 20%, 14%);
+  color: hsl(210, 15%, 88%);
+}
+
+.dark td {
+  border-color: hsl(220, 18%, 20%);
+}
+
+.dark tr:hover {
+  background-color: hsl(220, 20%, 14%);
+}
+
+/* Dark mode file input styling */
+.dark input[type="file"] {
+  color: hsl(210, 15%, 75%);
+}
+
+.dark input[type="file"]::file-selector-button {
+  background-color: hsl(174, 65%, 35%);
+  color: white;
+}
+
+/* Yellow/amber badge backgrounds */
+.dark .bg-yellow-50,
+.dark .bg-yellow-100 {
+  background-color: hsl(45, 35%, 16%);
+}
+
+.dark .text-yellow-700,
+.dark .text-yellow-800 {
+  color: hsl(45, 80%, 60%);
+}
+
+/* Orange backgrounds */
+.dark .bg-orange-50,
+.dark .bg-orange-100 {
+  background-color: hsl(25, 35%, 15%);
+}
+
