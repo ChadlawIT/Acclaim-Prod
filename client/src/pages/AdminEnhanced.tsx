@@ -2103,9 +2103,6 @@ export default function AdminEnhanced() {
   const [scheduledReportCaseFilter, setScheduledReportCaseFilter] = useState<"active" | "all" | "closed">("active");
   const [showReportEditForm, setShowReportEditForm] = useState(false); // Show add/edit form within dialog
 
-  // Admin notes text box state
-  const [showNotesDialog, setShowNotesDialog] = useState(false);
-  const [adminNotes, setAdminNotes] = useState("");
 
   // Fetch users with their organisations
   const { data: users = [], isLoading: usersLoading, error: usersError } = useQuery({
@@ -6189,41 +6186,6 @@ export default function AdminEnhanced() {
         </DialogContent>
       </Dialog>
 
-      {/* Admin Notes Dialog */}
-      <Dialog open={showNotesDialog} onOpenChange={setShowNotesDialog}>
-        <DialogContent className="w-[95vw] max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Admin Notes</DialogTitle>
-            <DialogDescription>
-              Write notes or reminders for yourself
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <textarea
-              className="w-full min-h-[200px] p-3 border rounded-lg resize-y focus:outline-none focus:ring-2 focus:ring-acclaim-teal"
-              placeholder="Enter your notes here..."
-              value={adminNotes}
-              onChange={(e) => setAdminNotes(e.target.value)}
-            />
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowNotesDialog(false)}>
-                Close
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Notes Button at bottom */}
-      <div className="fixed bottom-4 right-4 z-50">
-        <Button
-          onClick={() => setShowNotesDialog(true)}
-          className="bg-acclaim-teal hover:bg-acclaim-teal/90 shadow-lg"
-        >
-          <Pencil className="h-4 w-4 mr-2" />
-          Notes
-        </Button>
-      </div>
       </>
       )}
     </div>
