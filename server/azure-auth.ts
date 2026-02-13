@@ -20,10 +20,17 @@ function getMsalClient(): msal.ConfidentialClientApplication {
       throw new Error("Azure Entra External ID is not configured. Set AZURE_CLIENT_ID, AZURE_TENANT_ID, and AZURE_CLIENT_SECRET.");
     }
 
+    const isGuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(AZURE_TENANT_ID);
+    const authority = isGuid
+      ? `https://login.microsoftonline.com/${AZURE_TENANT_ID}`
+      : `https://${AZURE_TENANT_ID}.ciamlogin.com/`;
+
+    console.log(`[Azure Auth] Using authority: ${authority}`);
+
     const msalConfig: msal.Configuration = {
       auth: {
         clientId: AZURE_CLIENT_ID,
-        authority: `https://${AZURE_TENANT_ID}.ciamlogin.com/`,
+        authority,
         clientSecret: AZURE_CLIENT_SECRET,
       },
       system: {
@@ -189,7 +196,11 @@ export function setupAzureAuth(app: Express): void {
       if (err) {
         console.error("[Azure Auth] Logout error:", err);
       }
-      const logoutUri = `https://${AZURE_TENANT_ID}.ciamlogin.com/${AZURE_TENANT_ID}/oauth2/v2.0/logout?post_logout_redirect_uri=${encodeURIComponent(getBaseUrl(req) + "/auth")}`;
+      const isGuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(AZURE_TENANT_ID!);
+      const logoutBase = isGuid
+        ? `https://login.microsoftonline.com/${AZURE_TENANT_ID}/oauth2/v2.0/logout`
+        : `https://${AZURE_TENANT_ID}.ciamlogin.com/${AZURE_TENANT_ID}/oauth2/v2.0/logout`;
+      const logoutUri = `${logoutBase}?post_logout_redirect_uri=${encodeURIComponent(getBaseUrl(req) + "/auth")}`;
       res.redirect(logoutUri);
     });
   });
