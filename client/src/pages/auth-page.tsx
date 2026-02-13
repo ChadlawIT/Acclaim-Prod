@@ -1,16 +1,10 @@
 import { useState, useEffect } from "react";
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Eye, EyeOff, Loader2, FileText, MessageSquare, TrendingUp, Shield, Mail, KeyRound } from "lucide-react";
+import { FileText, MessageSquare, TrendingUp, Shield } from "lucide-react";
 import acclaimLogo from "@assets/acclaim_rose_transparent_1768474381340.png";
 
 const MicrosoftIcon = () => (
@@ -24,65 +18,9 @@ const MicrosoftIcon = () => (
 
 export default function AuthPage() {
   const [, navigate] = useLocation();
-  const { user, loginMutation } = useAuth();
-  
-  // Login form state
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  const { user } = useAuth();
   const [error, setError] = useState("");
 
-  // Password reset dialog state
-  const [showResetDialog, setShowResetDialog] = useState(false);
-  const [resetEmail, setResetEmail] = useState("");
-  const [resetOtp, setResetOtp] = useState("");
-  const [resetStep, setResetStep] = useState<'email' | 'otp'>('email');
-  const [resetError, setResetError] = useState("");
-  const [resetSuccess, setResetSuccess] = useState(false);
-
-  // Check if Azure auth is enabled
-  const { data: azureStatus } = useQuery<{ enabled: boolean; configured: boolean }>({
-    queryKey: ['/api/auth/azure/status'],
-  });
-
-  // Mutation for requesting password reset
-  const requestResetMutation = useMutation({
-    mutationFn: async (data: { email: string }) => {
-      const response = await apiRequest('POST', '/api/auth/password-reset/request', data);
-      return response.json();
-    },
-    onSuccess: () => {
-      setResetStep('otp');
-      setResetSuccess(true);
-      setResetError("");
-    },
-    onError: (error: any) => {
-      setResetError(error.message || "Failed to send reset code");
-    }
-  });
-
-  // Mutation for OTP login
-  const otpLoginMutation = useMutation({
-    mutationFn: async (data: { email: string; otp: string }) => {
-      const response = await apiRequest('POST', '/api/auth/login/otp', data);
-      return response.json();
-    },
-    onSuccess: (data) => {
-      setShowResetDialog(false);
-      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-      // User will be redirected to change password page
-      if (data.user?.mustChangePassword) {
-        navigate("/change-password");
-      } else {
-        navigate("/");
-      }
-    },
-    onError: (error: any) => {
-      setResetError(error.message || "Invalid code");
-    }
-  });
-
-  // Handle URL error parameters from Azure auth
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const errorParam = urlParams.get('error');
@@ -97,83 +35,17 @@ export default function AuthPage() {
         'callback_failed': 'Authentication callback failed. Please try again.',
       };
       setError(errorMessages[errorParam] || `Authentication error: ${errorParam}`);
-      // Clean up URL
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
 
-  // Redirect if already logged in - check after all hooks to avoid rule violations
   if (user) {
-    // Use setTimeout to avoid setting state during render
     setTimeout(() => navigate("/"), 0);
     return null;
   }
 
   const handleAzureLogin = () => {
     window.location.href = '/auth/azure/login';
-  };
-
-  const resetPasswordResetForm = () => {
-    setResetEmail("");
-    setResetOtp("");
-    setResetStep('email');
-    setResetError("");
-    setResetSuccess(false);
-  };
-
-  const handleResetRequest = (e: React.FormEvent) => {
-    e.preventDefault();
-    setResetError("");
-    
-    if (!resetEmail) {
-      setResetError("Please enter your email address");
-      return;
-    }
-
-    requestResetMutation.mutate({ email: resetEmail });
-  };
-
-  const handleOtpLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    setResetError("");
-    
-    if (!resetOtp) {
-      setResetError("Please enter the code from your email");
-      return;
-    }
-
-    if (resetOtp.length !== 6) {
-      setResetError("Please enter the 6-digit code");
-      return;
-    }
-
-    otpLoginMutation.mutate({ email: resetEmail, otp: resetOtp });
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    
-    if (!email || !password) {
-      setError("Please fill in all fields");
-      return;
-    }
-
-    try {
-      const userData = await loginMutation.mutateAsync({
-        email: email,
-        password: password,
-      });
-      
-      // Check if user needs to change password
-      if (userData.mustChangePassword) {
-        navigate("/change-password");
-      } else {
-        navigate("/");
-      }
-    } catch (error: any) {
-      setError(error.message || "Login failed");
-    }
   };
 
   return (
@@ -202,111 +74,25 @@ export default function AuthPage() {
             <CardHeader className="pb-4">
               <CardTitle className="text-lg">Sign In</CardTitle>
               <CardDescription>
-                Enter your credentials to access your account
+                Sign in with your Microsoft account to access the portal
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-sm font-medium">Email Address</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="your.email@company.com"
-                    className="h-11"
-                    required
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="password" className="text-sm font-medium">Password</Label>
-                    <Button
-                      type="button"
-                      variant="link"
-                      className="h-auto p-0 text-xs text-acclaim-teal hover:text-acclaim-teal/80"
-                      onClick={() => {
-                        resetPasswordResetForm();
-                        setResetEmail(email); // Pre-fill with login email if available
-                        setShowResetDialog(true);
-                      }}
-                      data-testid="link-forgot-password"
-                    >
-                      Forgot password?
-                    </Button>
-                  </div>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter your password"
-                      className="h-11 pr-10"
-                      required
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4 text-gray-500" />
-                      ) : (
-                        <Eye className="h-4 w-4 text-gray-500" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-
-                <Button 
-                  type="submit" 
-                  className="w-full h-11 bg-acclaim-teal hover:bg-acclaim-teal/90 font-medium"
-                  disabled={loginMutation.isPending}
-                  data-testid="button-login"
-                >
-                  {loginMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Signing in...
-                    </>
-                  ) : (
-                    "Sign In to Portal"
-                  )}
-                </Button>
-              </form>
-
-              {azureStatus?.enabled && (
-                <>
-                  <div className="relative my-6">
-                    <Separator />
-                    <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-2 text-xs text-muted-foreground">
-                      or
-                    </span>
-                  </div>
-                  
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full h-11 font-medium"
-                    onClick={handleAzureLogin}
-                    data-testid="button-azure-login"
-                  >
-                    <MicrosoftIcon />
-                    <span className="ml-2">Sign in with Microsoft</span>
-                  </Button>
-                </>
+              {error && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
               )}
+
+              <Button
+                type="button"
+                className="w-full h-11 font-medium bg-acclaim-teal hover:bg-acclaim-teal/90"
+                onClick={handleAzureLogin}
+                data-testid="button-azure-login"
+              >
+                <MicrosoftIcon />
+                <span className="ml-2">Sign in with Microsoft</span>
+              </Button>
               
               <div className="mt-6 text-center text-xs text-muted-foreground">Need assistance? Please contact us at email@acclaim.law | 0113 225 8811</div>
               <div className="mt-3 text-center text-xs text-muted-foreground">
@@ -378,159 +164,6 @@ export default function AuthPage() {
         </div>
       </div>
 
-      {/* Password Reset Dialog */}
-      <Dialog open={showResetDialog} onOpenChange={(open) => {
-        setShowResetDialog(open);
-        if (!open) {
-          resetPasswordResetForm();
-        }
-      }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <KeyRound className="h-5 w-5" />
-              Reset Password
-            </DialogTitle>
-            <DialogDescription>
-              {resetStep === 'email' 
-                ? "Enter your email address and we'll send you a one-time code."
-                : "Enter the 6-digit code we sent to your email."
-              }
-            </DialogDescription>
-          </DialogHeader>
-
-          {resetStep === 'email' ? (
-            <form onSubmit={handleResetRequest} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="reset-email">Email Address</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="reset-email"
-                    type="email"
-                    value={resetEmail}
-                    onChange={(e) => setResetEmail(e.target.value)}
-                    placeholder="your.email@company.com"
-                    className="pl-10"
-                    required
-                    data-testid="input-reset-email"
-                  />
-                </div>
-              </div>
-
-              {resetError && (
-                <Alert variant="destructive">
-                  <AlertDescription>{resetError}</AlertDescription>
-                </Alert>
-              )}
-
-              <div className="flex gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => setShowResetDialog(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  className="flex-1 bg-acclaim-teal hover:bg-acclaim-teal/90"
-                  disabled={requestResetMutation.isPending}
-                  data-testid="button-send-code"
-                >
-                  {requestResetMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Sending...
-                    </>
-                  ) : (
-                    "Send Reset Code"
-                  )}
-                </Button>
-              </div>
-            </form>
-          ) : (
-            <form onSubmit={handleOtpLogin} className="space-y-4">
-              {resetSuccess && (
-                <Alert className="bg-green-50 border-green-200">
-                  <AlertDescription className="text-green-800">
-                    A reset code has been sent to {resetEmail}. Please check your email.
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="reset-otp">One-Time Code</Label>
-                <Input
-                  id="reset-otp"
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={6}
-                  value={resetOtp}
-                  onChange={(e) => setResetOtp(e.target.value.replace(/\D/g, ''))}
-                  placeholder="Enter 6-digit code"
-                  className="text-center text-2xl tracking-widest font-mono"
-                  required
-                  data-testid="input-reset-otp"
-                />
-                <p className="text-xs text-muted-foreground text-center">
-                  The code expires in 15 minutes
-                </p>
-              </div>
-
-              {resetError && (
-                <Alert variant="destructive">
-                  <AlertDescription>{resetError}</AlertDescription>
-                </Alert>
-              )}
-
-              <div className="flex gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => {
-                    setResetStep('email');
-                    setResetOtp("");
-                    setResetError("");
-                  }}
-                >
-                  Back
-                </Button>
-                <Button
-                  type="submit"
-                  className="flex-1 bg-acclaim-teal hover:bg-acclaim-teal/90"
-                  disabled={otpLoginMutation.isPending}
-                  data-testid="button-verify-code"
-                >
-                  {otpLoginMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Verifying...
-                    </>
-                  ) : (
-                    "Login with Code"
-                  )}
-                </Button>
-              </div>
-
-              <div className="text-center">
-                <Button
-                  type="button"
-                  variant="link"
-                  className="text-xs text-muted-foreground"
-                  onClick={() => requestResetMutation.mutate({ email: resetEmail })}
-                  disabled={requestResetMutation.isPending}
-                >
-                  Didn't receive a code? Send again
-                </Button>
-              </div>
-            </form>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
