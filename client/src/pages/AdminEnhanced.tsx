@@ -3752,20 +3752,19 @@ export default function AdminEnhanced() {
                         )}
                         Admin
                       </Button>
-                      {isSuperAdmin && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setEditingUser(user);
-                            setShowEditUser(true);
-                          }}
-                          title="Edit user details"
-                        >
-                          <Pencil className="h-3 w-3 mr-1" />
-                          Edit
-                        </Button>
-                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setEditingUser(user);
+                          setShowEditUser(true);
+                        }}
+                        title="Edit user details"
+                        data-testid={`button-edit-user-${user.id}`}
+                      >
+                        <Pencil className="h-3 w-3 mr-1" />
+                        Edit
+                      </Button>
                       {isSuperAdmin && user.isAdmin && user.email?.endsWith('@chadlaw.co.uk') && (
                         <Button
                           variant="outline"
@@ -4090,19 +4089,18 @@ export default function AdminEnhanced() {
                                 <Shield className="h-3 w-3" />
                               )}
                             </Button>
-                            {isSuperAdmin && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setEditingUser(user);
-                                  setShowEditUser(true);
-                                }}
-                                title="Edit user details"
-                              >
-                                <Pencil className="h-3 w-3" />
-                              </Button>
-                            )}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setEditingUser(user);
+                                setShowEditUser(true);
+                              }}
+                              title="Edit user details"
+                              data-testid={`button-edit-user-compact-${user.id}`}
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </Button>
                             {isSuperAdmin && user.isAdmin && user.email?.endsWith('@chadlaw.co.uk') && (
                               <Button
                                 variant="outline"
