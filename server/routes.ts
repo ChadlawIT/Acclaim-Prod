@@ -2598,9 +2598,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         delete userData.lastName;
       }
       
-      // Only super admins can change email addresses (for any user)
-      if (userData.email && !req.user.isSuperAdmin) {
-        return res.status(403).json({ message: "Only super admins can change email addresses" });
+      // Admins and super admins can change email addresses
+      if (userData.email && !req.user.isAdmin) {
+        return res.status(403).json({ message: "Only admins can change email addresses" });
       }
       
       // Check email uniqueness if email is being changed

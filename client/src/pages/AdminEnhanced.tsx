@@ -3449,7 +3449,7 @@ export default function AdminEnhanced() {
                           onChange={(e) => setEditingUser(prev => prev ? { ...prev, email: e.target.value } : null)}
                           placeholder="Email address"
                         />
-                        <p className="text-xs text-amber-600">Warning: Changing email will affect the user's login credentials.</p>
+                        <p className="text-xs text-amber-600">Warning: Changing email will affect the user's Microsoft sign-in. Ensure this matches their Microsoft account email.</p>
                       </div>
                     </div>
                     <div className="flex justify-end gap-2">
