@@ -73,9 +73,7 @@ export default function AuthPage() {
           <Card className="shadow-lg border-0">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg">Sign In</CardTitle>
-              <CardDescription>
-                Sign in with your Microsoft account to access the portal
-              </CardDescription>
+              <CardDescription>Sign in with your Microsoft account to access the portal.</CardDescription>
             </CardHeader>
             <CardContent>
               {error && (
@@ -163,7 +161,6 @@ export default function AuthPage() {
           </div>
         </div>
       </div>
-
     </div>
   );
 }
