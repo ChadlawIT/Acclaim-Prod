@@ -5,15 +5,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { FileText, MessageSquare, TrendingUp, Shield, ArrowRight, Loader2 } from "lucide-react";
+import { FileText, MessageSquare, TrendingUp, Shield, ArrowRight, ArrowLeft, Loader2, Eye, EyeOff } from "lucide-react";
 import acclaimLogo from "@assets/acclaim_rose_transparent_1768474381340.png";
+
+type Step = "email" | "password";
 
 export default function AuthPage() {
   const [, navigate] = useLocation();
-  const { user } = useAuth();
+  const { user, loginMutation } = useAuth();
   const [error, setError] = useState("");
   const [email, setEmail] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [step, setStep] = useState<Step>("email");
+  const [checkingEmail, setCheckingEmail] = useState(false);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -33,33 +38,62 @@ export default function AuthPage() {
     }
   }, []);
 
+  useEffect(() => {
+    if (loginMutation.error) {
+      setError(loginMutation.error.message || "Invalid email or password.");
+    }
+  }, [loginMutation.error]);
+
   if (user) {
     setTimeout(() => navigate("/"), 0);
     return null;
   }
 
-  const handleContinue = async (e: React.FormEvent) => {
+  const handleEmailContinue = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
 
-    setLoading(true);
+    setCheckingEmail(true);
     setError("");
 
     try {
       const res = await fetch(`/api/auth/check-email?email=${encodeURIComponent(email.trim())}`);
       const data = await res.json();
-      const hint = `?login_hint=${encodeURIComponent(email.trim())}`;
 
-      if (data.flow === 'signup') {
-        window.location.href = `/auth/azure/signup${hint}`;
+      if (data.flow === 'sso') {
+        window.location.href = `/auth/azure/login?login_hint=${encodeURIComponent(email.trim())}`;
       } else {
-        window.location.href = `/auth/azure/login${hint}`;
+        setStep("password");
+        setCheckingEmail(false);
       }
     } catch {
       setError("Something went wrong. Please try again.");
-      setLoading(false);
+      setCheckingEmail(false);
     }
   };
+
+  const handlePasswordSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !password) return;
+    setError("");
+    loginMutation.mutate(
+      { email: email.trim(), password },
+      {
+        onSuccess: () => navigate("/"),
+        onError: (err: any) => {
+          setError(err.message || "Invalid email or password.");
+        },
+      }
+    );
+  };
+
+  const handleBack = () => {
+    setStep("email");
+    setPassword("");
+    setError("");
+  };
+
+  const isLoading = checkingEmail || loginMutation.isPending;
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-gray-50 dark:bg-gray-900">
@@ -83,8 +117,23 @@ export default function AuthPage() {
 
           <Card className="shadow-lg border-0">
             <CardHeader className="pb-4">
-              <CardTitle className="text-lg">Sign In</CardTitle>
-              <CardDescription>Enter your email address to continue.</CardDescription>
+              <div className="flex items-center gap-2">
+                {step === "password" && (
+                  <button
+                    onClick={handleBack}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label="Go back"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </button>
+                )}
+                <CardTitle className="text-lg">Sign In</CardTitle>
+              </div>
+              <CardDescription>
+                {step === "email"
+                  ? "Enter your email address to continue."
+                  : `Enter your password for ${email}`}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {error && (
@@ -93,32 +142,71 @@ export default function AuthPage() {
                 </Alert>
               )}
 
-              <form onSubmit={handleContinue} className="space-y-3">
-                <Input
-                  type="email"
-                  placeholder="Enter your email address"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={loading}
-                  autoFocus
-                  required
-                />
-                <Button
-                  type="submit"
-                  className="w-full h-11 font-medium bg-acclaim-teal hover:bg-acclaim-teal/90"
-                  disabled={loading || !email.trim()}
-                  data-testid="button-continue"
-                >
-                  {loading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      <span>Continue</span>
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </>
-                  )}
-                </Button>
-              </form>
+              {step === "email" ? (
+                <form onSubmit={handleEmailContinue} className="space-y-3">
+                  <Input
+                    type="email"
+                    placeholder="Enter your email address"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={isLoading}
+                    autoFocus
+                    required
+                  />
+                  <Button
+                    type="submit"
+                    className="w-full h-11 font-medium bg-acclaim-teal hover:bg-acclaim-teal/90"
+                    disabled={isLoading || !email.trim()}
+                  >
+                    {checkingEmail ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <span>Continue</span>
+                        <ArrowRight className="h-4 w-4 ml-2" />
+                      </>
+                    )}
+                  </Button>
+                </form>
+              ) : (
+                <form onSubmit={handlePasswordSignIn} className="space-y-3">
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      disabled={isLoading}
+                      autoFocus
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      tabIndex={-1}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <Button
+                    type="submit"
+                    className="w-full h-11 font-medium bg-acclaim-teal hover:bg-acclaim-teal/90"
+                    disabled={isLoading || !password}
+                  >
+                    {loginMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      "Sign In"
+                    )}
+                  </Button>
+                  <div className="text-center">
+                    <Link href="/forgot-password" className="text-xs text-muted-foreground hover:text-primary hover:underline">
+                      Forgot your password?
+                    </Link>
+                  </div>
+                </form>
+              )}
 
               <div className="mt-6 text-center text-xs text-muted-foreground">Need assistance? Please contact us at email@acclaim.law | 0113 225 8811</div>
               <div className="mt-3 text-center text-xs text-muted-foreground">
@@ -134,6 +222,7 @@ export default function AuthPage() {
           </Card>
         </div>
       </div>
+
       <div className="hidden md:flex md:flex-1 bg-gradient-to-br from-teal-700 via-teal-600 to-slate-800 dark:from-slate-900 dark:via-slate-800 dark:to-gray-900 items-center justify-center p-8">
         <div className="max-w-lg text-white">
           <div className="mb-8">

@@ -61,28 +61,23 @@ export function setupAzureAuth(app: Express): void {
     });
   });
 
-  // Email routing check — determines whether to send a user through sign-in or sign-up
+  // Email routing check — determines whether to use SSO (chadlaw staff) or password (external clients)
   app.get("/api/auth/check-email", async (req: any, res) => {
     try {
       const email = (req.query.email as string || "").trim().toLowerCase();
-      if (!email) return res.status(400).json({ flow: "login" });
+      if (!email) return res.status(400).json({ flow: "password" });
 
-      // Chadwick Lawrence staff always use standard SSO sign-in
+      // Chadwick Lawrence staff use Microsoft SSO via the corporate tenant
       if (email.endsWith("@chadlaw.co.uk")) {
-        return res.json({ flow: "login" });
+        return res.json({ flow: "sso" });
       }
 
-      // Check if user exists and has previously signed in via SSO
-      const user = await storage.getUserByEmail(email);
-      if (user && user.azureId) {
-        return res.json({ flow: "login" });
-      }
-
-      // User not found or has never done SSO — send to sign-up flow
-      return res.json({ flow: "signup" });
+      // All external users (clients, third parties) use username/password login.
+      // The corporate Azure tenant cannot authenticate non-chadlaw.co.uk accounts.
+      return res.json({ flow: "password" });
     } catch (error) {
       console.error("[Azure Auth] Error checking email:", error);
-      return res.json({ flow: "login" });
+      return res.json({ flow: "password" });
     }
   });
 
