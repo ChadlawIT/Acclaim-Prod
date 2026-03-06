@@ -2884,6 +2884,23 @@ export default function AdminEnhanced() {
     },
   });
 
+  const sendAzureInviteMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const response = await apiRequest("POST", `/api/admin/users/${userId}/send-azure-invite`);
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      toast({ title: "SSO Invitation Sent", description: data.message });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send SSO invitation",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Force logout mutation (invalidate all sessions for a user)
   const forceLogoutMutation = useMutation({
     mutationFn: async ({ userId, reason }: { userId: string; reason?: string }) => {
@@ -3727,6 +3744,21 @@ export default function AdminEnhanced() {
                         variant="outline"
                         size="sm"
                         onClick={() => {
+                          const confirmation = confirm(`Send SSO invitation to ${user.firstName} ${user.lastName}?\n\nThis will send ${user.email} an invitation to sign in via Single Sign-On.`);
+                          if (confirmation) {
+                            sendAzureInviteMutation.mutate(user.id);
+                          }
+                        }}
+                        disabled={sendAzureInviteMutation.isPending}
+                        title="Send Azure SSO invitation"
+                      >
+                        <UserPlus className="h-3 w-3 mr-1" />
+                        SSO Invite
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
                           if (!user.isAdmin && !user.email?.endsWith('@chadlaw.co.uk')) {
                             alert('Admin privileges can only be granted to @chadlaw.co.uk email addresses.');
                             return;
@@ -4059,6 +4091,20 @@ export default function AdminEnhanced() {
                               title="Send welcome email with login details"
                             >
                               <Mail className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const confirmation = confirm(`Send SSO invitation to ${user.firstName} ${user.lastName}?\n\nThis will send ${user.email} an invitation to sign in via Single Sign-On.`);
+                                if (confirmation) {
+                                  sendAzureInviteMutation.mutate(user.id);
+                                }
+                              }}
+                              disabled={sendAzureInviteMutation.isPending}
+                              title="Send Azure SSO invitation"
+                            >
+                              <UserPlus className="h-3 w-3" />
                             </Button>
                             <Button
                               variant="outline"
