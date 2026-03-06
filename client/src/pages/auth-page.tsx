@@ -39,6 +39,10 @@ export default function AuthPage() {
     window.location.href = '/auth/azure/login';
   };
 
+  const handleAzureSignup = () => {
+    window.location.href = '/auth/azure/signup';
+  };
+
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-gray-50 dark:bg-gray-900">
       {/* Left side - Form */}
@@ -82,7 +86,27 @@ export default function AuthPage() {
                 <KeyRound className="h-4 w-4" />
                 <span className="ml-2">Sign in with SSO</span>
               </Button>
-              
+
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white dark:bg-card px-2 text-muted-foreground">First time?</span>
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full h-11 font-medium"
+                onClick={handleAzureSignup}
+                data-testid="button-azure-signup"
+              >
+                <KeyRound className="h-4 w-4" />
+                <span className="ml-2">Register as a client</span>
+              </Button>
+
               <div className="mt-6 text-center text-xs text-muted-foreground">Need assistance? Please contact us at email@acclaim.law | 0113 225 8811</div>
               <div className="mt-3 text-center text-xs text-muted-foreground">
                 <Link href="/terms" className="hover:text-primary hover:underline">

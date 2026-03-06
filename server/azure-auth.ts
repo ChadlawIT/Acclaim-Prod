@@ -97,6 +97,26 @@ export function setupAzureAuth(app: Express): void {
     }
   });
 
+  app.get("/auth/azure/signup", async (req, res) => {
+    try {
+      const client = getMsalClient();
+      const redirectUri = getFullRedirectUri(req);
+
+      const authCodeUrlParameters: msal.AuthorizationUrlRequest = {
+        scopes: ["openid", "profile", "email", "offline_access"],
+        redirectUri,
+        prompt: "create",
+      };
+
+      const authUrl = await client.getAuthCodeUrl(authCodeUrlParameters);
+      console.log("[Azure Auth] Generated sign-up URL, redirecting...");
+      res.redirect(authUrl);
+    } catch (error: any) {
+      console.error("[Azure Auth] Sign-up error:", error);
+      res.redirect("/auth?error=azure_login_failed");
+    }
+  });
+
   app.get("/auth/azure/callback", async (req, res) => {
     try {
       const { code, error, error_description } = req.query;
