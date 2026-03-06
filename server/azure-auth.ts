@@ -206,6 +206,74 @@ export function setupAzureAuth(app: Express): void {
   });
 }
 
+export async function inviteUserToAzure(
+  email: string,
+  displayName: string,
+  appBaseUrl: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!isAzureAuthEnabled()) {
+    return { success: false, error: "Azure auth not configured" };
+  }
+
+  try {
+    const isGuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(AZURE_TENANT_ID!);
+    const tokenEndpoint = isGuid
+      ? `https://login.microsoftonline.com/${AZURE_TENANT_ID}/oauth2/v2.0/token`
+      : `https://${AZURE_TENANT_ID}.ciamlogin.com/${AZURE_TENANT_ID}.onmicrosoft.com/oauth2/v2.0/token`;
+
+    const tokenParams = new URLSearchParams({
+      client_id: AZURE_CLIENT_ID!,
+      client_secret: AZURE_CLIENT_SECRET!,
+      scope: "https://graph.microsoft.com/.default",
+      grant_type: "client_credentials",
+    });
+
+    const tokenResponse = await fetch(tokenEndpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: tokenParams.toString(),
+    });
+
+    if (!tokenResponse.ok) {
+      const errorText = await tokenResponse.text();
+      console.error("[Azure Invite] Failed to get access token:", errorText);
+      return { success: false, error: "Failed to get access token" };
+    }
+
+    const { access_token } = await tokenResponse.json();
+
+    const inviteResponse = await fetch("https://graph.microsoft.com/v1.0/invitations", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        invitedUserEmailAddress: email,
+        invitedUserDisplayName: displayName,
+        inviteRedirectUrl: `${appBaseUrl}/auth`,
+        sendInvitationMessage: true,
+        invitedUserMessageInfo: {
+          customizedMessageBody: `You have been invited to access the Acclaim Credit Management System by Chadwick Lawrence LLP. Click the link above to accept your invitation and set up your account. Once accepted, you can sign in using the "Sign in with SSO" option on the login page.`,
+        },
+      }),
+    });
+
+    if (!inviteResponse.ok) {
+      const errorText = await inviteResponse.text();
+      console.error("[Azure Invite] Failed to send invitation:", errorText);
+      return { success: false, error: `Graph API error: ${inviteResponse.status}` };
+    }
+
+    const inviteData = await inviteResponse.json();
+    console.log(`[Azure Invite] Successfully invited ${email}, invite ID: ${inviteData.id}`);
+    return { success: true };
+  } catch (error: any) {
+    console.error("[Azure Invite] Unexpected error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
 function getBaseUrl(req: any): string {
   const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
   const host = req.headers["x-forwarded-host"] || req.headers.host;

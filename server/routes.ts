@@ -40,7 +40,7 @@ import bcrypt from "bcrypt";
 import { emailService } from "./email-service";
 import { getAutoMuteNewCases, setAutoMuteNewCases } from "./user-preferences";
 import { sendGridEmailService } from "./email-service-sendgrid";
-import { setupAzureAuth } from "./azure-auth";
+import { setupAzureAuth, inviteUserToAzure, isAzureAuthEnabled } from "./azure-auth";
 import ExcelJS from "exceljs";
 import { loginRateLimiter } from "./rate-limiter";
 
@@ -2566,7 +2566,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const result = await storage.createUser(userData);
-      
+
+      // Send Azure SSO invitation in the background (non-blocking)
+      if (isAzureAuthEnabled()) {
+        const appBaseUrl = `${req.headers["x-forwarded-proto"] || req.protocol}://${req.headers["x-forwarded-host"] || req.headers.host}`;
+        const displayName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim() || userData.email;
+        inviteUserToAzure(userData.email, displayName, appBaseUrl)
+          .then((inviteResult) => {
+            if (!inviteResult.success) {
+              console.warn(`[Azure Invite] Could not invite ${userData.email}: ${inviteResult.error}`);
+            }
+          })
+          .catch((err) => console.error("[Azure Invite] Unexpected error:", err));
+      }
+
       // Return user info and temporary password (in production, this would be sent via email)
       res.status(201).json({
         user: result,
