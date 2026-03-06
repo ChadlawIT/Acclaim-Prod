@@ -2,26 +2,29 @@ import { useState, useEffect } from "react";
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { FileText, MessageSquare, TrendingUp, Shield, KeyRound } from "lucide-react";
+import { FileText, MessageSquare, TrendingUp, Shield, ArrowRight, Loader2 } from "lucide-react";
 import acclaimLogo from "@assets/acclaim_rose_transparent_1768474381340.png";
 
 export default function AuthPage() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
   const [error, setError] = useState("");
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const errorParam = urlParams.get('error');
     if (errorParam) {
       const errorMessages: Record<string, string> = {
-        'azure_login_failed': 'Microsoft sign-in failed. Please try again.',
+        'azure_login_failed': 'Sign-in failed. Please try again.',
         'no_code': 'Authentication was cancelled or failed.',
-        'no_account': 'Could not retrieve account information from Microsoft.',
-        'no_email': 'No email address found in your Microsoft account.',
-        'user_not_found': 'Your Microsoft account is not registered with Acclaim. Please contact your administrator.',
+        'no_account': 'Could not retrieve account information.',
+        'no_email': 'No email address found in your account.',
+        'user_not_found': 'Your account is not registered with Acclaim. Please contact your administrator.',
         'session_error': 'Failed to create session. Please try again.',
         'callback_failed': 'Authentication callback failed. Please try again.',
       };
@@ -35,25 +38,37 @@ export default function AuthPage() {
     return null;
   }
 
-  const handleAzureLogin = () => {
-    window.location.href = '/auth/azure/login';
-  };
+  const handleContinue = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) return;
 
-  const handleAzureSignup = () => {
-    window.location.href = '/auth/azure/signup';
+    setLoading(true);
+    setError("");
+
+    try {
+      const res = await fetch(`/api/auth/check-email?email=${encodeURIComponent(email.trim())}`);
+      const data = await res.json();
+
+      if (data.flow === 'signup') {
+        window.location.href = '/auth/azure/signup';
+      } else {
+        window.location.href = '/auth/azure/login';
+      }
+    } catch {
+      setError("Something went wrong. Please try again.");
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-gray-50 dark:bg-gray-900">
-      {/* Left side - Form */}
       <div className="flex-1 flex items-center justify-center p-4 md:p-8">
         <div className="w-full max-w-md">
-          {/* Logo and Header */}
           <div className="text-center mb-8">
             <div className="flex items-center justify-center mb-6">
-              <img 
-                src={acclaimLogo} 
-                alt="Acclaim Credit Management" 
+              <img
+                src={acclaimLogo}
+                alt="Acclaim Credit Management"
                 className="h-16 w-16 mr-3"
               />
               <div className="text-left">
@@ -68,7 +83,7 @@ export default function AuthPage() {
           <Card className="shadow-lg border-0">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg">Sign In</CardTitle>
-              <CardDescription>Sign in with your organisation account to access the portal.</CardDescription>
+              <CardDescription>Enter your email address to continue.</CardDescription>
             </CardHeader>
             <CardContent>
               {error && (
@@ -77,35 +92,32 @@ export default function AuthPage() {
                 </Alert>
               )}
 
-              <Button
-                type="button"
-                className="w-full h-11 font-medium bg-acclaim-teal hover:bg-acclaim-teal/90"
-                onClick={handleAzureLogin}
-                data-testid="button-azure-login"
-              >
-                <KeyRound className="h-4 w-4" />
-                <span className="ml-2">Sign in with SSO</span>
-              </Button>
-
-              <div className="relative my-4">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-white dark:bg-card px-2 text-muted-foreground">First time?</span>
-                </div>
-              </div>
-
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full h-11 font-medium"
-                onClick={handleAzureSignup}
-                data-testid="button-azure-signup"
-              >
-                <KeyRound className="h-4 w-4" />
-                <span className="ml-2">Register as a client</span>
-              </Button>
+              <form onSubmit={handleContinue} className="space-y-3">
+                <Input
+                  type="email"
+                  placeholder="Enter your email address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
+                  autoFocus
+                  required
+                />
+                <Button
+                  type="submit"
+                  className="w-full h-11 font-medium bg-acclaim-teal hover:bg-acclaim-teal/90"
+                  disabled={loading || !email.trim()}
+                  data-testid="button-continue"
+                >
+                  {loading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <span>Continue</span>
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </>
+                  )}
+                </Button>
+              </form>
 
               <div className="mt-6 text-center text-xs text-muted-foreground">Need assistance? Please contact us at email@acclaim.law | 0113 225 8811</div>
               <div className="mt-3 text-center text-xs text-muted-foreground">
@@ -121,7 +133,6 @@ export default function AuthPage() {
           </Card>
         </div>
       </div>
-      {/* Right side - Feature showcase */}
       <div className="hidden md:flex md:flex-1 bg-gradient-to-br from-teal-700 via-teal-600 to-slate-800 dark:from-slate-900 dark:via-slate-800 dark:to-gray-900 items-center justify-center p-8">
         <div className="max-w-lg text-white">
           <div className="mb-8">
