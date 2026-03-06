@@ -23,7 +23,7 @@ function getMsalClient(): msal.ConfidentialClientApplication {
     const isGuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(AZURE_TENANT_ID);
     const authority = isGuid
       ? `https://login.microsoftonline.com/${AZURE_TENANT_ID}`
-      : `https://${AZURE_TENANT_ID}.ciamlogin.com/`;
+      : `https://${AZURE_TENANT_ID}.ciamlogin.com/${AZURE_TENANT_ID}.onmicrosoft.com`;
 
     console.log(`[Azure Auth] Using authority: ${authority}`);
 
