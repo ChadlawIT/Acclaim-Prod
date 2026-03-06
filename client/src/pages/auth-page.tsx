@@ -48,11 +48,12 @@ export default function AuthPage() {
     try {
       const res = await fetch(`/api/auth/check-email?email=${encodeURIComponent(email.trim())}`);
       const data = await res.json();
+      const hint = `?login_hint=${encodeURIComponent(email.trim())}`;
 
       if (data.flow === 'signup') {
-        window.location.href = '/auth/azure/signup';
+        window.location.href = `/auth/azure/signup${hint}`;
       } else {
-        window.location.href = '/auth/azure/login';
+        window.location.href = `/auth/azure/login${hint}`;
       }
     } catch {
       setError("Something went wrong. Please try again.");

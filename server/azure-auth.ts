@@ -102,10 +102,13 @@ export function setupAzureAuth(app: Express): void {
       console.log("[Azure Auth] Redirect URI:", redirectUri);
       console.log("[Azure Auth] Tenant ID:", AZURE_TENANT_ID);
 
+      const loginHint = req.query.login_hint as string | undefined;
+
       const authCodeUrlParameters: msal.AuthorizationUrlRequest = {
         scopes: ["openid", "profile", "email", "offline_access"],
         redirectUri,
         prompt: "select_account",
+        ...(loginHint ? { loginHint } : {}),
       };
 
       const authUrl = await client.getAuthCodeUrl(authCodeUrlParameters);
@@ -127,11 +130,13 @@ export function setupAzureAuth(app: Express): void {
     try {
       const client = getMsalClient();
       const redirectUri = getFullRedirectUri(req);
+      const loginHint = req.query.login_hint as string | undefined;
 
       const authCodeUrlParameters: msal.AuthorizationUrlRequest = {
         scopes: ["openid", "profile", "email", "offline_access"],
         redirectUri,
-        prompt: "create",
+        prompt: "select_account",
+        ...(loginHint ? { loginHint } : {}),
       };
 
       const authUrl = await client.getAuthCodeUrl(authCodeUrlParameters);
