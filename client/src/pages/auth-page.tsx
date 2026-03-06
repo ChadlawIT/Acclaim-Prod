@@ -4,17 +4,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { FileText, MessageSquare, TrendingUp, Shield } from "lucide-react";
+import { FileText, MessageSquare, TrendingUp, Shield, KeyRound } from "lucide-react";
 import acclaimLogo from "@assets/acclaim_rose_transparent_1768474381340.png";
-
-const MicrosoftIcon = () => (
-  <svg className="h-4 w-4" viewBox="0 0 23 23" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M11 11H0V0H11V11Z" fill="#F25022"/>
-    <path d="M23 11H12V0H23V11Z" fill="#7FBA00"/>
-    <path d="M11 23H0V12H11V23Z" fill="#00A4EF"/>
-    <path d="M23 23H12V12H23V23Z" fill="#FFB900"/>
-  </svg>
-);
 
 export default function AuthPage() {
   const [, navigate] = useLocation();
@@ -73,7 +64,7 @@ export default function AuthPage() {
           <Card className="shadow-lg border-0">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg">Sign In</CardTitle>
-              <CardDescription>Sign in with your Microsoft account to access the portal.</CardDescription>
+              <CardDescription>Sign in with your organisation account to access the portal.</CardDescription>
             </CardHeader>
             <CardContent>
               {error && (
@@ -88,8 +79,8 @@ export default function AuthPage() {
                 onClick={handleAzureLogin}
                 data-testid="button-azure-login"
               >
-                <MicrosoftIcon />
-                <span className="ml-2">Sign in with Microsoft</span>
+                <KeyRound className="h-4 w-4" />
+                <span className="ml-2">Sign in with SSO</span>
               </Button>
               
               <div className="mt-6 text-center text-xs text-muted-foreground">Need assistance? Please contact us at email@acclaim.law | 0113 225 8811</div>
