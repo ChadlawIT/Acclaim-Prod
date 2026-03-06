@@ -61,6 +61,31 @@ export function setupAzureAuth(app: Express): void {
     });
   });
 
+  // Email routing check — determines whether to send a user through sign-in or sign-up
+  app.get("/api/auth/check-email", async (req: any, res) => {
+    try {
+      const email = (req.query.email as string || "").trim().toLowerCase();
+      if (!email) return res.status(400).json({ flow: "login" });
+
+      // Chadwick Lawrence staff always use standard SSO sign-in
+      if (email.endsWith("@chadlaw.co.uk")) {
+        return res.json({ flow: "login" });
+      }
+
+      // Check if user exists and has previously signed in via SSO
+      const user = await storage.getUserByEmail(email);
+      if (user && user.azureId) {
+        return res.json({ flow: "login" });
+      }
+
+      // User not found or has never done SSO — send to sign-up flow
+      return res.json({ flow: "signup" });
+    } catch (error) {
+      console.error("[Azure Auth] Error checking email:", error);
+      return res.json({ flow: "login" });
+    }
+  });
+
   if (!isAzureAuthEnabled()) {
     console.log("[Azure Auth] Azure Entra External ID not configured - skipping setup");
     return;

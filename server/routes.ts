@@ -412,30 +412,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/screenshots", express.static(path.join(__dirname, "../screenshots")));
 
   // Auth routes
-  app.get('/api/auth/check-email', async (req: any, res) => {
-    try {
-      const email = (req.query.email as string || "").trim().toLowerCase();
-      if (!email) return res.status(400).json({ flow: 'login' });
-
-      // Chadwick Lawrence staff always use standard SSO sign-in
-      if (email.endsWith('@chadlaw.co.uk')) {
-        return res.json({ flow: 'login' });
-      }
-
-      // Check if user exists and has previously signed in via SSO
-      const user = await storage.getUserByEmail(email);
-      if (user && (user as any).azureId) {
-        return res.json({ flow: 'login' });
-      }
-
-      // User not found or has never done SSO — send to sign-up flow
-      return res.json({ flow: 'signup' });
-    } catch (error) {
-      console.error("Error checking email:", error);
-      return res.json({ flow: 'login' });
-    }
-  });
-
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
