@@ -152,6 +152,7 @@ export function setupAzureAuth(app: Express): void {
 
       (req.session as any).passport = { user: user.id };
       (req.session as any).loginMethod = 'azure';
+      (req.session as any).azureIdToken = response.idToken;
 
       req.session.save(async (err) => {
         if (err) {

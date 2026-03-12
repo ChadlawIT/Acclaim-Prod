@@ -285,6 +285,7 @@ export function setupAuth(app: Express) {
     }
     
     const loginMethod = (req.session as any).loginMethod;
+    const azureIdToken = (req.session as any).azureIdToken;
     const isGuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(process.env.AZURE_TENANT_ID || '');
     const tenantId = process.env.AZURE_TENANT_ID;
 
@@ -298,8 +299,8 @@ export function setupAuth(app: Express) {
         const logoutBase = isGuid
           ? `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/logout`
           : `https://${tenantId}.ciamlogin.com/${tenantId}/oauth2/v2.0/logout`;
-        const logoutHint = user?.email ? `&logout_hint=${encodeURIComponent(user.email)}` : '';
-        const azureLogoutUrl = `${logoutBase}?post_logout_redirect_uri=${postLogoutUri}${logoutHint}`;
+        const idTokenHint = azureIdToken ? `&id_token_hint=${encodeURIComponent(azureIdToken)}` : '';
+        const azureLogoutUrl = `${logoutBase}?post_logout_redirect_uri=${postLogoutUri}${idTokenHint}`;
         return res.json({ message: "Logged out successfully", azureLogoutUrl });
       }
 
