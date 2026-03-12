@@ -2042,6 +2042,7 @@ export class DatabaseStorage implements IStorage {
     await db.update(payments).set({ recordedBy: null }).where(eq(payments.recordedBy, userId));
     await db.update(auditLog).set({ userId: null }).where(eq(auditLog.userId, userId));
     await db.update(externalApiCredentials).set({ createdBy: null }).where(eq(externalApiCredentials.createdBy, userId));
+    await db.update(caseAccessRestrictions).set({ createdBy: null }).where(eq(caseAccessRestrictions.createdBy, userId));
 
     // Remove organisation memberships
     await db.delete(userOrganisations).where(eq(userOrganisations.userId, userId));
