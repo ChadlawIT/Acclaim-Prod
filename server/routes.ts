@@ -2953,29 +2953,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Send just the temporary password email (for password resets)
-  app.post('/api/admin/users/:userId/send-azure-invite', isAuthenticated, isAdmin, async (req: any, res) => {
-    try {
-      const { userId } = req.params;
-      const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      if (!user.email) {
-        return res.status(400).json({ message: "User has no email address" });
-      }
-      const appBaseUrl = `${req.headers["x-forwarded-proto"] || req.protocol}://${req.headers["x-forwarded-host"] || req.headers.host}`;
-      const displayName = `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email;
-      const result = await inviteUserToAzure(user.email, displayName, appBaseUrl);
-      if (!result.success) {
-        return res.status(500).json({ message: `Failed to send invitation: ${result.error}` });
-      }
-      res.json({ message: "Azure SSO invitation sent successfully" });
-    } catch (error) {
-      console.error("Error sending Azure invite:", error);
-      res.status(500).json({ message: "Failed to send invitation" });
-    }
-  });
-
   app.post('/api/admin/users/:userId/send-password-email', isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const { userId } = req.params;

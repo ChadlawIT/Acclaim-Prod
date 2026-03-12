@@ -23,7 +23,7 @@ function getMsalClient(): msal.ConfidentialClientApplication {
     const isGuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(AZURE_TENANT_ID);
     const authority = isGuid
       ? `https://login.microsoftonline.com/${AZURE_TENANT_ID}`
-      : `https://${AZURE_TENANT_ID}.ciamlogin.com/${AZURE_TENANT_ID}.onmicrosoft.com`;
+      : `https://${AZURE_TENANT_ID}.ciamlogin.com/`;
 
     console.log(`[Azure Auth] Using authority: ${authority}`);
 
@@ -61,26 +61,6 @@ export function setupAzureAuth(app: Express): void {
     });
   });
 
-  // Email routing check — determines whether to use SSO (chadlaw staff) or password (external clients)
-  app.get("/api/auth/check-email", async (req: any, res) => {
-    try {
-      const email = (req.query.email as string || "").trim().toLowerCase();
-      if (!email) return res.status(400).json({ flow: "password" });
-
-      // Chadwick Lawrence staff use Microsoft SSO via the corporate tenant
-      if (email.endsWith("@chadlaw.co.uk")) {
-        return res.json({ flow: "sso" });
-      }
-
-      // All external users (clients, third parties) use username/password login.
-      // The corporate Azure tenant cannot authenticate non-chadlaw.co.uk accounts.
-      return res.json({ flow: "password" });
-    } catch (error) {
-      console.error("[Azure Auth] Error checking email:", error);
-      return res.json({ flow: "password" });
-    }
-  });
-
   if (!isAzureAuthEnabled()) {
     console.log("[Azure Auth] Azure Entra External ID not configured - skipping setup");
     return;
@@ -97,13 +77,10 @@ export function setupAzureAuth(app: Express): void {
       console.log("[Azure Auth] Redirect URI:", redirectUri);
       console.log("[Azure Auth] Tenant ID:", AZURE_TENANT_ID);
 
-      const loginHint = req.query.login_hint as string | undefined;
-
       const authCodeUrlParameters: msal.AuthorizationUrlRequest = {
         scopes: ["openid", "profile", "email", "offline_access"],
         redirectUri,
         prompt: "select_account",
-        ...(loginHint ? { loginHint } : {}),
       };
 
       const authUrl = await client.getAuthCodeUrl(authCodeUrlParameters);
@@ -117,28 +94,6 @@ export function setupAzureAuth(app: Express): void {
         name: error.name,
         stack: error.stack?.substring(0, 500)
       });
-      res.redirect("/auth?error=azure_login_failed");
-    }
-  });
-
-  app.get("/auth/azure/signup", async (req, res) => {
-    try {
-      const client = getMsalClient();
-      const redirectUri = getFullRedirectUri(req);
-      const loginHint = req.query.login_hint as string | undefined;
-
-      const authCodeUrlParameters: msal.AuthorizationUrlRequest = {
-        scopes: ["openid", "profile", "email", "offline_access"],
-        redirectUri,
-        prompt: "select_account",
-        ...(loginHint ? { loginHint } : {}),
-      };
-
-      const authUrl = await client.getAuthCodeUrl(authCodeUrlParameters);
-      console.log("[Azure Auth] Generated sign-up URL, redirecting...");
-      res.redirect(authUrl);
-    } catch (error: any) {
-      console.error("[Azure Auth] Sign-up error:", error);
       res.redirect("/auth?error=azure_login_failed");
     }
   });
@@ -209,20 +164,8 @@ export function setupAzureAuth(app: Express): void {
         
         try {
           const fullUser = await storage.getUser(user!.id);
-          if (fullUser && fullUser.email) {
-            // Check if new location BEFORE recording — so this login isn't counted as known yet
-            const isNewLocation = (fullUser as any).loginNotifications !== false
-              ? await storage.isNewLoginLocation(fullUser.email, ipAddress, userAgent)
-              : false;
-
-            // Always record this login so future logins from same IP aren't flagged as new
-            await storage.logLoginAttempt({
-              email: fullUser.email,
-              success: true,
-              ipAddress,
-              userAgent,
-            });
-
+          if (fullUser && fullUser.email && (fullUser as any).loginNotifications !== false) {
+            const isNewLocation = await storage.isNewLoginLocation(fullUser.email, ipAddress, userAgent);
             if (isNewLocation) {
               sendGridEmailService.sendLoginNotification({
                 userEmail: fullUser.email,
@@ -249,25 +192,16 @@ export function setupAzureAuth(app: Express): void {
   });
 
   app.get("/auth/azure/logout", (req, res) => {
-    const isGuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(AZURE_TENANT_ID!);
-    const logoutBase = isGuid
-      ? `https://login.microsoftonline.com/${AZURE_TENANT_ID}/oauth2/v2.0/logout`
-      : `https://${AZURE_TENANT_ID}.ciamlogin.com/${AZURE_TENANT_ID}/oauth2/v2.0/logout`;
-    const logoutUri = `${logoutBase}?post_logout_redirect_uri=${encodeURIComponent(getBaseUrl(req) + "/auth")}`;
-
-    // Use Passport's logout to properly clear the user from the session
-    req.logout((logoutErr) => {
-      if (logoutErr) {
-        console.error("[Azure Auth] Passport logout error:", logoutErr);
+    req.session.destroy((err) => {
+      if (err) {
+        console.error("[Azure Auth] Logout error:", err);
       }
-      // Destroy the session entirely and clear the cookie
-      req.session.destroy((destroyErr) => {
-        if (destroyErr) {
-          console.error("[Azure Auth] Session destroy error:", destroyErr);
-        }
-        res.clearCookie("connect.sid", { path: "/" });
-        res.redirect(logoutUri);
-      });
+      const isGuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(AZURE_TENANT_ID!);
+      const logoutBase = isGuid
+        ? `https://login.microsoftonline.com/${AZURE_TENANT_ID}/oauth2/v2.0/logout`
+        : `https://${AZURE_TENANT_ID}.ciamlogin.com/${AZURE_TENANT_ID}/oauth2/v2.0/logout`;
+      const logoutUri = `${logoutBase}?post_logout_redirect_uri=${encodeURIComponent(getBaseUrl(req) + "/auth")}`;
+      res.redirect(logoutUri);
     });
   });
 }
