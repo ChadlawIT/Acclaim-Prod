@@ -61,15 +61,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest("POST", "/api/logout");
+      const res = await apiRequest("POST", "/api/logout");
+      return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.setQueryData(["/api/user"], null);
-      queryClient.clear(); // Clear all cached data on logout
-      toast({
-        title: "Signed out",
-        description: "You have been signed out successfully.",
-      });
+      queryClient.clear();
+      if (data?.azureLogoutUrl) {
+        window.location.href = data.azureLogoutUrl;
+      } else {
+        toast({
+          title: "Signed out",
+          description: "You have been signed out successfully.",
+        });
+      }
     },
     onError: (error: Error) => {
       toast({

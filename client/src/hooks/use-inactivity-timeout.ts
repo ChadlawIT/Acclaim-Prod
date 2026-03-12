@@ -27,7 +27,14 @@ export function useInactivityTimeout({
 
   const handleLogout = useCallback(async () => {
     try {
-      await fetch('/api/logout', { method: 'POST', credentials: 'include' });
+      const res = await fetch('/api/logout', { method: 'POST', credentials: 'include' });
+      const data = await res.json();
+      if (data?.azureLogoutUrl) {
+        warningShownRef.current = false;
+        if (onLogout) onLogout();
+        window.location.href = data.azureLogoutUrl;
+        return;
+      }
     } catch (error) {
       console.error('Error during logout:', error);
     }

@@ -284,8 +284,24 @@ export function setupAuth(app: Express) {
       }
     }
     
+    const loginMethod = (req.session as any).loginMethod;
+    const isGuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(process.env.AZURE_TENANT_ID || '');
+    const tenantId = process.env.AZURE_TENANT_ID;
+
     req.logout((err) => {
       if (err) return next(err);
+
+      if (loginMethod === 'azure' && tenantId) {
+        const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+        const host = req.headers['x-forwarded-host'] || req.headers.host;
+        const postLogoutUri = encodeURIComponent(`${protocol}://${host}/auth`);
+        const logoutBase = isGuid
+          ? `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/logout`
+          : `https://${tenantId}.ciamlogin.com/${tenantId}/oauth2/v2.0/logout`;
+        const azureLogoutUrl = `${logoutBase}?post_logout_redirect_uri=${postLogoutUri}`;
+        return res.json({ message: "Logged out successfully", azureLogoutUrl });
+      }
+
       res.json({ message: "Logged out successfully" });
     });
   });
