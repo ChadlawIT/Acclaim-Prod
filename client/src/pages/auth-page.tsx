@@ -26,15 +26,16 @@ export default function AuthPage() {
     const errorParam = urlParams.get('error');
     if (errorParam) {
       const errorMessages: Record<string, string> = {
-        'azure_login_failed': 'Microsoft sign-in failed. Please try again.',
+        'azure_login_failed': 'Sign-in failed. Please try again.',
+        'invalid_request': 'Sign-in could not be completed. Please try again.',
         'no_code': 'Authentication was cancelled or failed.',
-        'no_account': 'Could not retrieve account information from Microsoft.',
-        'no_email': 'No email address found in your Microsoft account.',
-        'user_not_found': 'Your Microsoft account is not registered with Acclaim. Please contact your administrator.',
+        'no_account': 'Could not retrieve account information.',
+        'no_email': 'No email address was found in your account.',
+        'user_not_found': 'This account is not registered with Acclaim. Please contact your administrator.',
         'session_error': 'Failed to create session. Please try again.',
-        'callback_failed': 'Authentication callback failed. Please try again.',
+        'callback_failed': 'Authentication failed. Please try again.',
       };
-      setError(errorMessages[errorParam] || `Authentication error: ${errorParam}`);
+      setError(errorMessages[errorParam] || 'Sign-in failed. Please try again.');
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
