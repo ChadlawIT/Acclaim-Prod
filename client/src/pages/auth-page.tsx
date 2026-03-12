@@ -1,10 +1,16 @@
 import { useState, useEffect } from "react";
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import { FileText, MessageSquare, TrendingUp, Shield } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import acclaimLogo from "@assets/acclaim_rose_transparent_1768474381340.png";
 
 const MicrosoftIcon = () => (
@@ -16,10 +22,26 @@ const MicrosoftIcon = () => (
   </svg>
 );
 
+const loginSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+  password: z.string().min(1, "Password is required"),
+});
+
+type LoginFormData = z.infer<typeof loginSchema>;
+
 export default function AuthPage() {
   const [, navigate] = useLocation();
-  const { user } = useAuth();
+  const { user, loginMutation } = useAuth();
   const [error, setError] = useState("");
+
+  const { data: azureStatus } = useQuery<{ enabled: boolean; configured: boolean }>({
+    queryKey: ['/api/auth/azure/status'],
+  });
+
+  const form = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: "", password: "" },
+  });
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -48,6 +70,15 @@ export default function AuthPage() {
     window.location.href = '/auth/azure/login';
   };
 
+  const onSubmit = (data: LoginFormData) => {
+    setError("");
+    loginMutation.mutate(data, {
+      onError: (err: any) => {
+        setError(err?.message || "Invalid email or password.");
+      },
+    });
+  };
+
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-gray-50 dark:bg-gray-900">
       {/* Left side - Form */}
@@ -73,7 +104,7 @@ export default function AuthPage() {
           <Card className="shadow-lg border-0">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg">Sign In</CardTitle>
-              <CardDescription>Sign in with your Microsoft account to access the portal.</CardDescription>
+              <CardDescription>Enter your credentials to access the portal.</CardDescription>
             </CardHeader>
             <CardContent>
               {error && (
@@ -82,16 +113,69 @@ export default function AuthPage() {
                 </Alert>
               )}
 
-              <Button
-                type="button"
-                className="w-full h-11 font-medium bg-acclaim-teal hover:bg-acclaim-teal/90"
-                onClick={handleAzureLogin}
-                data-testid="button-azure-login"
-              >
-                <MicrosoftIcon />
-                <span className="ml-2">Sign in with Microsoft</span>
-              </Button>
-              
+              {/* Email/password form */}
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input type="email" placeholder="you@example.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Password</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder="••••••••" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button
+                    type="submit"
+                    className="w-full h-11 font-medium bg-acclaim-teal hover:bg-acclaim-teal/90"
+                    disabled={loginMutation.isPending}
+                  >
+                    {loginMutation.isPending ? "Signing in..." : "Sign In"}
+                  </Button>
+                </form>
+              </Form>
+
+              {/* SSO divider and button */}
+              {azureStatus?.enabled && (
+                <>
+                  <div className="relative my-4">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-white dark:bg-gray-800 px-2 text-muted-foreground">Or</span>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full h-11 font-medium"
+                    onClick={handleAzureLogin}
+                    data-testid="button-azure-login"
+                  >
+                    <MicrosoftIcon />
+                    <span className="ml-2">Sign in with SSO</span>
+                  </Button>
+                </>
+              )}
+
               <div className="mt-6 text-center text-xs text-muted-foreground">Need assistance? Please contact us at email@acclaim.law | 0113 225 8811</div>
               <div className="mt-3 text-center text-xs text-muted-foreground">
                 <Link href="/terms" className="hover:text-primary hover:underline">
@@ -106,6 +190,7 @@ export default function AuthPage() {
           </Card>
         </div>
       </div>
+
       {/* Right side - Feature showcase */}
       <div className="hidden md:flex md:flex-1 bg-gradient-to-br from-teal-700 via-teal-600 to-slate-800 dark:from-slate-900 dark:via-slate-800 dark:to-gray-900 items-center justify-center p-8">
         <div className="max-w-lg text-white">
