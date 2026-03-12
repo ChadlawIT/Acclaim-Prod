@@ -2035,32 +2035,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteUser(userId: string): Promise<void> {
-    // First delete all related data
-    // Delete from user-organisation junction table
+    // Null out FK references on records we want to preserve (messages, documents,
+    // payments, audit logs, case activities, external API credentials)
+    await db.update(messages).set({ senderId: null }).where(eq(messages.senderId, userId));
+    await db.update(documents).set({ uploadedBy: null }).where(eq(documents.uploadedBy, userId));
+    await db.update(payments).set({ recordedBy: null }).where(eq(payments.recordedBy, userId));
+    await db.update(auditLog).set({ userId: null }).where(eq(auditLog.userId, userId));
+    await db.update(externalApiCredentials).set({ createdBy: null }).where(eq(externalApiCredentials.createdBy, userId));
+
+    // Remove organisation memberships
     await db.delete(userOrganisations).where(eq(userOrganisations.userId, userId));
-    
-    // Delete user activity logs
+
+    // Remove user activity/session logs (internal login tracking, not case data)
     await db.delete(userActivityLogs).where(eq(userActivityLogs.userId, userId));
-    
-    // Delete case activities performed by this user
-    await db.delete(caseActivities).where(eq(caseActivities.performedBy, userId));
-    
-    // Delete documents uploaded by this user
-    await db.delete(documents).where(eq(documents.uploadedBy, userId));
-    
-    // Delete messages sent by this user
-    await db.delete(messages).where(eq(messages.senderId, userId));
-    
-    // Delete payments recorded by this user
-    await db.delete(payments).where(eq(payments.recordedBy, userId));
-    
-    // Delete audit logs related to this user
-    await db.delete(auditLog).where(eq(auditLog.userId, userId));
-    
-    // Delete external API credentials created by this user
-    await db.delete(externalApiCredentials).where(eq(externalApiCredentials.createdBy, userId));
-    
-    // Finally delete the user record
+
+    // Remove the user record itself
     await db.delete(users).where(eq(users.id, userId));
   }
 

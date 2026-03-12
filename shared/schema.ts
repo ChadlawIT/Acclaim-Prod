@@ -241,7 +241,7 @@ export const caseActivities = pgTable("case_activities", {
 // Messages table
 export const messages = pgTable("messages", {
   id: serial("id").primaryKey(),
-  senderId: varchar("sender_id").references(() => users.id).notNull(),
+  senderId: varchar("sender_id").references(() => users.id),
   recipientType: varchar("recipient_type", { length: 20 }).notNull(), // 'user' or 'organisation'
   recipientId: varchar("recipient_id").notNull(),
   caseId: integer("case_id").references(() => cases.id),
