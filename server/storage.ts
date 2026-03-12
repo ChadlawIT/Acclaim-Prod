@@ -2035,36 +2035,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteUser(userId: string): Promise<void> {
-    console.log(`[deleteUser] Starting deletion for user: ${userId}`);
-
-    console.log(`[deleteUser] Nulling messages.senderId`);
+    // Null out FK references on records we want to preserve (messages, documents,
+    // payments, audit logs, case activities, external API credentials)
     await db.update(messages).set({ senderId: null }).where(eq(messages.senderId, userId));
-
-    console.log(`[deleteUser] Nulling documents.uploadedBy`);
     await db.update(documents).set({ uploadedBy: null }).where(eq(documents.uploadedBy, userId));
-
-    console.log(`[deleteUser] Nulling payments.recordedBy`);
     await db.update(payments).set({ recordedBy: null }).where(eq(payments.recordedBy, userId));
-
-    console.log(`[deleteUser] Nulling auditLog.userId`);
     await db.update(auditLog).set({ userId: null }).where(eq(auditLog.userId, userId));
-
-    console.log(`[deleteUser] Nulling externalApiCredentials.createdBy`);
     await db.update(externalApiCredentials).set({ createdBy: null }).where(eq(externalApiCredentials.createdBy, userId));
-
-    console.log(`[deleteUser] Nulling caseAccessRestrictions.createdBy`);
     await db.update(caseAccessRestrictions).set({ createdBy: null }).where(eq(caseAccessRestrictions.createdBy, userId));
 
-    console.log(`[deleteUser] Deleting userOrganisations`);
+    // Remove organisation memberships and internal activity logs
     await db.delete(userOrganisations).where(eq(userOrganisations.userId, userId));
-
-    console.log(`[deleteUser] Deleting userActivityLogs`);
     await db.delete(userActivityLogs).where(eq(userActivityLogs.userId, userId));
 
-    console.log(`[deleteUser] Deleting user record`);
+    // Remove the user record itself
     await db.delete(users).where(eq(users.id, userId));
-
-    console.log(`[deleteUser] Deletion complete for user: ${userId}`);
   }
 
   // System monitoring operations
