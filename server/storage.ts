@@ -662,7 +662,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUsersWithOrganisations(): Promise<(User & { organisations: (Organization & { role?: string })[] })[]> {
-    const allUsers = await db.select().from(users).orderBy(users.lastName, users.firstName);
+    const allUsers = await db.select().from(users).where(isNotNull(users.email)).orderBy(users.lastName, users.firstName);
     
     const usersWithOrgs = await Promise.all(
       allUsers.map(async (user) => {
@@ -1750,6 +1750,7 @@ export class DatabaseStorage implements IStorage {
       })
       .from(users)
       .leftJoin(organisations, eq(users.organisationId, organisations.id))
+      .where(isNotNull(users.email))
       .orderBy(users.createdAt);
     
     return result;
@@ -2035,22 +2036,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteUser(userId: string): Promise<void> {
-    // Null out FK references on records we want to preserve (messages, documents,
-    // payments, audit logs, case activities, external API credentials)
-    await db.update(messages).set({ senderId: null }).where(eq(messages.senderId, userId));
-    await db.update(documents).set({ uploadedBy: null }).where(eq(documents.uploadedBy, userId));
-    await db.update(payments).set({ recordedBy: null }).where(eq(payments.recordedBy, userId));
-    await db.update(auditLog).set({ userId: null }).where(eq(auditLog.userId, userId));
-    await db.update(externalApiCredentials).set({ createdBy: null }).where(eq(externalApiCredentials.createdBy, userId));
+    // Anonymise the user record rather than deleting it.
+    // This preserves all case data (messages, documents, payments, case activities,
+    // audit logs) by keeping the user row alive so FK references remain valid.
+    // Setting email to null also prevents login and hides the user from admin lists.
+    await db.update(users).set({
+      email: null,
+      firstName: "Deleted",
+      lastName: "User",
+      phone: null,
+      profileImageUrl: null,
+      hashedPassword: null,
+      tempPassword: null,
+      azureId: null,
+      externalRef: null,
+      isAdmin: false,
+      isSuperAdmin: false,
+    }).where(eq(users.id, userId));
 
     // Remove organisation memberships
     await db.delete(userOrganisations).where(eq(userOrganisations.userId, userId));
 
-    // Remove user activity/session logs (internal login tracking, not case data)
+    // Remove internal login/session tracking logs (not case data)
     await db.delete(userActivityLogs).where(eq(userActivityLogs.userId, userId));
-
-    // Remove the user record itself
-    await db.delete(users).where(eq(users.id, userId));
   }
 
   // System monitoring operations
