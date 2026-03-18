@@ -80,6 +80,7 @@ export function setupAzureAuth(app: Express): void {
       const authCodeUrlParameters: msal.AuthorizationUrlRequest = {
         scopes: ["openid", "profile", "email", "offline_access"],
         redirectUri,
+        prompt: "login",
       };
 
       const authUrl = await client.getAuthCodeUrl(authCodeUrlParameters);
