@@ -937,7 +937,7 @@ Portal: https://acclaim-api.azurewebsites.net/auth
     }
 
     try {
-      const portalUrl = data.portalUrl || 'https://acclaim-api.azurewebsites.net/auth';
+      const portalUrl = data.portalUrl || 'https://acclaim-api-uat-uks-001.azurewebsites.net/';
       const subject = `Welcome to the Acclaim Credit Management & Recovery Portal!`;
 
       const htmlContent = `

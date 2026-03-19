@@ -762,7 +762,7 @@ To manage your notification preferences, visit your Profile settings in the port
             </div>
 
             <div style="text-align: center; margin: 30px 0;">
-              <a href="https://acclaim-api.azurewebsites.net/auth" style="background: #14b8a6; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block; font-weight: bold;">
+              <a href="https://acclaim-api-uat-uks-001.azurewebsites.net/" style="background: #14b8a6; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block; font-weight: bold;">
                 Access the Portal
               </a>
             </div>
@@ -788,7 +788,7 @@ Hello ${data.firstName},
 Your account has been created and you can now access the system to view and manage your cases.
 
 How to sign in for the first time:
-1. Visit https://acclaim-api.azurewebsites.net/auth
+1. Visit https://acclaim-api-uat-uks-001.azurewebsites.net/
 2. Click "Sign in with Microsoft" on the login page.
 3. On the Microsoft page, click "No account? Create one!" and register using this email address.
 4. Once registered, return to the portal and sign in with your Microsoft account.
