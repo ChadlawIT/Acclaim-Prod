@@ -296,6 +296,11 @@ class SendGridEmailService {
       return false;
     }
 
+    if (!payload.to || !payload.to.includes('@')) {
+      console.error(`❌ Invalid recipient email address: "${payload.to}" — email not sent`);
+      return false;
+    }
+
     try {
       const textContent = payload.textContent || payload.text || '';
       const htmlContent = payload.htmlContent || payload.html || '';
