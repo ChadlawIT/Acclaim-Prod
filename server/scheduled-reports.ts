@@ -707,21 +707,6 @@ export async function processScheduledReports(): Promise<void> {
       if (!user || !user.email) continue;
       
       const frequencyLabel = settings.frequency === "daily" ? "Daily" : settings.frequency === "weekly" ? "Weekly" : "Monthly";
-      
-      // Skip users who haven't logged in for the first time (still have temporary password)
-      if (user.mustChangePassword) {
-        console.log(`  Skipping - user ${user.email} has not completed first login`);
-        await storage.logAuditEvent({
-          tableName: 'scheduled_reports',
-          recordId: String(settings.id),
-          operation: 'SKIP',
-          userId: settings.userId,
-          userEmail: user.email,
-          description: `${frequencyLabel} report skipped - user has not completed first login`,
-          newValue: JSON.stringify({ reason: 'user_not_activated', recipient: user.email }),
-        });
-        continue;
-      }
 
       // Check if user's organisations have scheduled reports enabled
       const userOrgs = await storage.getUserOrganisations(settings.userId);

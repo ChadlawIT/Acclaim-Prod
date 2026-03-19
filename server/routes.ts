@@ -1419,6 +1419,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user.isAdmin) {
         // User-to-admin notification - route to case handler's email if available
         // Do NOT notify other users associated with the case - only admin receives user messages
+        console.log(`[MSG Email] User→Admin notification triggered for user ${user.id} (${user.email})`);
         try {
           // Get case reference and details if this is a case-specific message
           let caseReference = undefined;
@@ -1482,6 +1483,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
 
           // Send email notification only to admin email - no other users
+          console.log(`[MSG Email] Calling sendMessageNotification → adminEmail=${adminEmail}, from=${user.email}`);
           await sendGridEmailService.sendMessageNotification(
             {
               userEmail: user.email || '',
@@ -1501,6 +1503,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } else {
         // Admin-to-user notification (new functionality)
+        console.log(`[MSG Email] Admin→User notification triggered by admin ${user.id} (${user.email}), recipientType=${recipientType}, recipientId=${recipientId}`);
         try {
           // If admin is sending to a specific user, notify them
           if (recipientType === 'user') {
@@ -1508,6 +1511,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Check if this case is muted by the user or if user is blocked from the case
             const isCaseMuted = messageData.caseId ? await storage.isCaseMuted(recipientId, messageData.caseId) : false;
             const isBlockedFromCase = messageData.caseId ? await storage.isUserBlockedFromCase(recipientId, messageData.caseId) : false;
+            console.log(`[MSG Email] Recipient check: email=${recipientUser?.email}, isAdmin=${recipientUser?.isAdmin}, emailNotifications=${recipientUser?.emailNotifications}, muted=${isCaseMuted}, blocked=${isBlockedFromCase}`);
             if (recipientUser && recipientUser.email && !recipientUser.isAdmin && recipientUser.emailNotifications !== false && !isCaseMuted && !isBlockedFromCase) {
               // Get organisation name
               let organisationName = "Unknown Organisation";
@@ -1549,6 +1553,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
 
               // Send admin-to-user notification
+              console.log(`[MSG Email] Calling sendAdminToUserNotification → to=${recipientUser.email}`);
               await sendGridEmailService.sendAdminToUserNotification({
                 adminName: `${user.firstName} ${user.lastName}`.trim() || user.email,
                 adminEmail: user.email,
