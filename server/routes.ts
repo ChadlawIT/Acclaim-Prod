@@ -2868,35 +2868,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "Admin user not found" });
       }
 
-      // Determine password to use: passed from request, or stored temporary password
-      const passwordToSend = temporaryPassword || user.temporaryPassword;
-      if (!passwordToSend) {
-        return res.status(400).json({ message: "No temporary password available. Please reset the user's password first." });
-      }
-
       const welcomeEmailData = {
         userEmail: user.email,
         userName: `${user.firstName} ${user.lastName}`,
         firstName: user.firstName,
         lastName: user.lastName,
         username: user.username,
-        temporaryPassword: passwordToSend,
         organisationName: organisation.name,
         adminName: `${admin.firstName} ${admin.lastName}`,
         portalUrl: 'https://acclaim-api.azurewebsites.net/auth'
       };
 
-      const passwordEmailData = {
-        userEmail: user.email,
-        firstName: user.firstName,
-        temporaryPassword: passwordToSend
-      };
-
-      // Send both emails
       let welcomeEmailSent = false;
-      let passwordEmailSent = false;
 
-      // Send welcome email first
       try {
         welcomeEmailSent = await sendGridEmailService.sendWelcomeEmail(welcomeEmailData);
       } catch (error) {
@@ -2907,43 +2891,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         welcomeEmailSent = await emailService.sendWelcomeEmail(welcomeEmailData);
       }
 
-      // Send temporary password email
-      try {
-        passwordEmailSent = await sendGridEmailService.sendTemporaryPasswordEmail(passwordEmailData);
-      } catch (error) {
-        console.error("SendGrid temporary password email failed:", error);
-      }
-
-      if (!passwordEmailSent) {
-        // Fallback to console logging for password email
-        console.log(`[Email] Temporary password email would be sent to ${user.email} with password: ${passwordToSend}`);
-        passwordEmailSent = true; // Consider console logging as success for fallback
-      }
-
-      if (welcomeEmailSent && passwordEmailSent) {
+      if (welcomeEmailSent) {
         res.json({ 
-          message: `Welcome emails sent successfully to ${user.email}`,
+          message: `Welcome email sent successfully to ${user.email}`,
           recipient: {
             name: `${user.firstName} ${user.lastName}`,
             email: user.email,
             organisation: organisation.name
-          },
-          emailsSent: {
-            welcome: true,
-            temporaryPassword: true
-          }
-        });
-      } else if (welcomeEmailSent) {
-        res.json({ 
-          message: `Welcome email sent but temporary password email failed`,
-          partial: true,
-          emailsSent: {
-            welcome: true,
-            temporaryPassword: false
           }
         });
       } else {
-        res.status(500).json({ message: "Failed to send welcome emails" });
+        res.status(500).json({ message: "Failed to send welcome email" });
       }
 
     } catch (error) {

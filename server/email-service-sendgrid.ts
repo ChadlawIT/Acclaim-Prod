@@ -135,7 +135,7 @@ interface WelcomeEmailData {
   firstName: string;
   lastName: string;
   username: string;
-  temporaryPassword: string;
+  temporaryPassword?: string;
   organisationName: string;
   adminName: string;
   portalUrl?: string;
@@ -1007,11 +1007,35 @@ Portal: https://acclaim-api.azurewebsites.net/auth
                         </ul>
                       </div>
 
-                      <!-- Note Card -->
+                      <!-- Sign-up steps -->
                       <div style="background: #e0f7f6; border-radius: 12px; padding: 20px; margin-bottom: 16px;">
-                        <p style="color: #00695c; margin: 0; font-size: 14px; line-height: 1.6;">
-                          <strong>Note:</strong> Your temporary password will be sent in a separate email for security purposes. If you don't receive it within 5 minutes, please check your spam or junk folder.
-                        </p>
+                        <p style="color: #00695c; margin: 0 0 12px 0; font-size: 14px; font-weight: 600;">How to sign in for the first time:</p>
+                        <table role="presentation" cellspacing="0" cellpadding="0" width="100%">
+                          <tr>
+                            <td style="padding: 6px 0; vertical-align: top;">
+                              <span style="display: inline-block; width: 22px; height: 22px; background: #008b8b; color: #fff; border-radius: 50%; text-align: center; font-size: 12px; font-weight: 700; line-height: 22px; margin-right: 10px;">1</span>
+                              <span style="color: #00695c; font-size: 13px;">Click <strong>Access the Portal</strong> above.</span>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style="padding: 6px 0; vertical-align: top;">
+                              <span style="display: inline-block; width: 22px; height: 22px; background: #008b8b; color: #fff; border-radius: 50%; text-align: center; font-size: 12px; font-weight: 700; line-height: 22px; margin-right: 10px;">2</span>
+                              <span style="color: #00695c; font-size: 13px;">Click <strong>"Sign in with Microsoft"</strong> on the login page.</span>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style="padding: 6px 0; vertical-align: top;">
+                              <span style="display: inline-block; width: 22px; height: 22px; background: #008b8b; color: #fff; border-radius: 50%; text-align: center; font-size: 12px; font-weight: 700; line-height: 22px; margin-right: 10px;">3</span>
+                              <span style="color: #00695c; font-size: 13px;">On the Microsoft page, click <strong>"No account? Create one!"</strong> to register using this email address.</span>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style="padding: 6px 0; vertical-align: top;">
+                              <span style="display: inline-block; width: 22px; height: 22px; background: #008b8b; color: #fff; border-radius: 50%; text-align: center; font-size: 12px; font-weight: 700; line-height: 22px; margin-right: 10px;">4</span>
+                              <span style="color: #00695c; font-size: 13px;">Once registered, return to the portal and sign in with your Microsoft account.</span>
+                            </td>
+                          </tr>
+                        </table>
                       </div>
                       
                     </td>
@@ -1039,19 +1063,20 @@ Hello ${data.firstName},
 
 Welcome to the Acclaim Credit Management & Recovery Portal! Your account has been created and you can now access the system to view and manage your cases.
 
-Username: ${data.userEmail}
-
 Access the portal here: ${portalUrl}
+
+How to sign in for the first time:
+
+1. Click the link above to visit the portal.
+2. Click "Sign in with Microsoft" on the login page.
+3. On the Microsoft sign-in page, click "No account? Create one!" and register using this email address.
+4. Once registered, return to the portal and sign in with your Microsoft account.
 
 What you can do in the portal:
 - View and track your cases
 - Send and receive messages with our team
 - Access and download case documents
 - Track payment history
-
-Note: Your temporary password will be sent in a separate email for security purposes.
-
-Important: If you don't receive the password email within 5 minutes, please check your spam or junk folder.
 
 If you have any questions, please contact our support team.
       `;

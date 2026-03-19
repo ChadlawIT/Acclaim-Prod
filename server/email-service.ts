@@ -61,7 +61,7 @@ interface WelcomeEmailData {
   firstName: string;
   lastName: string;
   username: string;
-  temporaryPassword: string;
+  temporaryPassword?: string;
   organisationName: string;
   adminName: string;
 }
@@ -724,7 +724,6 @@ To manage your notification preferences, visit your Profile settings in the port
       console.log(`📧 Welcome email would be sent to: ${data.userEmail}`);
       console.log(`👤 New User: ${data.firstName} ${data.lastName}`);
       console.log(`🔑 Username: ${data.userEmail}`);
-      console.log(`🔐 Temporary Password: ${data.temporaryPassword}`);
       console.log(`⏰ Time: ${new Date().toLocaleString('en-GB')}`);
       console.log('===========================================================\n');
       
@@ -747,41 +746,25 @@ To manage your notification preferences, visit your Profile settings in the port
           
           <div style="padding: 30px;">
             <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-              <h2 style="color: #1e293b; margin-top: 0;">Account Details</h2>
+              <h2 style="color: #1e293b; margin-top: 0;">Your Account is Ready</h2>
               <p style="color: #475569; margin-bottom: 20px;">Hello ${data.firstName},</p>
-              <p style="color: #475569; margin-bottom: 20px;">Welcome to the Acclaim Credit Management & Recovery Portal! Your account has been created and you can now access the system.</p>
-              
-              <table style="width: 100%; border-spacing: 0; margin: 20px 0;">
-                <tr>
-                  <td style="padding: 8px 0; font-weight: bold; color: #475569; width: 140px;">Username:</td>
-                  <td style="padding: 8px 0; color: #1e293b; font-family: monospace; background: #f1f5f9; padding: 4px 8px; border-radius: 4px;">${data.userEmail}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; font-weight: bold; color: #475569;">Temporary Password:</td>
-                  <td style="padding: 8px 0; color: #1e293b; font-family: monospace; background: #f1f5f9; padding: 4px 8px; border-radius: 4px;">${data.temporaryPassword}</td>
-                </tr>
-              </table>
+              <p style="color: #475569; margin-bottom: 20px;">Welcome to the Acclaim Credit Management & Recovery Portal! Your account has been created and you can now access the system to view and manage your cases.</p>
             </div>
 
-            <div style="background: #fef3c7; border: 1px solid #f59e0b; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-              <h3 style="color: #92400e; margin-top: 0; margin-bottom: 10px;">⚠️ Important Security Notice</h3>
-              <p style="color: #92400e; margin: 0; font-size: 14px;">This is a temporary password. You will be required to change it when you first log in for security purposes.</p>
-            </div>
-
-            <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-              <h3 style="color: #1e293b; margin-top: 0;">Getting Started</h3>
-              <ol style="color: #475569; line-height: 1.6; padding-left: 20px;">
-                <li>Visit the Acclaim Portal login page</li>
-                <li>Enter your username and temporary password</li>
-                <li>Create a new secure password when prompted</li>
-                <li>Explore your dashboard and case management tools</li>
+            <div style="background: #e0f7f6; border: 1px solid #14b8a6; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+              <h3 style="color: #0f766e; margin-top: 0; margin-bottom: 10px;">How to sign in for the first time</h3>
+              <ol style="color: #0f766e; line-height: 1.8; padding-left: 20px; margin: 0; font-size: 14px;">
+                <li>Click <strong>Access the Portal</strong> below.</li>
+                <li>Click <strong>"Sign in with Microsoft"</strong> on the login page.</li>
+                <li>On the Microsoft page, click <strong>"No account? Create one!"</strong> and register using this email address.</li>
+                <li>Once registered, return to the portal and sign in with your Microsoft account.</li>
               </ol>
             </div>
 
             <div style="text-align: center; margin: 30px 0;">
-              <div style="background: #14b8a6; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block; font-weight: bold;">
-                Access Portal
-              </div>
+              <a href="https://acclaim-api.azurewebsites.net/auth" style="background: #14b8a6; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block; font-weight: bold;">
+                Access the Portal
+              </a>
             </div>
 
             <div style="background: #f8fafc; padding: 15px; border-radius: 8px; text-align: center;">
@@ -802,19 +785,13 @@ Welcome to the Acclaim Credit Management & Recovery Portal!
 
 Hello ${data.firstName},
 
-Your account has been created and you can now access the system.
+Your account has been created and you can now access the system to view and manage your cases.
 
-Account Details:
-Username: ${data.userEmail}
-Temporary Password: ${data.temporaryPassword}
-
-IMPORTANT: This is a temporary password. You will be required to change it when you first log in.
-
-Getting Started:
-1. Visit the Acclaim Portal login page
-2. Enter your username and temporary password
-3. Create a new secure password when prompted
-4. Explore your dashboard and case management tools
+How to sign in for the first time:
+1. Visit https://acclaim-api.azurewebsites.net/auth
+2. Click "Sign in with Microsoft" on the login page.
+3. On the Microsoft page, click "No account? Create one!" and register using this email address.
+4. Once registered, return to the portal and sign in with your Microsoft account.
 
 If you have any questions, please contact our support team.
       `;
