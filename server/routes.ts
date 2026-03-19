@@ -1575,6 +1575,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const organisationUsers = orgUsers.filter(u => 
               !u.isAdmin && u.email && u.emailNotifications !== false
             );
+            console.log(`[MSG Email] Org lookup: orgId=${recipientId}, totalUsers=${orgUsers.length}, eligibleUsers=${organisationUsers.length}`);
+            if (orgUsers.length > 0 && organisationUsers.length === 0) {
+              console.log(`[MSG Email] All org users were filtered out — reasons: ${orgUsers.map(u => `user=${u.id} isAdmin=${u.isAdmin} hasEmail=${!!u.email} emailNotifs=${u.emailNotifications}`).join(' | ')}`);
+            }
 
             if (organisationUsers.length > 0) {
               // Get organisation name
@@ -1641,6 +1645,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 });
               }
             }
+          } else {
+            console.log(`[MSG Email] Admin→User: no email sent — recipientType="${recipientType}" recipientId="${recipientId}" (expected 'user' or 'organisation')`);
           }
         } catch (emailError) {
           // Log email error but don't fail the message creation
