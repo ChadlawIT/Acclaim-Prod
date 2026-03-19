@@ -11,8 +11,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
 import ExcelJS from "exceljs";
-import jsPDF from "jspdf";
-import "jspdf-autotable";
 
 type DatePreset = "24h" | "3d" | "7d" | "2w" | "1m" | "custom";
 
@@ -91,7 +89,7 @@ export default function MessagesReport() {
   const [customTo, setCustomTo] = useState<string>("");
   const [orgFilter, setOrgFilter] = useState<string>("all");
   const [collapsedCases, setCollapsedCases] = useState<Set<string>>(new Set());
-  const [exporting, setExporting] = useState<"excel" | "pdf" | null>(null);
+  const [exporting, setExporting] = useState<"excel" | null>(null);
 
   const dateRange = useMemo(() => {
     if (preset === "custom") {
@@ -257,103 +255,111 @@ export default function MessagesReport() {
     }
   }
 
-  function downloadPDF() {
+  function openHtml() {
     if (!messages || messages.length === 0) return;
-    setExporting("pdf");
     try {
-      const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+      const printWindow = window.open("", "_blank");
+      if (!printWindow) {
+        toast({ title: "Popup blocked", description: "Please allow popups for this site.", variant: "destructive" });
+        return;
+      }
 
       const rangeLabel = preset === "custom"
         ? `${dateRange.from} to ${dateRange.to}`
         : formatDateLabel(preset);
 
-      doc.setFillColor(0, 139, 139);
-      doc.rect(0, 0, 297, 20, "F");
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text("Acclaim Credit Management & Recovery", 14, 9);
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      doc.text("Messages Report", 14, 16);
-      doc.text(`Period: ${rangeLabel}`, 200, 9);
-      doc.text(`Generated: ${new Date().toLocaleString("en-GB")}`, 200, 16);
+      const groupsHtml = caseGroups.map((group) => {
+        const rowsHtml = group.messages.map((m) => `
+          <tr class="${m.senderIsAdmin ? "outgoing" : "incoming"}">
+            <td>${formatDateTime(m.createdAt)}</td>
+            <td><span class="dir-badge ${m.senderIsAdmin ? "dir-out" : "dir-in"}">${m.senderIsAdmin ? "Outgoing" : "Incoming"}</span></td>
+            <td>${m.senderName}</td>
+            <td>${m.subject || "—"}</td>
+            <td class="msg-content">${m.content.replace(/\n/g, "<br>")}</td>
+            <td>${m.attachmentFileName ? `📎 ${m.attachmentFileName}` : "—"}</td>
+          </tr>`).join("");
 
-      let y = 26;
-
-      caseGroups.forEach((group) => {
-        if (y > 185) {
-          doc.addPage();
-          y = 14;
-        }
-
-        doc.setFillColor(224, 242, 241);
-        doc.rect(10, y, 277, 7, "F");
-        doc.setTextColor(0, 102, 102);
-        doc.setFontSize(9);
-        doc.setFont("helvetica", "bold");
-        const caseLabel = group.caseId
-          ? `Matter: ${group.caseName}${group.accountNumber ? "  |  " + group.accountNumber : ""}${group.organisationName ? "  |  " + group.organisationName : ""}`
+        const caseHeader = group.caseId
+          ? `${group.caseName}${group.accountNumber ? ` &nbsp;·&nbsp; Ref: ${group.accountNumber}` : ""}${group.organisationName ? ` &nbsp;·&nbsp; ${group.organisationName}` : ""}`
           : "General Messages";
-        doc.text(caseLabel, 12, y + 5);
-        y += 9;
 
-        const tableRows = group.messages.map((m) => [
-          formatDateTime(m.createdAt),
-          m.senderIsAdmin ? "Outgoing" : "Incoming",
-          m.senderName,
-          m.subject || "—",
-          m.content.length > 200 ? m.content.substring(0, 200) + "…" : m.content,
-          m.attachmentFileName ? "Yes" : "—",
-        ]);
+        return `
+          <div class="case-block">
+            <div class="case-header">${caseHeader} <span class="msg-count">${group.messages.length} message${group.messages.length !== 1 ? "s" : ""}</span></div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Date &amp; Time</th>
+                  <th>Direction</th>
+                  <th>Sender</th>
+                  <th>Subject</th>
+                  <th>Message</th>
+                  <th>Attachment</th>
+                </tr>
+              </thead>
+              <tbody>${rowsHtml}</tbody>
+            </table>
+          </div>`;
+      }).join("");
 
-        (doc as any).autoTable({
-          startY: y,
-          head: [["Date & Time", "Direction", "Sender", "Subject", "Message", "Attachment"]],
-          body: tableRows,
-          styles: { fontSize: 7.5, cellPadding: 2.5, valign: "top" },
-          headStyles: { fillColor: [0, 139, 139], textColor: 255, fontStyle: "bold" },
-          alternateRowStyles: { fillColor: [248, 250, 252] },
-          columnStyles: {
-            0: { cellWidth: 32 },
-            1: { cellWidth: 20 },
-            2: { cellWidth: 22 },
-            3: { cellWidth: 35 },
-            4: { cellWidth: 145 },
-            5: { cellWidth: 18 },
-          },
-          margin: { left: 10, right: 10 },
-          didParseCell: (data: any) => {
-            if (data.section === "body" && data.column.index === 1) {
-              const val = data.cell.raw as string;
-              data.cell.styles.textColor = val === "Outgoing" ? [0, 102, 102] : [120, 80, 0];
-              data.cell.styles.fontStyle = "bold";
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Messages Report — ${rangeLabel}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; color: #1a1a1a; }
+            .header { margin-bottom: 24px; border-bottom: 2px solid #008b8b; padding-bottom: 12px; }
+            .header h1 { margin: 0 0 4px; font-size: 22px; color: #006666; }
+            .header p { margin: 2px 0; font-size: 12px; color: #666; }
+            .summary { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+            .summary-card { padding: 10px 16px; border: 1px solid #ddd; border-radius: 6px; min-width: 120px; }
+            .summary-card .val { font-size: 20px; font-weight: bold; color: #006666; }
+            .summary-card .lbl { font-size: 11px; color: #666; margin-top: 2px; }
+            .case-block { margin-bottom: 28px; }
+            .case-header { background: #e0f2f1; padding: 8px 12px; font-weight: bold; font-size: 13px; color: #006666; border-radius: 4px 4px 0 0; border: 1px solid #b2dfdb; border-bottom: none; }
+            .msg-count { font-weight: normal; font-size: 11px; color: #555; margin-left: 8px; }
+            table { width: 100%; border-collapse: collapse; font-size: 11px; border: 1px solid #b2dfdb; }
+            th { background: #008b8b; color: #fff; padding: 7px 8px; text-align: left; font-size: 11px; }
+            td { padding: 7px 8px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+            tr.outgoing td { background: #fafffe; }
+            tr.incoming td { background: #fffdf0; }
+            .msg-content { white-space: pre-wrap; max-width: 420px; }
+            .dir-badge { padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: bold; }
+            .dir-out { background: #e0f2f1; color: #006666; }
+            .dir-in { background: #fef3c7; color: #92400e; }
+            .footer { margin-top: 40px; text-align: center; font-size: 11px; color: #999; border-top: 1px solid #eee; padding-top: 12px; }
+            @media print {
+              body { margin: 10px; }
+              .no-print { display: none; }
+              .case-block { page-break-inside: avoid; }
             }
-          },
-        });
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Messages Report</h1>
+            <p>Period: ${rangeLabel}</p>
+            <p>Generated: ${new Date().toLocaleString("en-GB")} &nbsp;·&nbsp; Acclaim Credit Management &amp; Recovery</p>
+          </div>
+          <div class="summary">
+            <div class="summary-card"><div class="val">${totalMessages}</div><div class="lbl">Total Messages</div></div>
+            <div class="summary-card"><div class="val">${totalMatters}</div><div class="lbl">Matters</div></div>
+            <div class="summary-card"><div class="val">${messages.filter(m => m.senderIsAdmin).length}</div><div class="lbl">Outgoing</div></div>
+            <div class="summary-card"><div class="val">${messages.filter(m => !m.senderIsAdmin).length}</div><div class="lbl">Incoming</div></div>
+          </div>
+          ${groupsHtml}
+          <div class="footer">Acclaim Credit Management &amp; Recovery &nbsp;·&nbsp; Confidential &nbsp;·&nbsp; ${rangeLabel}</div>
+        </body>
+        </html>`;
 
-        y = (doc as any).lastAutoTable.finalY + 6;
-      });
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      printWindow.onload = () => printWindow.focus();
 
-      const pageCount = (doc as any).internal.getNumberOfPages();
-      for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.setFontSize(8);
-        doc.setTextColor(150);
-        doc.text(
-          `Page ${i} of ${pageCount}  |  Acclaim Credit Management & Recovery  |  Confidential`,
-          148,
-          207,
-          { align: "center" }
-        );
-      }
-
-      doc.save(`Messages_Report_${dateRange.from}_to_${dateRange.to}.pdf`);
-      toast({ title: "PDF downloaded", description: `${totalMessages} messages exported.` });
+      toast({ title: "Report opened", description: "Opened in a new tab. Use your browser's print function to save as PDF if needed." });
     } catch (err) {
-      toast({ title: "Export failed", variant: "destructive" });
-    } finally {
-      setExporting(null);
+      toast({ title: "Failed to open report", variant: "destructive" });
     }
   }
 
@@ -418,15 +424,11 @@ export default function MessagesReport() {
             <Button
               variant="outline"
               size="sm"
-              onClick={downloadPDF}
+              onClick={openHtml}
               disabled={!canExport || exporting !== null}
             >
-              {exporting === "pdf" ? (
-                <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
-              ) : (
-                <FileText className="h-4 w-4 mr-1" />
-              )}
-              PDF
+              <FileText className="h-4 w-4 mr-1" />
+              HTML
             </Button>
           </div>
         </div>
