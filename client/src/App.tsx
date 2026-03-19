@@ -21,6 +21,7 @@ import MonthlyStatementReport from "@/pages/MonthlyStatementReport";
 import PaymentPerformanceReport from "@/pages/PaymentPerformanceReport";
 import AdminPaymentPerformanceReport from "@/pages/AdminPaymentPerformanceReport";
 import SimpleReports from "@/pages/SimpleReports";
+import MessagesReport from "@/pages/MessagesReport";
 import AuditManagement from "@/pages/AuditManagement";
 import OrgSettings from "@/pages/OrgSettings";
 import PrivacyNotice from "@/pages/PrivacyNotice";
@@ -44,6 +45,7 @@ function Router() {
       <ProtectedRoute path="/monthly-statement-report" component={MonthlyStatementReport} />
       <ProtectedRoute path="/payment-performance-report" component={PaymentPerformanceReport} />
       <ProtectedRoute path="/admin-payment-performance-report" component={AdminPaymentPerformanceReport} />
+      <ProtectedRoute path="/messages-report" component={MessagesReport} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/change-password" component={ChangePasswordPage} />
       <Route path="/privacy" component={PrivacyNotice} />

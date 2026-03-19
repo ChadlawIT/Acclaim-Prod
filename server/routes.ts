@@ -1225,6 +1225,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Messages Report - admin only, date range filtered, grouped by case
+  app.get('/api/admin/messages/report', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { from, to, organisationId } = req.query;
+
+      const allMessages = await storage.getMessagesForUser(userId);
+
+      let filtered = allMessages;
+
+      if (from) {
+        const fromDate = new Date(from as string);
+        if (!isNaN(fromDate.getTime())) {
+          filtered = filtered.filter((m: any) => new Date(m.createdAt) >= fromDate);
+        }
+      }
+      if (to) {
+        const toDate = new Date(to as string);
+        if (!isNaN(toDate.getTime())) {
+          toDate.setHours(23, 59, 59, 999);
+          filtered = filtered.filter((m: any) => new Date(m.createdAt) <= toDate);
+        }
+      }
+      if (organisationId && organisationId !== 'all') {
+        const orgId = parseInt(organisationId as string);
+        filtered = filtered.filter((m: any) => m.caseOrganisationId === orgId);
+      }
+
+      const enriched = filtered.map((m: any) => ({
+        id: m.id,
+        caseId: m.caseId,
+        caseName: m.caseName || null,
+        accountNumber: m.accountNumber || null,
+        organisationName: m.organisationName || null,
+        caseOrganisationId: m.caseOrganisationId || null,
+        subject: m.subject || '',
+        content: m.content,
+        createdAt: m.createdAt,
+        senderName: m.senderIsAdmin ? 'Acclaim' : (m.senderName || m.senderEmail || 'Unknown'),
+        senderIsAdmin: m.senderIsAdmin,
+        hasAttachment: !!m.attachmentFileName,
+        attachmentFileName: m.attachmentFileName || null,
+      }));
+
+      enriched.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+      res.json(enriched);
+    } catch (error) {
+      console.error("Error fetching messages report:", error);
+      res.status(500).json({ message: "Failed to fetch messages report" });
+    }
+  });
+
   app.get('/api/cases/:id/messages', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;

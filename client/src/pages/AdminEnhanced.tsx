@@ -3110,6 +3110,13 @@ export default function AdminEnhanced() {
               <span className="sm:hidden">Recovery</span>
             </Button>
           </Link>
+          <Link href="/messages-report">
+            <Button variant="outline" size="sm">
+              <Mail className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Messages Report</span>
+              <span className="sm:hidden">Messages</span>
+            </Button>
+          </Link>
           {isSuperAdmin && (
             <Link href="/audit-management">
               <Button variant="outline" size="sm">
