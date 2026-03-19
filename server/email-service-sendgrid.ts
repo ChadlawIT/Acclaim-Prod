@@ -262,14 +262,18 @@ class SendGridEmailService {
   }
 
   private initializeService() {
-    // Check for APIM subscription key (required for Azure APIM)
-    if (process.env.APIM_SUBSCRIPTION_KEY) {
+    if (process.env.APIM_SUBSCRIPTION_KEY || process.env.SENDGRID_API_KEY) {
       this.initialized = true;
-      console.log('✅ SendGrid Email Service: REAL email delivery enabled via Azure APIM');
-      console.log('📧 Emails will be delivered to actual inboxes through APIM');
+      if (process.env.APIM_SUBSCRIPTION_KEY) {
+        console.log('✅ SendGrid Email Service: REAL email delivery enabled via Azure APIM');
+        console.log('📧 Emails will be delivered to actual inboxes through APIM');
+      } else {
+        console.log('✅ SendGrid Email Service: REAL email delivery enabled via SendGrid API directly');
+        console.log('📧 Emails will be delivered to actual inboxes through SendGrid');
+      }
     } else {
       this.initialized = false;
-      console.log('❌ APIM_SUBSCRIPTION_KEY not found - emails will not be sent');
+      console.log('❌ Neither APIM_SUBSCRIPTION_KEY nor SENDGRID_API_KEY found - emails will not be sent');
     }
   }
 
@@ -347,29 +351,60 @@ class SendGridEmailService {
         console.log(`📧 Sending email with ${payload.bcc.length} BCC recipient(s)`);
       }
 
-      console.log(`📤 Sending email via APIM to: ${payload.to} | Subject: ${payload.subject}`);
+      // Try APIM first (Azure-hosted environments)
+      if (process.env.APIM_SUBSCRIPTION_KEY) {
+        try {
+          console.log(`📤 Sending email via APIM to: ${payload.to} | Subject: ${payload.subject}`);
+          const apimResponse = await fetch(APIM_ENDPOINT, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Ocp-Apim-Subscription-Key': process.env.APIM_SUBSCRIPTION_KEY
+            },
+            body: JSON.stringify(emailPayload)
+          });
 
-      const response = await fetch(APIM_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Ocp-Apim-Subscription-Key': process.env.APIM_SUBSCRIPTION_KEY!
-        },
-        body: JSON.stringify(emailPayload)
-      });
+          const apimResponseText = await apimResponse.text();
+          console.log(`📬 APIM response: status=${apimResponse.status} ok=${apimResponse.ok} body=${apimResponseText.substring(0, 200)}`);
 
-      const responseText = await response.text();
-      console.log(`📬 APIM response: status=${response.status} ok=${response.ok} body=${responseText.substring(0, 200)}`);
-
-      if (response.ok || response.status === 202) {
-        console.log(`✅ REAL EMAIL SENT via Azure APIM to: ${payload.to}`);
-        return true;
-      } else {
-        console.error(`❌ APIM email failed with status ${response.status}: ${responseText}`);
-        return false;
+          if (apimResponse.ok || apimResponse.status === 202) {
+            console.log(`✅ EMAIL SENT via Azure APIM to: ${payload.to}`);
+            return true;
+          }
+          console.warn(`⚠️ APIM returned ${apimResponse.status} — falling back to direct SendGrid API`);
+        } catch (apimError) {
+          console.warn(`⚠️ APIM unreachable (${(apimError as any)?.cause?.code || apimError}) — falling back to direct SendGrid API`);
+        }
       }
+
+      // Fall back to direct SendGrid API (Replit dev environment or APIM unavailable)
+      if (process.env.SENDGRID_API_KEY) {
+        console.log(`📤 Sending email via SendGrid API directly to: ${payload.to} | Subject: ${payload.subject}`);
+        const sgResponse = await fetch('https://api.sendgrid.com/v3/mail/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.SENDGRID_API_KEY}`
+          },
+          body: JSON.stringify(emailPayload)
+        });
+
+        const sgResponseText = await sgResponse.text();
+        console.log(`📬 SendGrid API response: status=${sgResponse.status} ok=${sgResponse.ok} body=${sgResponseText.substring(0, 200)}`);
+
+        if (sgResponse.ok || sgResponse.status === 202) {
+          console.log(`✅ EMAIL SENT via SendGrid API directly to: ${payload.to}`);
+          return true;
+        } else {
+          console.error(`❌ SendGrid API failed with status ${sgResponse.status}: ${sgResponseText}`);
+          return false;
+        }
+      }
+
+      console.error('❌ No working email transport available (APIM unreachable, no SENDGRID_API_KEY)');
+      return false;
     } catch (error) {
-      console.error('❌ APIM email sending failed (network/exception):', error);
+      console.error('❌ Email sending failed (unhandled exception):', error);
       return false;
     }
   }
