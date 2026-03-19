@@ -1505,11 +1505,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // If admin is sending to a specific user, notify them
           if (recipientType === 'user') {
             const recipientUser = await storage.getUser(recipientId);
-            // Only send emails to users who have logged in (mustChangePassword = false) and have notifications enabled
-            // Also check if this case is muted by the user or if user is blocked from the case
+            // Check if this case is muted by the user or if user is blocked from the case
             const isCaseMuted = messageData.caseId ? await storage.isCaseMuted(recipientId, messageData.caseId) : false;
             const isBlockedFromCase = messageData.caseId ? await storage.isUserBlockedFromCase(recipientId, messageData.caseId) : false;
-            if (recipientUser && recipientUser.email && !recipientUser.isAdmin && recipientUser.emailNotifications !== false && !recipientUser.mustChangePassword && !isCaseMuted && !isBlockedFromCase) {
+            if (recipientUser && recipientUser.email && !recipientUser.isAdmin && recipientUser.emailNotifications !== false && !isCaseMuted && !isBlockedFromCase) {
               // Get organisation name
               let organisationName = "Unknown Organisation";
               if (recipientUser.organisationId) {
@@ -1567,9 +1566,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Admin sending to organisation - notify all non-admin users in that organisation
             // Use getUsersByOrganisationId which properly checks both legacy organisationId and junction table
             const orgUsers = await storage.getUsersByOrganisationId(parseInt(recipientId));
-            // Only send emails to users who have logged in (mustChangePassword = false) and have notifications enabled
+            // Filter to non-admin users with email and notifications enabled
             const organisationUsers = orgUsers.filter(u => 
-              !u.isAdmin && u.email && u.emailNotifications !== false && !u.mustChangePassword
+              !u.isAdmin && u.email && u.emailNotifications !== false
             );
 
             if (organisationUsers.length > 0) {
@@ -4635,7 +4634,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get all recipient users
       const allUsers = await storage.getAllUsers();
-      const recipients = allUsers.filter(u => recipientIds.includes(u.id) && u.email && !u.mustChangePassword);
+      const recipients = allUsers.filter(u => recipientIds.includes(u.id) && u.email);
       
       if (recipients.length === 0) {
         return res.status(400).json({ message: "No valid recipients found" });
@@ -5080,8 +5079,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               continue;
             }
             
-            // Check user's email notification preferences and that they have logged in at least once
-            if (user.emailNotifications && user.email && !user.mustChangePassword) {
+            // Check user's email notification preferences
+            if (user.emailNotifications && user.email) {
               try {
                 // Send email notification to user via SendGrid (for real delivery)
                 const emailSent = await sendGridEmailService.sendExternalMessageNotification({
