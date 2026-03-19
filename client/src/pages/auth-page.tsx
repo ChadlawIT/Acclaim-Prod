@@ -21,6 +21,34 @@ export default function AuthPage() {
   const { user } = useAuth();
   const [error, setError] = useState("");
   const [showFirstTimeGuide, setShowFirstTimeGuide] = useState(false);
+  const [devEmail, setDevEmail] = useState("");
+  const [devLoading, setDevLoading] = useState(false);
+  const [devError, setDevError] = useState("");
+  const isDev = import.meta.env.DEV;
+
+  const handleDevLogin = async () => {
+    if (!devEmail.trim()) return;
+    setDevLoading(true);
+    setDevError("");
+    try {
+      const res = await fetch("/auth/dev-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: devEmail.trim() }),
+        credentials: "include",
+      });
+      if (res.ok) {
+        window.location.href = "/";
+      } else {
+        const data = await res.json();
+        setDevError(data.message || "Login failed");
+      }
+    } catch {
+      setDevError("Network error");
+    } finally {
+      setDevLoading(false);
+    }
+  };
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -106,6 +134,35 @@ export default function AuthPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Dev-only bypass login — never shown in production */}
+          {isDev && (
+            <div className="mt-4 p-4 rounded-lg border-2 border-dashed border-amber-400 bg-amber-50 dark:bg-amber-900/20">
+              <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-2 uppercase tracking-wide">
+                Dev Login (Replit only — not shown in production)
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  placeholder="Enter user email to log in as..."
+                  value={devEmail}
+                  onChange={e => setDevEmail(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && handleDevLogin()}
+                  className="flex-1 px-3 py-2 text-sm border border-amber-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white dark:bg-gray-800"
+                />
+                <Button
+                  onClick={handleDevLogin}
+                  disabled={devLoading || !devEmail.trim()}
+                  className="text-sm bg-amber-500 hover:bg-amber-600 text-white px-3"
+                >
+                  {devLoading ? "..." : "Go"}
+                </Button>
+              </div>
+              {devError && (
+                <p className="mt-1 text-xs text-red-600">{devError}</p>
+              )}
+            </div>
+          )}
 
           {/* First time guidance */}
           <div className="mt-4">

@@ -198,6 +198,46 @@ export function setupAzureAuth(app: Express): void {
     }
   });
 
+  // ── DEV-ONLY bypass login ──────────────────────────────────────────────────
+  // Simulates a successful SSO callback without hitting Azure.
+  // Completely disabled in production.
+  if (process.env.NODE_ENV === 'development') {
+    app.post("/auth/dev-login", async (req, res) => {
+      try {
+        const { email } = req.body;
+        if (!email) {
+          return res.status(400).json({ message: "Email is required" });
+        }
+
+        const user = await storage.getUserByEmail(email.toLowerCase().trim());
+        if (!user) {
+          return res.status(404).json({ message: `No user found with email: ${email}` });
+        }
+
+        // Clear mustChangePassword just as the real SSO callback does
+        if (user.mustChangePassword) {
+          await storage.updateUserPassword(user.id, { mustChangePassword: false });
+        }
+
+        (req.session as any).passport = { user: user.id };
+        (req.session as any).loginMethod = 'azure-dev-bypass';
+
+        req.session.save((err) => {
+          if (err) {
+            console.error("[Dev Login] Session save error:", err);
+            return res.status(500).json({ message: "Session error" });
+          }
+          console.log(`[Dev Login] ✅ Logged in as ${user.email} (id=${user.id}, isAdmin=${user.isAdmin})`);
+          res.json({ ok: true, userId: user.id, email: user.email, isAdmin: user.isAdmin });
+        });
+      } catch (error) {
+        console.error("[Dev Login] Error:", error);
+        res.status(500).json({ message: "Dev login failed" });
+      }
+    });
+  }
+  // ──────────────────────────────────────────────────────────────────────────
+
   app.get("/auth/azure/logout", (req, res) => {
     req.session.destroy((err) => {
       if (err) {
