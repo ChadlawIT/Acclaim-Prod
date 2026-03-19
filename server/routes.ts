@@ -1225,8 +1225,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Messages Report - admin only, date range filtered, grouped by case
-  app.get('/api/admin/messages/report', isAuthenticated, isAdmin, async (req: any, res) => {
+  // Messages Report - all authenticated users, date range filtered, grouped by case
+  app.get('/api/messages/report', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { from, to, organisationId } = req.query;

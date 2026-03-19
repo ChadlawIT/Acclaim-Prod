@@ -106,19 +106,26 @@ export default function MessagesReport() {
   if (orgFilter !== "all") queryParams.set("organisationId", orgFilter);
 
   const { data: messages, isLoading, refetch, isFetching } = useQuery<ReportMessage[]>({
-    queryKey: ["/api/admin/messages/report", dateRange.from, dateRange.to, orgFilter],
+    queryKey: ["/api/messages/report", dateRange.from, dateRange.to, orgFilter],
     queryFn: async () => {
-      const res = await fetch(`/api/admin/messages/report?${queryParams.toString()}`);
+      const res = await fetch(`/api/messages/report?${queryParams.toString()}`);
       if (!res.ok) throw new Error("Failed to load messages");
       return res.json();
     },
     enabled: !!(dateRange.from && dateRange.to),
   });
 
-  const { data: organisations } = useQuery<any[]>({
+  const { data: adminOrgs } = useQuery<any[]>({
     queryKey: ["/api/admin/organisations"],
     enabled: user?.isAdmin === true,
   });
+
+  const { data: userOrgs } = useQuery<any[]>({
+    queryKey: ["/api/user/organisations"],
+    enabled: user?.isAdmin !== true,
+  });
+
+  const organisations = user?.isAdmin ? adminOrgs : userOrgs;
 
   const caseGroups = useMemo<CaseGroup[]>(() => {
     if (!messages) return [];
@@ -478,7 +485,7 @@ export default function MessagesReport() {
             )}
 
             {/* Organisation Filter */}
-            {organisations && organisations.length > 0 && (
+            {organisations && (user?.isAdmin ? organisations.length > 0 : organisations.length > 1) && (
               <div className="space-y-1">
                 <Label className="text-xs text-gray-500">Organisation</Label>
                 <Select value={orgFilter} onValueChange={setOrgFilter}>

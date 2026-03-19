@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BarChart3, FileText, TrendingUp, PieChart, CreditCard, Calendar, PoundSterling, Building2, Filter } from "lucide-react";
+import { BarChart3, FileText, TrendingUp, PieChart, CreditCard, Calendar, PoundSterling, Building2, Filter, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -145,6 +145,8 @@ export default function Reports() {
     } else if (reportType === "Payment Performance") {
       // Navigate to payment performance report page
       window.location.href = '/payment-performance-report';
+    } else if (reportType === "Messages Report") {
+      window.location.href = '/messages-report';
     } else {
       toast({
         title: "Report View",
@@ -401,7 +403,7 @@ export default function Reports() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="p-4 border rounded-lg">
               <div className="flex items-center justify-between mb-3">
                 <div>
@@ -449,6 +451,24 @@ export default function Reports() {
                 onClick={() => handleViewReport("Monthly Statement")}
                 variant="outline"
                 className="w-full border-purple-500 text-purple-600 hover:bg-purple-50"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                View Report
+              </Button>
+            </div>
+
+            <div className="p-4 border rounded-lg">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h4 className="font-medium">Messages Report</h4>
+                  <p className="text-sm text-gray-600">Messages grouped by matter</p>
+                </div>
+                <MessageSquare className="h-8 w-8 text-teal-600" />
+              </div>
+              <Button 
+                onClick={() => handleViewReport("Messages Report")}
+                variant="outline"
+                className="w-full border-teal-500 text-teal-600 hover:bg-teal-50"
               >
                 <FileText className="h-4 w-4 mr-2" />
                 View Report
