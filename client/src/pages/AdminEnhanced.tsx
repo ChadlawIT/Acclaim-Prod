@@ -3080,7 +3080,7 @@ export default function AdminEnhanced() {
       <div className="space-y-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold">Admin Panel</h1>
-          <p className="text-gray-600 text-sm sm:text-base">Comprehensive user and organisation management</p>
+          <p className="text-gray-600 text-sm sm:text-base">Comprehensive user and organisation management.</p>
         </div>
         <div className="flex flex-wrap gap-2 sm:items-center">
           <Link href="/">
