@@ -150,6 +150,11 @@ export function setupAzureAuth(app: Express): void {
         await storage.linkAzureAccount(user.id, azureId);
       }
 
+      // SSO users don't have an Acclaim password — clear the change-password flag
+      if (user.mustChangePassword) {
+        await storage.updateUserPassword(user.id, { mustChangePassword: false });
+      }
+
       (req.session as any).passport = { user: user.id };
       (req.session as any).loginMethod = 'azure';
       (req.session as any).azureIdToken = response.idToken;
