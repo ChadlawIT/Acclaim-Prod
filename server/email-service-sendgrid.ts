@@ -347,6 +347,8 @@ class SendGridEmailService {
         console.log(`📧 Sending email with ${payload.bcc.length} BCC recipient(s)`);
       }
 
+      console.log(`📤 Sending email via APIM to: ${payload.to} | Subject: ${payload.subject}`);
+
       const response = await fetch(APIM_ENDPOINT, {
         method: 'POST',
         headers: {
@@ -356,17 +358,18 @@ class SendGridEmailService {
         body: JSON.stringify(emailPayload)
       });
 
+      const responseText = await response.text();
+      console.log(`📬 APIM response: status=${response.status} ok=${response.ok} body=${responseText.substring(0, 200)}`);
+
       if (response.ok || response.status === 202) {
         console.log(`✅ REAL EMAIL SENT via Azure APIM to: ${payload.to}`);
-        console.log(`📧 Subject: ${payload.subject}`);
         return true;
       } else {
-        const errorText = await response.text();
-        console.error(`❌ APIM email failed with status ${response.status}:`, errorText);
+        console.error(`❌ APIM email failed with status ${response.status}: ${responseText}`);
         return false;
       }
     } catch (error) {
-      console.error('❌ APIM email sending failed:', error);
+      console.error('❌ APIM email sending failed (network/exception):', error);
       return false;
     }
   }

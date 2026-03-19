@@ -2859,10 +2859,18 @@ export default function AdminEnhanced() {
       return await response.json();
     },
     onSuccess: (data) => {
-      toast({
-        title: "Welcome Email Sent",
-        description: data.message,
-      });
+      if (data.emailSent) {
+        toast({
+          title: "Welcome Email Sent",
+          description: data.message,
+        });
+      } else {
+        toast({
+          title: "Email Not Delivered",
+          description: `The welcome email could not be delivered to ${data.recipient?.email || 'the user'}. Please check the server logs or try again shortly.`,
+          variant: "destructive",
+        });
+      }
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
@@ -2942,14 +2950,22 @@ export default function AdminEnhanced() {
       });
       const result = await response.json();
       
-      toast({
-        title: "Success",
-        description: result.message || "Welcome emails sent successfully",
-      });
+      if (result.emailSent) {
+        toast({
+          title: "Welcome Email Sent",
+          description: result.message || "Welcome email sent successfully",
+        });
+      } else {
+        toast({
+          title: "Email Not Delivered",
+          description: `The welcome email could not be delivered to ${result.recipient?.email || 'the user'}. Please check the server logs or try again shortly.`,
+          variant: "destructive",
+        });
+      }
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to send welcome emails",
+        description: error.message || "Failed to send welcome email",
         variant: "destructive",
       });
     } finally {
