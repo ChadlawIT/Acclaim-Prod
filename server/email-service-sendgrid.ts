@@ -3075,23 +3075,54 @@ The Acclaim Team
       attachments: attachments
     };
 
-    const response = await fetch(APIM_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Ocp-Apim-Subscription-Key': APIM_KEY
-      },
-      body: JSON.stringify(emailPayload)
-    });
+    try {
+      console.log(`[ScheduledReport] Sending ${frequencyText} report via APIM to: ${recipientEmail}`);
+      const apimResponse = await fetch(APIM_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Ocp-Apim-Subscription-Key': APIM_KEY
+        },
+        body: JSON.stringify(emailPayload)
+      });
 
-    if (response.ok || response.status === 202) {
-      console.log(`[ScheduledReport] Successfully sent ${frequencyText} report to ${recipientEmail}`);
-      return true;
-    } else {
-      const errorText = await response.text();
-      console.error(`[ScheduledReport] Failed to send report: ${response.status} - ${errorText}`);
+      const apimResponseText = await apimResponse.text();
+      console.log(`[ScheduledReport] APIM response: status=${apimResponse.status} body=${apimResponseText.substring(0, 200)}`);
+
+      if (apimResponse.ok || apimResponse.status === 202) {
+        console.log(`[ScheduledReport] Successfully sent ${frequencyText} report via APIM to: ${recipientEmail}`);
+        return true;
+      }
+      console.warn(`[ScheduledReport] APIM returned ${apimResponse.status} — falling back to direct SendGrid`);
+    } catch (apimError) {
+      console.warn(`[ScheduledReport] APIM unreachable (${(apimError as any)?.cause?.code || apimError}) — falling back to direct SendGrid`);
+    }
+
+    // Fallback to direct SendGrid API
+    if (process.env.SENDGRID_API_KEY) {
+      console.log(`[ScheduledReport] Sending ${frequencyText} report via SendGrid directly to: ${recipientEmail}`);
+      const sgResponse = await fetch('https://api.sendgrid.com/v3/mail/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.SENDGRID_API_KEY}`
+        },
+        body: JSON.stringify(emailPayload)
+      });
+
+      const sgResponseText = await sgResponse.text();
+      console.log(`[ScheduledReport] SendGrid response: status=${sgResponse.status} body=${sgResponseText.substring(0, 200)}`);
+
+      if (sgResponse.ok || sgResponse.status === 202) {
+        console.log(`[ScheduledReport] Successfully sent ${frequencyText} report via SendGrid to: ${recipientEmail}`);
+        return true;
+      }
+      console.error(`[ScheduledReport] SendGrid also failed: ${sgResponse.status} - ${sgResponseText}`);
       return false;
     }
+
+    console.error('[ScheduledReport] No working email transport — APIM failed and no SENDGRID_API_KEY set');
+    return false;
   } catch (error) {
     console.error('[ScheduledReport] Error sending scheduled report email:', error);
     return false;
