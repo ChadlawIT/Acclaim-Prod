@@ -173,15 +173,12 @@ export default function MessagesReport() {
       const ws = wb.addWorksheet("Messages Report");
 
       ws.columns = [
-        { header: "Date & Time", key: "date", width: 22 },
-        { header: "Matter Name", key: "caseName", width: 30 },
+        { header: "Date & Time", key: "date", width: 20 },
+        { header: "Case Name", key: "caseName", width: 28 },
         { header: "Account Number", key: "accountNumber", width: 18 },
-        { header: "Organisation", key: "organisation", width: 24 },
-        { header: "Subject", key: "subject", width: 30 },
-        { header: "Sender", key: "sender", width: 18 },
-        { header: "Direction", key: "direction", width: 14 },
-        { header: "Message", key: "content", width: 55 },
-        { header: "Attachment", key: "attachment", width: 20 },
+        { header: "Subject", key: "subject", width: 35 },
+        { header: "From", key: "senderName", width: 18 },
+        { header: "Message", key: "content", width: 50 },
       ];
 
       const headerRow = ws.getRow(1);
@@ -195,8 +192,7 @@ export default function MessagesReport() {
           "",
           group.caseId ? `Matter: ${group.caseName}` : "General Messages",
           group.accountNumber,
-          group.organisationName,
-          "", "", "", "", "",
+          "", "", "",
         ]);
         groupHeaderRow.font = { bold: true, italic: true, color: { argb: "FF006666" } };
         groupHeaderRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE0F2F1" } };
@@ -207,12 +203,9 @@ export default function MessagesReport() {
             date: formatDateTime(m.createdAt),
             caseName: group.caseName,
             accountNumber: group.accountNumber,
-            organisation: group.organisationName,
             subject: m.subject,
-            sender: m.senderName,
-            direction: m.senderIsAdmin ? "Outgoing" : "Incoming",
+            senderName: m.senderName,
             content: m.content,
-            attachment: m.attachmentFileName || "",
           });
           row.alignment = { wrapText: true, vertical: "top" };
           row.fill = {
@@ -270,17 +263,15 @@ export default function MessagesReport() {
 
       const groupsHtml = caseGroups.map((group) => {
         const rowsHtml = group.messages.map((m) => `
-          <tr class="${m.senderIsAdmin ? "outgoing" : "incoming"}">
+          <tr>
             <td>${formatDateTime(m.createdAt)}</td>
-            <td><span class="dir-badge ${m.senderIsAdmin ? "dir-out" : "dir-in"}">${m.senderIsAdmin ? "Outgoing" : "Incoming"}</span></td>
+            <td>${m.subject || ""}</td>
             <td>${m.senderName}</td>
-            <td>${m.subject || "—"}</td>
             <td class="msg-content">${m.content.replace(/\n/g, "<br>")}</td>
-            <td>${m.attachmentFileName ? `📎 ${m.attachmentFileName}` : "—"}</td>
           </tr>`).join("");
 
         const caseHeader = group.caseId
-          ? `${group.caseName}${group.accountNumber ? ` &nbsp;·&nbsp; Ref: ${group.accountNumber}` : ""}${group.organisationName ? ` &nbsp;·&nbsp; ${group.organisationName}` : ""}`
+          ? `${group.caseName}${group.accountNumber ? ` (${group.accountNumber})` : ""}${group.organisationName ? ` &nbsp;·&nbsp; ${group.organisationName}` : ""}`
           : "General Messages";
 
         return `
@@ -290,11 +281,9 @@ export default function MessagesReport() {
               <thead>
                 <tr>
                   <th>Date &amp; Time</th>
-                  <th>Direction</th>
-                  <th>Sender</th>
                   <th>Subject</th>
+                  <th>From</th>
                   <th>Message</th>
-                  <th>Attachment</th>
                 </tr>
               </thead>
               <tbody>${rowsHtml}</tbody>
