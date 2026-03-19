@@ -710,7 +710,14 @@ export async function processScheduledReports(): Promise<void> {
       // Check if user's organisations have scheduled reports enabled
       const userOrgs = await storage.getUserOrganisations(settings.userId);
       const disabledOrgIds = await storage.getOrganisationsWithScheduledReportsDisabled();
-      const allOrgsDisabled = userOrgs.every(org => disabledOrgIds.includes(org.id));
+
+      // Build complete set of org IDs: junction table + legacy organisationId field on user record
+      const allUserOrgIds = new Set<number>(userOrgs.map(org => org.organisationId));
+      if (user.organisationId) allUserOrgIds.add(user.organisationId);
+
+      // Only skip if the user HAS at least one org AND every one of them has scheduled reports disabled
+      // (guard against empty-array vacuous truth: [].every(...) === true)
+      const allOrgsDisabled = allUserOrgIds.size > 0 && [...allUserOrgIds].every(id => disabledOrgIds.includes(id));
       
       if (allOrgsDisabled) {
         console.log(`  Skipping - scheduled reports disabled for all user's organisations`);
