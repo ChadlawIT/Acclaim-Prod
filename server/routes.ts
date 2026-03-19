@@ -2883,26 +2883,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       try {
         welcomeEmailSent = await sendGridEmailService.sendWelcomeEmail(welcomeEmailData);
+        if (!welcomeEmailSent) {
+          console.error(`[Welcome Email] SendGrid/APIM returned false for ${user.email} - trying fallback`);
+        }
       } catch (error) {
-        console.error("SendGrid welcome email failed:", error);
+        console.error(`[Welcome Email] SendGrid threw an error for ${user.email}:`, error);
       }
 
       if (!welcomeEmailSent) {
-        welcomeEmailSent = await emailService.sendWelcomeEmail(welcomeEmailData);
+        try {
+          welcomeEmailSent = await emailService.sendWelcomeEmail(welcomeEmailData);
+        } catch (error) {
+          console.error(`[Welcome Email] Fallback email service also failed for ${user.email}:`, error);
+          welcomeEmailSent = false;
+        }
       }
 
-      if (welcomeEmailSent) {
-        res.json({ 
-          message: `Welcome email sent successfully to ${user.email}`,
-          recipient: {
-            name: `${user.firstName} ${user.lastName}`,
-            email: user.email,
-            organisation: organisation.name
-          }
-        });
-      } else {
-        res.status(500).json({ message: "Failed to send welcome email" });
+      // Always return success — log the failure but don't block the admin
+      if (!welcomeEmailSent) {
+        console.error(`[Welcome Email] All email attempts failed for ${user.email}`);
       }
+
+      res.json({ 
+        message: welcomeEmailSent
+          ? `Welcome email sent successfully to ${user.email}`
+          : `Account created but welcome email could not be delivered to ${user.email}. Please check server logs.`,
+        recipient: {
+          name: `${user.firstName} ${user.lastName}`,
+          email: user.email,
+          organisation: organisation.name
+        },
+        emailSent: welcomeEmailSent
+      });
 
     } catch (error) {
       console.error("Error sending welcome emails:", error);
