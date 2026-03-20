@@ -228,23 +228,7 @@ export function setupAuth(app: Express) {
             userAgent,
           });
           
-          // Send login notification email if user has it enabled and it's a new IP
-          const fullUser = await storage.getUser(user.id);
-          if (fullUser && fullUser.email && (fullUser as any).loginNotifications !== false) {
-            const isNewLocation = await storage.isNewLoginLocation(fullUser.email, ipAddress, userAgent);
-            if (isNewLocation) {
-              sendGridEmailService.sendLoginNotification({
-                userEmail: fullUser.email,
-                userName: `${fullUser.firstName || ''} ${fullUser.lastName || ''}`.trim() || 'User',
-                loginTime: new Date(),
-                ipAddress: ipAddress,
-                userAgent: userAgent,
-                loginMethod: 'password'
-              }).catch(err => {
-                console.error('Failed to send login notification:', err);
-              });
-            }
-          }
+          // Login notification emails disabled
         } catch (logErr) {
           console.error('Failed to record login attempt:', logErr);
         }
