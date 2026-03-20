@@ -704,6 +704,10 @@ export async function processScheduledReports(): Promise<void> {
     try {
       const user = await storage.getUser(settings.userId);
       if (!user || !user.email) continue;
+      if (!user.hasLoggedIn) {
+        console.log(`  Skipping - user ${settings.userId} has never logged in`);
+        continue;
+      }
       
       const frequencyLabel = settings.frequency === "daily" ? "Daily" : settings.frequency === "weekly" ? "Weekly" : "Monthly";
 
