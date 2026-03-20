@@ -162,6 +162,10 @@ export default function MessagesReport() {
   const totalMessages = messages?.length ?? 0;
   const totalMatters = caseGroups.filter((g) => g.caseId != null).length;
 
+  // Direction is viewer-relative: outgoing means "sent by the viewer's side"
+  const isOutgoing = (msg: ReportMessage) =>
+    user?.isAdmin ? msg.senderIsAdmin : !msg.senderIsAdmin;
+
   async function downloadExcel() {
     if (!messages || messages.length === 0) return;
     setExporting("excel");
@@ -334,8 +338,8 @@ export default function MessagesReport() {
           <div class="summary">
             <div class="summary-card"><div class="val">${totalMessages}</div><div class="lbl">Total Messages</div></div>
             <div class="summary-card"><div class="val">${totalMatters}</div><div class="lbl">Matters</div></div>
-            <div class="summary-card"><div class="val">${messages.filter(m => m.senderIsAdmin).length}</div><div class="lbl">Outgoing</div></div>
-            <div class="summary-card"><div class="val">${messages.filter(m => !m.senderIsAdmin).length}</div><div class="lbl">Incoming</div></div>
+            <div class="summary-card"><div class="val">${messages.filter(m => isOutgoing(m)).length}</div><div class="lbl">${user?.isAdmin ? "Outgoing (Acclaim)" : "Sent by You"}</div></div>
+            <div class="summary-card"><div class="val">${messages.filter(m => !isOutgoing(m)).length}</div><div class="lbl">${user?.isAdmin ? "Incoming (Client)" : "From Acclaim"}</div></div>
           </div>
           ${groupsHtml}
           <div class="footer">Acclaim Credit Management &amp; Recovery &nbsp;·&nbsp; Confidential &nbsp;·&nbsp; ${rangeLabel}</div>
@@ -370,7 +374,7 @@ export default function MessagesReport() {
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
-            <Link href="/admin">
+            <Link href="/reports">
               <Button variant="outline" size="sm">
                 <ArrowLeft className="h-4 w-4 mr-1" />
                 Back
@@ -516,17 +520,21 @@ export default function MessagesReport() {
             <Card>
               <CardContent className="pt-5">
                 <div className="text-2xl font-bold text-teal-700">
-                  {messages.filter((m) => m.senderIsAdmin).length}
+                  {messages.filter((m) => isOutgoing(m)).length}
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Outgoing (Acclaim)</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {user?.isAdmin ? "Outgoing (Acclaim)" : "Sent by You"}
+                </p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-5">
                 <div className="text-2xl font-bold text-teal-700">
-                  {messages.filter((m) => !m.senderIsAdmin).length}
+                  {messages.filter((m) => !isOutgoing(m)).length}
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Incoming (Client)</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {user?.isAdmin ? "Incoming (Client)" : "From Acclaim"}
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -643,7 +651,7 @@ export default function MessagesReport() {
                         <div
                           key={msg.id}
                           className={`px-5 py-4 ${
-                            msg.senderIsAdmin
+                            isOutgoing(msg)
                               ? "bg-white dark:bg-gray-900"
                               : "bg-amber-50 dark:bg-amber-950/20"
                           }`}
@@ -652,12 +660,12 @@ export default function MessagesReport() {
                             <div className="flex items-center gap-2 flex-wrap">
                               <Badge
                                 className={
-                                  msg.senderIsAdmin
+                                  isOutgoing(msg)
                                     ? "bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200 text-xs"
                                     : "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 text-xs"
                                 }
                               >
-                                {msg.senderIsAdmin ? "Outgoing" : "Incoming"}
+                                {isOutgoing(msg) ? "Outgoing" : "Incoming"}
                               </Badge>
                               <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
                                 {msg.senderName}
