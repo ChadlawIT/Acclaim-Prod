@@ -1544,7 +1544,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const isCaseMuted = messageData.caseId ? await storage.isCaseMuted(recipientId, messageData.caseId) : false;
             const isBlockedFromCase = messageData.caseId ? await storage.isUserBlockedFromCase(recipientId, messageData.caseId) : false;
             console.log(`[MSG Email] Recipient check: email=${recipientUser?.email}, isAdmin=${recipientUser?.isAdmin}, emailNotifications=${recipientUser?.emailNotifications}, muted=${isCaseMuted}, blocked=${isBlockedFromCase}`);
-            if (recipientUser && recipientUser.email && !recipientUser.isAdmin && recipientUser.emailNotifications !== false && !isCaseMuted && !isBlockedFromCase && recipientUser.hasLoggedIn) {
+            if (recipientUser && recipientUser.email && !recipientUser.isAdmin && recipientUser.emailNotifications !== false && !isCaseMuted && !isBlockedFromCase && recipientUser.azureId) {
               // Get organisation name
               let organisationName = "Unknown Organisation";
               if (recipientUser.organisationId) {
@@ -1605,7 +1605,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const orgUsers = await storage.getUsersByOrganisationId(parseInt(recipientId));
             // Filter to non-admin users with email and notifications enabled
             const organisationUsers = orgUsers.filter(u => 
-              !u.isAdmin && u.email && u.emailNotifications !== false && u.hasLoggedIn
+              !u.isAdmin && u.email && u.emailNotifications !== false && u.azureId
             );
             console.log(`[MSG Email] Org lookup: orgId=${recipientId}, totalUsers=${orgUsers.length}, eligibleUsers=${organisationUsers.length}`);
             if (orgUsers.length > 0 && organisationUsers.length === 0) {
@@ -1888,7 +1888,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               console.log(`[Documents] Skipping notification for user ${orgUser.id} - user is blocked from case ${case_.id}`);
               continue;
             }
-            if (!orgUser.isAdmin && orgUser.email && orgUser.documentNotifications !== false && orgUser.hasLoggedIn) {
+            if (!orgUser.isAdmin && orgUser.email && orgUser.documentNotifications !== false && orgUser.azureId) {
               await sendGridEmailService.sendDocumentUploadNotificationToUser({
                 uploaderName: 'Acclaim Credit Management',
                 uploaderEmail: 'email@acclaim.law',
@@ -2053,7 +2053,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           const orgUsers = await storage.getUsersByOrganisationId(targetOrgId);
           for (const orgUser of orgUsers) {
-            if (!orgUser.isAdmin && orgUser.email && orgUser.documentNotifications !== false && orgUser.hasLoggedIn) {
+            if (!orgUser.isAdmin && orgUser.email && orgUser.documentNotifications !== false && orgUser.azureId) {
               await sendGridEmailService.sendDocumentUploadNotificationToUser({
                 uploaderName: 'Acclaim Credit Management',
                 uploaderEmail: 'email@acclaim.law',
@@ -2320,7 +2320,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               console.log(`[Case Documents] Skipping notification for user ${orgUser.id} - user is blocked from case ${case_.id}`);
               continue;
             }
-            if (!orgUser.isAdmin && orgUser.email && orgUser.documentNotifications !== false && orgUser.hasLoggedIn) {
+            if (!orgUser.isAdmin && orgUser.email && orgUser.documentNotifications !== false && orgUser.azureId) {
               await sendGridEmailService.sendDocumentUploadNotificationToUser({
                 uploaderName: 'Acclaim Credit Management',
                 uploaderEmail: 'email@acclaim.law',

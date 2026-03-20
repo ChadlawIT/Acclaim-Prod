@@ -704,8 +704,8 @@ export async function processScheduledReports(): Promise<void> {
     try {
       const user = await storage.getUser(settings.userId);
       if (!user || !user.email) continue;
-      if (!user.hasLoggedIn) {
-        console.log(`  Skipping - user ${settings.userId} has never logged in`);
+      if (!user.azureId) {
+        console.log(`  Skipping - user ${settings.userId} has never logged in via SSO`);
         continue;
       }
       

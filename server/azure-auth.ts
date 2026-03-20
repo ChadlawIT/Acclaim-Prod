@@ -155,11 +155,6 @@ export function setupAzureAuth(app: Express): void {
         await storage.updateUserPassword(user.id, { mustChangePassword: false });
       }
 
-      // Mark the user as having logged in at least once (used to gate email notifications)
-      if (!user.hasLoggedIn) {
-        await storage.markUserAsLoggedIn(user.id);
-      }
-
       (req.session as any).passport = { user: user.id };
       (req.session as any).loginMethod = 'azure';
       (req.session as any).azureIdToken = response.idToken;
@@ -199,11 +194,6 @@ export function setupAzureAuth(app: Express): void {
         // Clear mustChangePassword just as the real SSO callback does
         if (user.mustChangePassword) {
           await storage.updateUserPassword(user.id, { mustChangePassword: false });
-        }
-
-        // Mark as logged in just as the real SSO callback does
-        if (!user.hasLoggedIn) {
-          await storage.markUserAsLoggedIn(user.id);
         }
 
         (req.session as any).passport = { user: user.id };
