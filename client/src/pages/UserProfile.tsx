@@ -13,7 +13,7 @@ import { useTheme } from "@/hooks/use-theme";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest } from "@/lib/queryClient";
 import { useQueryClient } from "@tanstack/react-query";
-import { User, Settings, Key, Phone, Mail, Calendar, Shield, ArrowLeft, Bell, BellOff, Building2, FileText, Download, Trash2, Upload, Search, Sun, Moon, HelpCircle, Briefcase, MessageSquare, BarChart3, Crown, ShieldCheck, ShieldOff, Loader2, Users, ChevronDown, ChevronUp, UserPlus, UserMinus, Send, Eye } from "lucide-react";
+import { User, Settings, Phone, Mail, Calendar, Shield, ArrowLeft, Bell, BellOff, Building2, FileText, Download, Trash2, Upload, Search, Sun, Moon, HelpCircle, Briefcase, MessageSquare, BarChart3, Crown, ShieldCheck, ShieldOff, Loader2, Users, ChevronDown, ChevronUp, UserPlus, UserMinus, Send, Eye } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -994,22 +994,6 @@ export default function UserProfile() {
           </Dialog>
         </div>
       </div>
-      {/* Password Change Required Alert */}
-      {passwordStatus?.mustChangePassword && (
-        <Card className="border-amber-200 bg-amber-50">
-          <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
-              <Key className="h-5 w-5 text-amber-600" />
-              <div>
-                <p className="font-semibold text-amber-800">Password Change Required</p>
-                <p className="text-sm text-amber-700">
-                  You must change your password before continuing to use the system.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
       {/* Profile Overview */}
       <Card>
         <CardHeader>
@@ -1195,72 +1179,29 @@ export default function UserProfile() {
           </Card>
         </TabsContent>
 
-        {/* Security & Password Tab */}
+        {/* Security Tab */}
         <TabsContent value="security">
           <Card>
             <CardHeader>
-              <CardTitle>Security & Password</CardTitle>
+              <CardTitle>Security</CardTitle>
               <CardDescription>
-                Change your password to keep your account secure.
+                Your account security is managed through Microsoft Single Sign-On.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handlePasswordSubmit} className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="currentPassword">Current Password</Label>
-                  <Input
-                    id="currentPassword"
-                    type="password"
-                    value={passwordData.currentPassword}
-                    onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                    placeholder="Enter your current password"
-                    required
-                  />
-                  {passwordErrors.currentPassword && (
-                    <p className="text-sm text-red-600">{passwordErrors.currentPassword}</p>
-                  )}
+              <div className="flex items-start gap-4 p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-100 dark:border-blue-900">
+                <div className="mt-0.5 text-blue-600 dark:text-blue-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  </svg>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="newPassword">New Password</Label>
-                  <Input
-                    id="newPassword"
-                    type="password"
-                    value={passwordData.newPassword}
-                    onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                    placeholder="Enter your new password"
-                    required
-                  />
-                  {passwordErrors.newPassword && (
-                    <p className="text-sm text-red-600">{passwordErrors.newPassword}</p>
-                  )}
-                  <p className="text-sm text-gray-500">
-                    Password must be at least 8 characters and include uppercase, lowercase, a number, and a special character.
+                <div>
+                  <p className="text-sm font-medium text-blue-800 dark:text-blue-300">Sign-in managed by Microsoft</p>
+                  <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
+                    Your account uses Microsoft Single Sign-On (SSO). Password management, multi-factor authentication, and account security are all handled through your Microsoft account. To update your password or security settings, please visit your Microsoft account portal.
                   </p>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    value={passwordData.confirmPassword}
-                    onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                    placeholder="Confirm your new password"
-                    required
-                  />
-                  {passwordErrors.confirmPassword && (
-                    <p className="text-sm text-red-600">{passwordErrors.confirmPassword}</p>
-                  )}
-                </div>
-                <div className="flex justify-end">
-                  <Button
-                    type="submit"
-                    disabled={changePasswordMutation.isPending}
-                    className="bg-acclaim-teal hover:bg-acclaim-teal/90"
-                  >
-                    {changePasswordMutation.isPending ? "Changing..." : "Change Password"}
-                  </Button>
-                </div>
-              </form>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

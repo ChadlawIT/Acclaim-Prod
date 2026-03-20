@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Users, Building, Plus, Edit, Trash2, Shield, Key, Copy, UserPlus, AlertTriangle, ShieldCheck, ShieldAlert, ArrowLeft, Activity, FileText, CreditCard, Archive, ArchiveRestore, Download, Check, Eye, EyeOff, Mail, Bell, BellOff, FilePlus, FileX, BarChart3, Search, Crown, Calendar, CalendarOff, Pencil, LogOut, RefreshCw, ChevronDown, ChevronUp, Clock, Send, History } from "lucide-react";
+import { Users, Building, Plus, Edit, Trash2, Shield, Copy, UserPlus, AlertTriangle, ShieldCheck, ShieldAlert, ArrowLeft, Activity, FileText, CreditCard, Archive, ArchiveRestore, Download, Check, Eye, EyeOff, Mail, Bell, BellOff, FilePlus, FileX, BarChart3, Search, Crown, Calendar, CalendarOff, Pencil, LogOut, RefreshCw, ChevronDown, ChevronUp, Clock, Send, History } from "lucide-react";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { createUserSchema, updateUserSchema, createOrganisationSchema, updateOrganisationSchema } from "@shared/schema";
@@ -2535,42 +2535,6 @@ export default function AdminEnhanced() {
     },
   });
 
-  // Reset password mutation
-  const resetPasswordMutation = useMutation({
-    mutationFn: async (userId: string) => {
-      const response = await apiRequest("POST", `/api/admin/users/${userId}/reset-password`);
-      return await response.json();
-    },
-    onSuccess: (data, userId) => {
-      console.log("Reset password response:", data);
-      toast({
-        title: "Success",
-        description: "Password reset successfully",
-      });
-      setTempPassword(data.tempPassword || "");
-      setCreatedUserId(userId);
-      setIsNewUserFlow(false); // This is a password reset, not new user
-      setShowPasswordDialog(true);
-    },
-    onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
-      toast({
-        title: "Error",
-        description: "Failed to reset password",
-        variant: "destructive",
-      });
-    },
-  });
 
   // Multi-organisation management mutations
   const addUserToOrgMutation = useMutation({
@@ -3719,16 +3683,6 @@ export default function AdminEnhanced() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => resetPasswordMutation.mutate(user.id)}
-                        disabled={resetPasswordMutation.isPending}
-                        title="Reset user password"
-                      >
-                        <Key className="h-3 w-3 mr-1" />
-                        Reset
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
                         onClick={() => {
                           const hasTemporaryPassword = (user as any).temporaryPassword;
                           const message = hasTemporaryPassword
@@ -4054,15 +4008,6 @@ export default function AdminEnhanced() {
                               title="Assign to organisation"
                             >
                               <UserPlus className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => resetPasswordMutation.mutate(user.id)}
-                              disabled={resetPasswordMutation.isPending}
-                              title="Reset user password"
-                            >
-                              <Key className="h-3 w-3" />
                             </Button>
                             <Button
                               variant="outline"
