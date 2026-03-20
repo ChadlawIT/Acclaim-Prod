@@ -2883,14 +2883,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) return res.status(404).json({ message: 'User not found' });
 
       const allLogs = await storage.getUserActivityLogs(userId, 500);
-      const loginLogs = allLogs
-        .filter(l => l.action === 'sso_login')
-        .sort((a, b) => new Date(a.createdAt!).getTime() - new Date(b.createdAt!).getTime());
+      // getUserActivityLogs returns rows with 'timestamp' alias (not createdAt), newest first (DESC)
+      const loginLogs = allLogs.filter(l => l.action === 'sso_login');
 
       res.json({
         accountCreated: user.createdAt,
-        firstLogin: loginLogs.length > 0 ? loginLogs[0].createdAt : null,
-        lastLogin: loginLogs.length > 0 ? loginLogs[loginLogs.length - 1].createdAt : null,
+        // DESC order: index 0 = most recent, last index = oldest
+        firstLogin: loginLogs.length > 0 ? (loginLogs[loginLogs.length - 1] as any).timestamp : null,
+        lastLogin: loginLogs.length > 0 ? (loginLogs[0] as any).timestamp : null,
         totalLogins: loginLogs.length,
       });
     } catch (error) {
