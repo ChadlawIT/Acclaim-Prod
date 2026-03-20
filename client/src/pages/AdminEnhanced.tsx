@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Users, Building, Plus, Edit, Trash2, Shield, Copy, UserPlus, AlertTriangle, ShieldCheck, ShieldAlert, ArrowLeft, Activity, FileText, CreditCard, Archive, ArchiveRestore, Download, Check, Eye, EyeOff, Mail, Bell, BellOff, FilePlus, FileX, BarChart3, Search, Crown, Calendar, CalendarOff, Pencil, LogOut, RefreshCw, ChevronDown, ChevronUp, Clock, Send, History } from "lucide-react";
+import { Users, Building, Plus, Edit, Trash2, Shield, UserPlus, AlertTriangle, ShieldCheck, ShieldAlert, ArrowLeft, Activity, FileText, CreditCard, Archive, ArchiveRestore, Download, Check, Eye, EyeOff, Mail, Bell, BellOff, FilePlus, FileX, BarChart3, Search, Crown, Calendar, CalendarOff, Pencil, LogOut, RefreshCw, ChevronDown, ChevronUp, Clock, Send, History } from "lucide-react";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { createUserSchema, updateUserSchema, createOrganisationSchema, updateOrganisationSchema } from "@shared/schema";
@@ -2070,12 +2070,9 @@ export default function AdminEnhanced() {
     organisationId: undefined,
     isAdmin: false,
   });
-  const [tempPassword, setTempPassword] = useState("");
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [createdUserId, setCreatedUserId] = useState<string | null>(null);
   const [sendingWelcomeEmail, setSendingWelcomeEmail] = useState(false);
-  const [sendingPasswordEmail, setSendingPasswordEmail] = useState(false);
-  const [isNewUserFlow, setIsNewUserFlow] = useState(false); // true = new user, false = password reset
   const [showConfirmCreateUser, setShowConfirmCreateUser] = useState(false);
   const [orgSearchTerm, setOrgSearchTerm] = useState("");
 
@@ -2508,11 +2505,9 @@ export default function AdminEnhanced() {
         isAdmin: false,
       });
       setShowCreateUser(false);
-      setTempPassword(data.tempPassword || "");
       // Handle nested user structure from API: data.user.user.id or data.user.id
       const userId = data.user?.user?.id || data.user?.id || null;
       setCreatedUserId(userId);
-      setIsNewUserFlow(true); // This is a new user creation
       setShowPasswordDialog(true);
     },
     onError: (error) => {
@@ -2888,17 +2883,8 @@ export default function AdminEnhanced() {
     },
   });
 
-  // Copy temp password to clipboard
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({
-      title: "Copied",
-      description: "Temporary password copied to clipboard",
-    });
-  };
-
   const handleSendWelcomeEmail = async () => {
-    if (!createdUserId || !tempPassword) {
+    if (!createdUserId) {
       toast({
         title: "Error",
         description: "Unable to send welcome email - missing user information",
@@ -2909,9 +2895,7 @@ export default function AdminEnhanced() {
 
     setSendingWelcomeEmail(true);
     try {
-      const response = await apiRequest("POST", `/api/admin/users/${createdUserId}/send-welcome-email`, {
-        temporaryPassword: tempPassword
-      });
+      const response = await apiRequest("POST", `/api/admin/users/${createdUserId}/send-welcome-email`, {});
       const result = await response.json();
       
       if (result.emailSent) {
@@ -2937,37 +2921,6 @@ export default function AdminEnhanced() {
     }
   };
 
-  const handleSendPasswordEmail = async () => {
-    if (!createdUserId || !tempPassword) {
-      toast({
-        title: "Error",
-        description: "Unable to send password email - missing user information",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setSendingPasswordEmail(true);
-    try {
-      const response = await apiRequest("POST", `/api/admin/users/${createdUserId}/send-password-email`, {
-        temporaryPassword: tempPassword
-      });
-      const result = await response.json();
-      
-      toast({
-        title: "Success",
-        description: result.message || "Password email sent successfully",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to send password email",
-        variant: "destructive",
-      });
-    } finally {
-      setSendingPasswordEmail(false);
-    }
-  };
 
   // Check for admin access errors
   if (usersError || orgsError) {
@@ -5625,97 +5578,34 @@ export default function AdminEnhanced() {
         </DialogContent>
       </Dialog>
 
-      {/* Temporary Password Dialog */}
+      {/* New User Dialog */}
       <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Temporary Password Created</DialogTitle>
+            <DialogTitle>User Created</DialogTitle>
             <DialogDescription>
-              Please provide this temporary password to the user. They will be required to change it on first login.
+              The user has been added to the system. Send them a welcome email to invite them to the portal.
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label>Temporary Password</Label>
-              <div className="flex items-center space-x-2">
-                <Input
-                  value={tempPassword}
-                  readOnly
-                  className="font-mono bg-gray-50"
-                  placeholder={!tempPassword ? "Loading..." : ""}
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => copyToClipboard(tempPassword)}
-                  disabled={!tempPassword}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </div>
-              {tempPassword && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Password length: {tempPassword.length} characters
-                </p>
-              )}
-            </div>
-            <div className="bg-amber-50 border border-amber-200 rounded p-3">
-              <div className="flex items-center space-x-2">
-                <AlertTriangle className="h-4 w-4 text-amber-600" />
-                <p className="text-sm text-amber-700">
-                  This password will only be shown once. Make sure to copy it and provide it to the user securely.
-                </p>
-              </div>
-            </div>
-
-            {createdUserId && isNewUserFlow && (
+            {createdUserId && (
               <div className="bg-blue-50 border border-blue-200 rounded p-4">
                 <p className="text-sm text-blue-700 mb-3">
-                  <strong>Send Welcome Emails</strong><br />
-                  Click below to send two emails to the user:
+                  <strong>Send Welcome Email</strong><br />
+                  Click below to send a welcome email to the user with a link to the portal.
                 </p>
-                <ul className="text-sm text-blue-600 mb-3 ml-4 list-disc">
-                  <li>Welcome email with portal link</li>
-                  <li>Separate email with temporary password</li>
-                </ul>
                 <div className="bg-amber-50 border border-amber-200 rounded p-2 mb-3">
                   <p className="text-xs text-amber-700">
-                    <strong>Note:</strong> The user must be assigned to an organisation before sending welcome emails. Close this dialog and assign them first if needed.
+                    <strong>Note:</strong> The user must be assigned to an organisation before sending a welcome email. Close this dialog and assign them first if needed.
                   </p>
                 </div>
                 <Button
                   onClick={handleSendWelcomeEmail}
-                  disabled={sendingWelcomeEmail || !tempPassword}
+                  disabled={sendingWelcomeEmail}
                   className="w-full bg-blue-600 hover:bg-blue-700"
                 >
                   {sendingWelcomeEmail ? (
-                    <>
-                      <Mail className="h-4 w-4 mr-2 animate-pulse" />
-                      Sending Emails...
-                    </>
-                  ) : (
-                    <>
-                      <Mail className="h-4 w-4 mr-2" />
-                      Send Welcome Emails
-                    </>
-                  )}
-                </Button>
-              </div>
-            )}
-
-            {createdUserId && !isNewUserFlow && (
-              <div className="bg-green-50 border border-green-200 rounded p-4">
-                <p className="text-sm text-green-700 mb-3">
-                  <strong>Send Password Email</strong><br />
-                  Click below to email the new temporary password to the user.
-                </p>
-                <Button
-                  onClick={handleSendPasswordEmail}
-                  disabled={sendingPasswordEmail || !tempPassword}
-                  className="w-full bg-green-600 hover:bg-green-700"
-                >
-                  {sendingPasswordEmail ? (
                     <>
                       <Mail className="h-4 w-4 mr-2 animate-pulse" />
                       Sending Email...
@@ -5723,7 +5613,7 @@ export default function AdminEnhanced() {
                   ) : (
                     <>
                       <Mail className="h-4 w-4 mr-2" />
-                      Send Password Email
+                      Send Welcome Email
                     </>
                   )}
                 </Button>
@@ -5734,7 +5624,6 @@ export default function AdminEnhanced() {
             <Button onClick={() => {
               setShowPasswordDialog(false);
               setCreatedUserId(null);
-              setIsNewUserFlow(false);
             }}>
               Close
             </Button>
