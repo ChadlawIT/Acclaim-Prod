@@ -164,9 +164,16 @@ export function setupAzureAuth(app: Express): void {
           console.error("[Azure Auth] Session save error:", err);
           return res.redirect("/auth?error=session_error");
         }
-        
-        // Login notification emails disabled
-        
+
+        // Record successful SSO login in activity log (used for admin audit view)
+        storage.logUserActivity({
+          userId: user!.id,
+          action: 'sso_login',
+          ipAddress: req.ip || req.socket?.remoteAddress || 'unknown',
+          userAgent: req.get('user-agent') || 'unknown',
+          details: `Successful SSO login via Microsoft`,
+        }).catch(err => console.error('[Azure Auth] Failed to log login activity:', err));
+
         res.redirect("/");
       });
     } catch (error) {
@@ -205,6 +212,13 @@ export function setupAzureAuth(app: Express): void {
             return res.status(500).json({ message: "Session error" });
           }
           console.log(`[Dev Login] ✅ Logged in as ${user.email} (id=${user.id}, isAdmin=${user.isAdmin})`);
+          storage.logUserActivity({
+            userId: user!.id,
+            action: 'sso_login',
+            ipAddress: req.ip || 'dev',
+            userAgent: req.get('user-agent') || 'dev',
+            details: 'Successful SSO login via Microsoft (dev bypass)',
+          }).catch(() => {});
           res.json({ ok: true, userId: user.id, email: user.email, isAdmin: user.isAdmin });
         });
       } catch (error) {

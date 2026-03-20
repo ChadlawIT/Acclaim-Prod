@@ -2875,6 +2875,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get login history for a user (first registered & last login)
+  app.get('/api/admin/users/:userId/login-history', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ message: 'User not found' });
+
+      const allLogs = await storage.getUserActivityLogs(userId, 500);
+      const loginLogs = allLogs
+        .filter(l => l.action === 'sso_login')
+        .sort((a, b) => new Date(a.createdAt!).getTime() - new Date(b.createdAt!).getTime());
+
+      res.json({
+        accountCreated: user.createdAt,
+        firstLogin: loginLogs.length > 0 ? loginLogs[0].createdAt : null,
+        lastLogin: loginLogs.length > 0 ? loginLogs[loginLogs.length - 1].createdAt : null,
+        totalLogins: loginLogs.length,
+      });
+    } catch (error) {
+      console.error('Error fetching login history:', error);
+      res.status(500).json({ message: 'Failed to fetch login history' });
+    }
+  });
+
   // Send welcome emails to a user (welcome email + separate temporary password email)
   app.post('/api/admin/users/:userId/send-welcome-email', isAuthenticated, isAdmin, async (req: any, res) => {
     try {

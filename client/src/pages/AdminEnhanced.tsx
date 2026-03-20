@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -2001,6 +2001,102 @@ function CaseSubmissionsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
   );
 }
 
+function UserAuditRow({ userId }: { userId: string }) {
+  const { data, isLoading } = useQuery<{
+    accountCreated: string | null;
+    firstLogin: string | null;
+    lastLogin: string | null;
+    totalLogins: number;
+  }>({
+    queryKey: ['/api/admin/users', userId, 'login-history'],
+  });
+
+  const fmt = (dateStr: string | null | undefined) => {
+    if (!dateStr) return null;
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) +
+      ' at ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  return (
+    <TableRow className="bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-50 dark:hover:bg-slate-800/40">
+      <TableCell colSpan={10} className="py-4 px-6">
+        {isLoading ? (
+          <p className="text-sm text-gray-500">Loading audit log...</p>
+        ) : (
+          <div className="flex flex-wrap gap-8 text-sm">
+            <div>
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Account Created</p>
+              <p className="font-medium text-gray-800 dark:text-gray-200">{fmt(data?.accountCreated) ?? '—'}</p>
+              <p className="text-xs text-gray-400 mt-0.5">Added to system by admin</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">First Registered</p>
+              <p className={`font-medium ${data?.firstLogin ? 'text-gray-800 dark:text-gray-200' : 'text-amber-600 dark:text-amber-400'}`}>
+                {data?.firstLogin ? fmt(data.firstLogin) : 'Not yet logged in'}
+              </p>
+              <p className="text-xs text-gray-400 mt-0.5">{data?.firstLogin ? 'First successful SSO login' : 'Awaiting first login'}</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Last Login</p>
+              <p className={`font-medium ${data?.lastLogin ? 'text-gray-800 dark:text-gray-200' : 'text-amber-600 dark:text-amber-400'}`}>
+                {data?.lastLogin ? fmt(data.lastLogin) : 'Never'}
+              </p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {(data?.totalLogins ?? 0) > 0 ? `${data!.totalLogins} total login${data!.totalLogins === 1 ? '' : 's'}` : 'No logins recorded'}
+              </p>
+            </div>
+          </div>
+        )}
+      </TableCell>
+    </TableRow>
+  );
+}
+
+function MobileUserAuditSection({ userId }: { userId: string }) {
+  const { data, isLoading } = useQuery<{
+    accountCreated: string | null;
+    firstLogin: string | null;
+    lastLogin: string | null;
+    totalLogins: number;
+  }>({
+    queryKey: ['/api/admin/users', userId, 'login-history'],
+  });
+
+  const fmt = (dateStr: string | null | undefined) => {
+    if (!dateStr) return null;
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) +
+      ' at ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  if (isLoading) return <p className="text-xs text-gray-500">Loading login history...</p>;
+
+  return (
+    <div className="grid grid-cols-3 gap-3 text-xs">
+      <div>
+        <p className="font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Created</p>
+        <p className="font-medium text-gray-800 dark:text-gray-200">{fmt(data?.accountCreated) ?? '—'}</p>
+      </div>
+      <div>
+        <p className="font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">First Login</p>
+        <p className={`font-medium ${data?.firstLogin ? 'text-gray-800 dark:text-gray-200' : 'text-amber-600 dark:text-amber-400'}`}>
+          {data?.firstLogin ? fmt(data.firstLogin) : 'Not yet'}
+        </p>
+      </div>
+      <div>
+        <p className="font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Last Login</p>
+        <p className={`font-medium ${data?.lastLogin ? 'text-gray-800 dark:text-gray-200' : 'text-amber-600 dark:text-amber-400'}`}>
+          {data?.lastLogin ? fmt(data.lastLogin) : 'Never'}
+        </p>
+        {(data?.totalLogins ?? 0) > 0 && (
+          <p className="text-gray-400 mt-0.5">{data!.totalLogins} total</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function AdminEnhanced() {
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
@@ -2029,6 +2125,9 @@ export default function AdminEnhanced() {
   const [showOrgScheduleDialog, setShowOrgScheduleDialog] = useState(false);
   const [selectedOrgForSchedule, setSelectedOrgForSchedule] = useState<Organisation | null>(null);
   
+  // User audit log expand state
+  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+
   // Scheduled reports overview state
   const [expandedReportId, setExpandedReportId] = useState<number | null>(null);
   const [orgScheduleForm, setOrgScheduleForm] = useState({
@@ -3622,6 +3721,15 @@ export default function AdminEnhanced() {
                     
                     <div className="grid grid-cols-4 gap-2 pt-2">
                       <Button
+                        variant={expandedUserId === user.id ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setExpandedUserId(expandedUserId === user.id ? null : user.id)}
+                        title={expandedUserId === user.id ? "Hide login history" : "Show login history"}
+                      >
+                        <History className="h-3 w-3 mr-1" />
+                        History
+                      </Button>
+                      <Button
                         variant="outline"
                         size="sm"
                         onClick={() => {
@@ -3784,6 +3892,11 @@ export default function AdminEnhanced() {
                         </Button>
                       )}
                     </div>
+                    {expandedUserId === user.id && (
+                      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                        <MobileUserAuditSection userId={user.id} />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -3804,7 +3917,8 @@ export default function AdminEnhanced() {
                   </TableHeader>
                   <TableBody>
                     {paginatedUsers?.map((user: User) => (
-                      <TableRow key={user.id}>
+                      <Fragment key={user.id}>
+                      <TableRow>
                         <TableCell>
                           <div className="font-medium">{user.firstName} {user.lastName}</div>
                           <div className="text-sm text-gray-500">{user.id}</div>
@@ -3951,6 +4065,14 @@ export default function AdminEnhanced() {
                         )}
                         <TableCell>
                           <div className="flex items-center space-x-2">
+                            <Button
+                              variant={expandedUserId === user.id ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setExpandedUserId(expandedUserId === user.id ? null : user.id)}
+                              title={expandedUserId === user.id ? "Hide login history" : "Show login history"}
+                            >
+                              <History className="h-3 w-3" />
+                            </Button>
                             <Button
                               variant="outline"
                               size="sm"
@@ -4109,6 +4231,8 @@ export default function AdminEnhanced() {
                           </div>
                         </TableCell>
                       </TableRow>
+                      {expandedUserId === user.id && <UserAuditRow userId={user.id} />}
+                      </Fragment>
                     ))}
                   </TableBody>
                 </Table>
