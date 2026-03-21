@@ -374,12 +374,10 @@ export default function MessagesReport() {
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
-            <Link href="/reports">
-              <Button variant="outline" size="sm">
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                Back
-              </Button>
-            </Link>
+            <Button variant="outline" size="sm" onClick={() => window.history.back()}>
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Back
+            </Button>
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <MessageSquare className="h-6 w-6 text-teal-600" />
