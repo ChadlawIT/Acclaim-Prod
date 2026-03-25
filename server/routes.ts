@@ -5004,7 +5004,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // External API endpoints for case management system integration
-  
+
+  // Check whether a case exists by external reference (read-only, no side effects)
+  app.get('/api/external/cases/:externalRef/exists', async (req: any, res) => {
+    try {
+      const { externalRef } = req.params;
+      if (!externalRef) {
+        return res.status(400).json({ message: "externalRef is required" });
+      }
+      const case_ = await storage.getCaseByExternalRef(externalRef);
+      if (case_) {
+        return res.json({ exists: true, caseId: case_.id, accountNumber: case_.accountNumber });
+      }
+      return res.json({ exists: false });
+    } catch (error) {
+      console.error("Error checking case existence:", error);
+      res.status(500).json({ message: "Failed to check case existence" });
+    }
+  });
+
   // Create case activity (for external system to push activities)
   app.post('/api/external/cases/:externalRef/activities', async (req: any, res) => {
     try {
