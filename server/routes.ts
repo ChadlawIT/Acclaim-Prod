@@ -5133,8 +5133,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newMessage = await storage.createMessage({
         senderId: systemUserId,
         senderName: senderName, // Use the sender name from the API request
-        recipientType: 'case',
-        recipientId: case_.id.toString(),
+        recipientType: 'organisation',
+        recipientId: case_.organisationId.toString(),
         caseId: case_.id, // Set the caseId for proper filtering
         subject: messageSubject,
         content: message,
