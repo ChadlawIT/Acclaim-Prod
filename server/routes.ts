@@ -5123,17 +5123,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Case not found" });
       }
       
-      // Resolve a valid sender — try the default admin email first, fall back to any admin user
-      let adminUser = await storage.getUserByEmail('email@acclaim.law');
-      if (!adminUser) {
-        const allAdmins = await storage.getAllUsers();
-        adminUser = allAdmins.find(u => u.isAdmin) || null;
+      // Resolve the dedicated "Acclaim" system user for external API messages.
+      // This keeps the sender name as "Acclaim" without affecting admin UI messages.
+      const ACCLAIM_SYSTEM_EMAIL = 'acclaim.system@acclaim.law';
+      let systemUser = await storage.getUserByEmail(ACCLAIM_SYSTEM_EMAIL);
+      if (!systemUser) {
+        // Create the system user on first use — no manual setup required
+        systemUser = await storage.createUser({
+          id: 'acclaim-system-user',
+          email: ACCLAIM_SYSTEM_EMAIL,
+          firstName: 'Acclaim',
+          lastName: '',
+          isAdmin: false,
+          emailNotifications: false,
+          documentNotifications: false,
+          pushNotifications: false,
+          loginNotifications: false,
+        });
+        console.log('[External Messages] Created Acclaim system user for API messages');
       }
-      if (!adminUser) {
-        console.error('[External Messages] No admin user found in database to use as sender');
-        return res.status(500).json({ message: "No system sender account found" });
-      }
-      const systemUserId = adminUser.id;
+      const systemUserId = systemUser.id;
 
       // Use custom subject if provided, otherwise generate automatically
       const messageSubject = subject || `${messageType}: ${case_.caseName}`;
