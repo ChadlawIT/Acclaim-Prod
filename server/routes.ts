@@ -5123,9 +5123,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Case not found" });
       }
       
-      // Use a system admin user as sender (from the database)
-      const systemUserId = 'jZJVUVcC3I'; // Admin user: mattperry@chadlaw.co.uk
-      
+      // Resolve a valid sender — look up the default admin by email so it works across environments
+      const adminUser = await storage.getUserByEmail('email@acclaim.law');
+      if (!adminUser) {
+        console.error('[External Messages] Admin sender user not found in database');
+        return res.status(500).json({ message: "System sender account not found" });
+      }
+      const systemUserId = adminUser.id;
+
       // Use custom subject if provided, otherwise generate automatically
       const messageSubject = subject || `${messageType}: ${case_.caseName}`;
       
@@ -5211,8 +5216,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         refreshRequired: true 
       });
     } catch (error) {
-      console.error("Error creating case message via external API:", error);
-      res.status(500).json({ message: "Failed to create case message" });
+      const errMsg = error instanceof Error ? error.message : String(error);
+      console.error("Error creating case message via external API:", errMsg, error);
+      res.status(500).json({ message: "Failed to create case message", detail: errMsg });
     }
   });
 
