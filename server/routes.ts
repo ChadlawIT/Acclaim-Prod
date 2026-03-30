@@ -5123,11 +5123,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Case not found" });
       }
       
-      // Resolve a valid sender — look up the default admin by email so it works across environments
-      const adminUser = await storage.getUserByEmail('email@acclaim.law');
+      // Resolve a valid sender — try the default admin email first, fall back to any admin user
+      let adminUser = await storage.getUserByEmail('email@acclaim.law');
       if (!adminUser) {
-        console.error('[External Messages] Admin sender user not found in database');
-        return res.status(500).json({ message: "System sender account not found" });
+        const allAdmins = await storage.getAllUsers();
+        adminUser = allAdmins.find(u => u.isAdmin) || null;
+      }
+      if (!adminUser) {
+        console.error('[External Messages] No admin user found in database to use as sender');
+        return res.status(500).json({ message: "No system sender account found" });
       }
       const systemUserId = adminUser.id;
 
