@@ -5125,7 +5125,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Resolve the dedicated "Acclaim" system user for external API messages.
       // This keeps the sender name as "Acclaim" without affecting admin UI messages.
-      const ACCLAIM_SYSTEM_EMAIL = 'acclaim.system@acclaim.law';
+      const ACCLAIM_SYSTEM_EMAIL = 'email@acclaim.law';
       let systemUser = await storage.getUserByEmail(ACCLAIM_SYSTEM_EMAIL);
       if (!systemUser) {
         // Create the system user on first use — no manual setup required
