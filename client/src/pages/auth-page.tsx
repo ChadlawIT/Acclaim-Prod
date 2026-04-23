@@ -4,7 +4,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { FileText, MessageSquare, TrendingUp, Shield, ChevronDown, ChevronUp, Info } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { FileText, MessageSquare, TrendingUp, Shield, ChevronDown, ChevronUp, Info, ArrowLeft, Loader2 } from "lucide-react";
 import acclaimLogo from "@assets/acclaim_rose_transparent_1768474381340.png";
 
 const MicrosoftIcon = () => (
@@ -21,6 +23,11 @@ export default function AuthPage() {
   const { user } = useAuth();
   const [error, setError] = useState("");
   const [showFirstTimeGuide, setShowFirstTimeGuide] = useState(false);
+  const [showAltLogin, setShowAltLogin] = useState(false);
+  const [altEmail, setAltEmail] = useState("");
+  const [altPassword, setAltPassword] = useState("");
+  const [altLoading, setAltLoading] = useState(false);
+  const [altError, setAltError] = useState("");
   const [devEmail, setDevEmail] = useState("");
   const [devLoading, setDevLoading] = useState(false);
   const [devError, setDevError] = useState("");
@@ -47,6 +54,35 @@ export default function AuthPage() {
       setDevError("Network error");
     } finally {
       setDevLoading(false);
+    }
+  };
+
+  const handleAltLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!altEmail.trim() || !altPassword) return;
+    setAltLoading(true);
+    setAltError("");
+    try {
+      const res = await fetch("/api/auth/login/password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: altEmail.trim(), password: altPassword }),
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (res.ok) {
+        if (data.user?.mustChangePassword) {
+          window.location.href = "/change-password";
+        } else {
+          window.location.href = "/";
+        }
+      } else {
+        setAltError(data.message || "Sign in failed. Please check your details and try again.");
+      }
+    } catch {
+      setAltError("Network error. Please try again.");
+    } finally {
+      setAltLoading(false);
     }
   };
 
@@ -102,26 +138,96 @@ export default function AuthPage() {
 
           <Card className="shadow-lg border-0">
             <CardHeader className="pb-4">
-              <CardTitle className="text-lg">Sign In</CardTitle>
-              <CardDescription>Sign in with your Microsoft account to access the portal.</CardDescription>
+              <CardTitle className="text-lg">
+                {showAltLogin ? (
+                  <button
+                    onClick={() => { setShowAltLogin(false); setAltError(""); }}
+                    className="flex items-center gap-2 text-base font-semibold text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Sign In
+                  </button>
+                ) : "Sign In"}
+              </CardTitle>
+              <CardDescription>
+                {showAltLogin
+                  ? "Enter your email address and password below."
+                  : "Sign in with your Microsoft account to access the portal."}
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              {error && (
+              {error && !showAltLogin && (
                 <Alert variant="destructive" className="mb-4">
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
 
-              <Button
-                type="button"
-                className="w-full h-11 font-medium bg-acclaim-teal hover:bg-acclaim-teal/90"
-                onClick={handleAzureLogin}
-                data-testid="button-azure-login"
-              >
-                <MicrosoftIcon />
-                <span className="ml-2">Sign in with Microsoft</span>
-              </Button>
-              
+              {!showAltLogin ? (
+                <>
+                  <Button
+                    type="button"
+                    className="w-full h-11 font-medium bg-acclaim-teal hover:bg-acclaim-teal/90"
+                    onClick={handleAzureLogin}
+                    data-testid="button-azure-login"
+                  >
+                    <MicrosoftIcon />
+                    <span className="ml-2">Sign in with Microsoft</span>
+                  </Button>
+
+                  <div className="mt-4 text-center">
+                    <button
+                      onClick={() => { setShowAltLogin(true); setError(""); }}
+                      className="text-xs text-muted-foreground hover:text-gray-700 dark:hover:text-gray-300 underline underline-offset-2 transition-colors"
+                    >
+                      Sign in another way
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <form onSubmit={handleAltLogin} className="space-y-4">
+                  {altError && (
+                    <Alert variant="destructive">
+                      <AlertDescription>{altError}</AlertDescription>
+                    </Alert>
+                  )}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="alt-email">Email address</Label>
+                    <Input
+                      id="alt-email"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={altEmail}
+                      onChange={e => setAltEmail(e.target.value)}
+                      autoComplete="email"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="alt-password">Password</Label>
+                    <Input
+                      id="alt-password"
+                      type="password"
+                      placeholder="Enter your password"
+                      value={altPassword}
+                      onChange={e => setAltPassword(e.target.value)}
+                      autoComplete="current-password"
+                      required
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    className="w-full h-11 font-medium bg-acclaim-teal hover:bg-acclaim-teal/90"
+                    disabled={altLoading || !altEmail.trim() || !altPassword}
+                  >
+                    {altLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    {altLoading ? "Signing in…" : "Sign In"}
+                  </Button>
+                  <p className="text-xs text-center text-muted-foreground">
+                    Use the temporary password provided to you by Acclaim. You will be asked to set a new password on first sign in.
+                  </p>
+                </form>
+              )}
+
               <div className="mt-6 text-center text-xs text-muted-foreground">Need assistance? Please contact us at email@acclaim.law | 0113 225 8811</div>
               <div className="mt-3 text-center text-xs text-muted-foreground">
                 <Link href="/terms" className="hover:text-primary hover:underline">

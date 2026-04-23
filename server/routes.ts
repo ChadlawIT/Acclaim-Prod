@@ -320,6 +320,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Direct email + password login (alternative to Azure SSO)
+  app.post('/api/auth/login/password', async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
+      }
+
+      const ipAddress = req.ip || req.socket?.remoteAddress || 'unknown';
+      const lockStatus = loginRateLimiter.isLocked(ipAddress);
+      if (lockStatus.locked) {
+        return res.status(429).json({ message: `Too many failed attempts. Please try again in ${lockStatus.remainingSeconds} seconds.` });
+      }
+
+      const user = await storage.getUserByEmail(email.toLowerCase().trim());
+      if (!user || !user.hashedPassword) {
+        loginRateLimiter.recordFailedAttempt(ipAddress, email);
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+
+      const passwordValid = await bcrypt.compare(password, user.hashedPassword);
+      if (!passwordValid) {
+        loginRateLimiter.recordFailedAttempt(ipAddress, email);
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+
+      loginRateLimiter.recordSuccessfulLogin(ipAddress);
+
+      (req as any).login(user, async (err: any) => {
+        if (err) {
+          console.error("Login error during password login:", err);
+          return res.status(500).json({ message: "Login failed" });
+        }
+        console.log(`[Password Login] User ${email} signed in via password`);
+        res.json({
+          message: "Login successful",
+          user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            isAdmin: user.isAdmin,
+            isSuperAdmin: user.isSuperAdmin,
+            mustChangePassword: user.mustChangePassword ?? false,
+          }
+        });
+      });
+    } catch (error) {
+      console.error("Error during password login:", error);
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
+
   app.post('/api/auth/login/otp', async (req, res) => {
     try {
       const { email, otp } = req.body;
