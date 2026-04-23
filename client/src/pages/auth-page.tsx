@@ -233,7 +233,7 @@ export default function AuthPage() {
                 <div className="mt-1 text-center">
                   <button
                     onClick={() => { setShowAltLogin(true); setError(""); }}
-                    className="text-xs text-gray-400 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-colors"
+                    className="text-xs text-muted-foreground hover:text-primary hover:underline transition-colors"
                   >
                     Sign in another way
                   </button>
