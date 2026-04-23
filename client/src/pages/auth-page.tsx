@@ -173,15 +173,6 @@ export default function AuthPage() {
                     <MicrosoftIcon />
                     <span className="ml-2">Sign in with Microsoft</span>
                   </Button>
-
-                  <div className="mt-4 text-center">
-                    <button
-                      onClick={() => { setShowAltLogin(true); setError(""); }}
-                      className="text-xs text-muted-foreground hover:text-gray-700 dark:hover:text-gray-300 underline underline-offset-2 transition-colors"
-                    >
-                      Sign in another way
-                    </button>
-                  </div>
                 </>
               ) : (
                 <form onSubmit={handleAltLogin} className="space-y-4">
@@ -238,6 +229,16 @@ export default function AuthPage() {
                   Privacy Notice
                 </Link>
               </div>
+              {!showAltLogin && (
+                <div className="mt-3 text-center">
+                  <button
+                    onClick={() => { setShowAltLogin(true); setError(""); }}
+                    className="text-xs text-muted-foreground hover:text-gray-700 dark:hover:text-gray-300 underline underline-offset-2 transition-colors"
+                  >
+                    Sign in another way
+                  </button>
+                </div>
+              )}
             </CardContent>
           </Card>
 
