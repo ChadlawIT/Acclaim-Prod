@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Users, Building, Plus, Edit, Trash2, Shield, UserPlus, AlertTriangle, ShieldCheck, ShieldAlert, ArrowLeft, Activity, FileText, CreditCard, Archive, ArchiveRestore, Download, Check, Eye, EyeOff, Mail, Bell, BellOff, FilePlus, FileX, BarChart3, Search, Crown, Calendar, CalendarOff, Pencil, LogOut, RefreshCw, ChevronDown, ChevronUp, Clock, Send, History } from "lucide-react";
+import { Users, Building, Plus, Edit, Trash2, Shield, UserPlus, AlertTriangle, ShieldCheck, ShieldAlert, ArrowLeft, Activity, FileText, CreditCard, Archive, ArchiveRestore, Download, Check, Eye, EyeOff, Mail, Bell, BellOff, FilePlus, FileX, BarChart3, Search, Crown, Calendar, CalendarOff, Pencil, LogOut, RefreshCw, ChevronDown, ChevronUp, Clock, Send, History, KeyRound, Copy } from "lucide-react";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { createUserSchema, updateUserSchema, createOrganisationSchema, updateOrganisationSchema } from "@shared/schema";
@@ -2171,6 +2171,9 @@ export default function AdminEnhanced() {
   });
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [createdUserId, setCreatedUserId] = useState<string | null>(null);
+  const [showResetPasswordDialog, setShowResetPasswordDialog] = useState(false);
+  const [resetPasswordUser, setResetPasswordUser] = useState<User | null>(null);
+  const [resetPasswordResult, setResetPasswordResult] = useState<{ tempPassword: string; email: string } | null>(null);
   const [sendingWelcomeEmail, setSendingWelcomeEmail] = useState(false);
   const [showConfirmCreateUser, setShowConfirmCreateUser] = useState(false);
   const [orgSearchTerm, setOrgSearchTerm] = useState("");
@@ -2945,6 +2948,25 @@ export default function AdminEnhanced() {
       toast({
         title: "Error",
         description: error.message || "Failed to send welcome email",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Reset password mutation — generates a new temp password for the user
+  const resetPasswordMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const response = await apiRequest("POST", `/api/admin/users/${userId}/reset-password`);
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      setResetPasswordResult({ tempPassword: data.tempPassword, email: data.email });
+      setShowResetPasswordDialog(true);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to reset password. Please try again.",
         variant: "destructive",
       });
     },
@@ -3765,6 +3787,22 @@ export default function AdminEnhanced() {
                         variant="outline"
                         size="sm"
                         onClick={() => {
+                          const confirmation = confirm(`Reset password for ${user.firstName} ${user.lastName}?\n\nThis will generate a new temporary password. The user will need to change it on next sign in.`);
+                          if (confirmation) {
+                            setResetPasswordUser(user);
+                            resetPasswordMutation.mutate(user.id);
+                          }
+                        }}
+                        disabled={resetPasswordMutation.isPending}
+                        title="Reset temporary password"
+                      >
+                        <KeyRound className="h-3 w-3 mr-1" />
+                        Reset Pwd
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
                           if (!user.isAdmin && !user.email?.endsWith('@chadlaw.co.uk')) {
                             alert('Admin privileges can only be granted to @chadlaw.co.uk email addresses.');
                             return;
@@ -4102,6 +4140,21 @@ export default function AdminEnhanced() {
                               title="Send welcome email with login details"
                             >
                               <Mail className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const confirmation = confirm(`Reset password for ${user.firstName} ${user.lastName}?\n\nThis will generate a new temporary password. The user will need to change it on next sign in.`);
+                                if (confirmation) {
+                                  setResetPasswordUser(user);
+                                  resetPasswordMutation.mutate(user.id);
+                                }
+                              }}
+                              disabled={resetPasswordMutation.isPending}
+                              title="Reset temporary password"
+                            >
+                              <KeyRound className="h-3 w-3" />
                             </Button>
                             <Button
                               variant="outline"
@@ -5697,6 +5750,61 @@ export default function AdminEnhanced() {
               className="bg-acclaim-teal hover:bg-acclaim-teal/90"
             >
               {addUserToOrgMutation.isPending ? "Adding..." : "Add to Organisation"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Password Dialog */}
+      <Dialog open={showResetPasswordDialog} onOpenChange={(open) => { setShowResetPasswordDialog(open); if (!open) setResetPasswordResult(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Temporary Password Generated</DialogTitle>
+            <DialogDescription>
+              A new temporary password has been set for {resetPasswordUser?.firstName} {resetPasswordUser?.lastName}. Please share it with them securely — they will be required to set a new password on first sign in.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <p className="text-xs text-amber-700 font-medium mb-2 uppercase tracking-wide">Temporary Password</p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 text-lg font-mono font-bold text-amber-900 bg-amber-100 rounded px-3 py-2 select-all">
+                  {resetPasswordResult?.tempPassword}
+                </code>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (resetPasswordResult?.tempPassword) {
+                      navigator.clipboard.writeText(resetPasswordResult.tempPassword);
+                      toast({ title: "Copied", description: "Temporary password copied to clipboard." });
+                    }
+                  }}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+              <p className="text-xs text-amber-700 mt-2">Account: {resetPasswordResult?.email}</p>
+            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-sm text-blue-700">
+                <strong>Next step:</strong> Use the Email button to send this user a password reset email, or share the temporary password with them directly.
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (resetPasswordUser) sendWelcomeEmailMutation.mutate(resetPasswordUser.id);
+                setShowResetPasswordDialog(false);
+              }}
+            >
+              <Mail className="h-4 w-4 mr-2" />
+              Send Email
+            </Button>
+            <Button onClick={() => { setShowResetPasswordDialog(false); setResetPasswordResult(null); }}>
+              Close
             </Button>
           </div>
         </DialogContent>
