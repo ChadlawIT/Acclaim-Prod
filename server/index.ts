@@ -56,8 +56,9 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // Use port 5000 for Replit compatibility
-  const port = 5000;
+  // Azure provides the port via process.env.PORT.
+  // Falls back to 5000 for local/Replit development.
+  const port = Number(process.env.PORT) || 5000;
 
   server.listen(
     {
