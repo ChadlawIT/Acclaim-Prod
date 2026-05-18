@@ -5180,21 +5180,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const time = new Date(m.createdAt).toLocaleTimeString('en-GB', {
             hour: '2-digit', minute: '2-digit'
           });
-          const sender = (m.senderName || '').trim() || m.senderEmail || 'Unknown';
-          const isAdmin = m.senderIsAdmin;
-          const contentHtml = (m.content || '')
+
+          // Detect embedded sender prefix: "Name:\n\nContent"
+          let displaySender = (m.senderName || '').trim() || m.senderEmail || 'Acclaim';
+          let displayContent = m.content || '';
+          const embeddedMatch = displayContent.match(/^([^\n]+):\n\n([\s\S]*)$/);
+          if (embeddedMatch) {
+            displaySender = embeddedMatch[1].trim();
+            displayContent = embeddedMatch[2];
+          }
+
+          const contentHtml = displayContent
             .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
             .replace(/\r\n|\n/g, '<br>');
           const attachmentHtml = m.attachmentFileName
             ? `<div class="attachment">&#128206; ${m.attachmentFileName}</div>` : '';
-          const badgeClass = isAdmin ? 'badge badge-admin' : 'badge badge-client';
-          const badgeLabel = isAdmin ? 'Admin' : 'Client';
           return `
             <div class="card">
               <div class="card-header">
                 <div class="header-left">
-                  <span class="sender">${sender}</span>
-                  <span class="${badgeClass}">${badgeLabel}</span>
+                  <span class="sender">${displaySender.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>
                 </div>
                 <span class="date">${date} &nbsp;${time}</span>
               </div>
@@ -5351,33 +5356,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Case not found" });
       }
       
-      // Resolve (or upsert) a system user record per sender name so the name
-      // is stored in the users table and retrieved correctly by existing queries.
-      const nameParts = senderName.trim().split(/\s+/);
-      const firstName = nameParts[0] || senderName;
-      const lastName = nameParts.slice(1).join(' ') || '';
-      const senderSlug = senderName.toLowerCase().replace(/[^a-z0-9]+/g, '.');
-      const senderSystemId = `sos-system-${senderSlug}`;
-      const senderEmail = `sos-system.${senderSlug}@acclaim.law`;
-
-      // Use upsertUser so duplicate ID or email conflicts never cause a throw
-      const systemUser = await storage.upsertUser({
-        id: senderSystemId,
-        email: senderEmail,
-        firstName,
-        lastName,
-        isAdmin: false,
-        emailNotifications: false,
-        documentNotifications: false,
-        pushNotifications: false,
-        loginNotifications: false,
-      });
-      console.log(`[External Messages] Resolved SOS system user for sender: ${senderName} (id: ${systemUser?.id})`);
-
-      if (!systemUser?.id) {
-        return res.status(500).json({ message: "Failed to resolve sender user for message" });
+      // Use the shared Acclaim system user for all external API messages.
+      // The sender name is embedded into the message content so no DB schema changes are needed.
+      const ACCLAIM_SYSTEM_EMAIL = 'email@acclaim.law';
+      let systemUser = await storage.getUserByEmail(ACCLAIM_SYSTEM_EMAIL);
+      if (!systemUser) {
+        systemUser = await storage.createUser({
+          id: 'acclaim-system-user',
+          email: ACCLAIM_SYSTEM_EMAIL,
+          firstName: 'Acclaim',
+          lastName: '',
+          isAdmin: false,
+          emailNotifications: false,
+          documentNotifications: false,
+          pushNotifications: false,
+          loginNotifications: false,
+        });
       }
       const systemUserId = systemUser.id;
+
+      // Prefix the content with the sender name so it displays correctly in the portal and SOS
+      const contentWithSender = `${senderName}:\n\n${message}`;
 
       // Use custom subject if provided, otherwise generate automatically
       const messageSubject = subject || `${messageType}: ${case_.caseName}`;
@@ -5390,7 +5389,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         recipientId: case_.organisationId.toString(),
         caseId: case_.id, // Set the caseId for proper filtering
         subject: messageSubject,
-        content: message,
+        content: contentWithSender,
         isRead: false,
         createdAt: new Date(),
       });
