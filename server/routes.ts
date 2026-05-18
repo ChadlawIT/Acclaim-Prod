@@ -5144,9 +5144,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { externalRef } = req.params;
       const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
       const since = req.query.since ? new Date(req.query.since as string) : null;
+      const format = (req.query.format as string) || 'json';
 
       const case_ = await storage.getCaseByExternalRef(externalRef);
       if (!case_) {
+        if (format === 'text') return res.type('text/plain').status(404).send('Case not found.');
         return res.status(404).json({ message: "Case not found" });
       }
 
@@ -5159,6 +5161,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Apply limit (messages are already newest-first from storage)
       caseMessages = caseMessages.slice(0, limit);
+
+      // Plain text format for systems that cannot parse JSON (e.g. SOS Flow)
+      if (format === 'text') {
+        if (caseMessages.length === 0) {
+          return res.type('text/plain').send('No messages found for this case.');
+        }
+        const lines = caseMessages.map(m => {
+          const date = new Date(m.createdAt).toLocaleDateString('en-GB', {
+            day: '2-digit', month: 'short', year: 'numeric'
+          });
+          const time = new Date(m.createdAt).toLocaleTimeString('en-GB', {
+            hour: '2-digit', minute: '2-digit'
+          });
+          const sender = (m.senderName || '').trim() || m.senderEmail || 'Unknown';
+          const attachment = m.attachmentFileName ? `\n[Attachment: ${m.attachmentFileName}]` : '';
+          return `[${date} ${time}]  ${sender}\n${m.subject}\n${m.content}${attachment}`;
+        });
+        return res.type('text/plain').send(lines.join('\n\n---\n\n'));
+      }
 
       return res.json({
         externalRef,
