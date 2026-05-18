@@ -5138,6 +5138,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get messages for a case by external reference (for SOS to display portal messages on the matter)
+  app.get('/api/external/cases/:externalRef/messages', async (req: any, res) => {
+    try {
+      const { externalRef } = req.params;
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+      const since = req.query.since ? new Date(req.query.since as string) : null;
+
+      const case_ = await storage.getCaseByExternalRef(externalRef);
+      if (!case_) {
+        return res.status(404).json({ message: "Case not found" });
+      }
+
+      let caseMessages = await storage.getMessagesForCase(case_.id);
+
+      // Optional: only return messages newer than a given ISO timestamp
+      if (since && !isNaN(since.getTime())) {
+        caseMessages = caseMessages.filter(m => new Date(m.createdAt) > since);
+      }
+
+      // Apply limit (messages are already newest-first from storage)
+      caseMessages = caseMessages.slice(0, limit);
+
+      return res.json({
+        externalRef,
+        caseId: case_.id,
+        caseName: case_.caseName,
+        accountNumber: case_.accountNumber,
+        messageCount: caseMessages.length,
+        messages: caseMessages.map(m => ({
+          id: m.id,
+          subject: m.subject,
+          content: m.content,
+          sentAt: m.createdAt,
+          senderName: m.senderName,
+          senderEmail: m.senderEmail,
+          senderIsAdmin: m.senderIsAdmin,
+          hasAttachment: !!m.attachmentFileName,
+          attachmentFileName: m.attachmentFileName || null,
+          attachmentFileSize: m.attachmentFileSize || null,
+          isRead: m.isRead,
+        })),
+      });
+    } catch (error) {
+      console.error("Error fetching case messages via external API:", error);
+      res.status(500).json({ message: "Failed to fetch case messages" });
+    }
+  });
+
   // Create case message (for external system to send messages to specific cases)
   app.post('/api/external/cases/:externalRef/messages', async (req: any, res) => {
     try {
