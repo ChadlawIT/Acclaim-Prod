@@ -5351,24 +5351,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Case not found" });
       }
       
-      // Resolve the dedicated "Acclaim" system user for external API messages.
-      // This keeps the sender name as "Acclaim" without affecting admin UI messages.
-      const ACCLAIM_SYSTEM_EMAIL = 'email@acclaim.law';
-      let systemUser = await storage.getUserByEmail(ACCLAIM_SYSTEM_EMAIL);
+      // Resolve (or create) a system user record per sender name so the name
+      // is stored in the users table and retrieved correctly by existing queries.
+      const nameParts = senderName.trim().split(/\s+/);
+      const firstName = nameParts[0] || senderName;
+      const lastName = nameParts.slice(1).join(' ') || '';
+      const senderSlug = senderName.toLowerCase().replace(/[^a-z0-9]+/g, '.');
+      const senderEmail = `sos-system.${senderSlug}@acclaim.law`;
+
+      let systemUser = await storage.getUserByEmail(senderEmail);
       if (!systemUser) {
-        // Create the system user on first use — no manual setup required
         systemUser = await storage.createUser({
-          id: 'acclaim-system-user',
-          email: ACCLAIM_SYSTEM_EMAIL,
-          firstName: 'Acclaim',
-          lastName: '',
+          id: `sos-system-${senderSlug}`,
+          email: senderEmail,
+          firstName,
+          lastName,
           isAdmin: false,
           emailNotifications: false,
           documentNotifications: false,
           pushNotifications: false,
           loginNotifications: false,
         });
-        console.log('[External Messages] Created Acclaim system user for API messages');
+        console.log(`[External Messages] Created SOS system user for sender: ${senderName}`);
       }
       const systemUserId = systemUser.id;
 
