@@ -5162,12 +5162,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Apply limit (messages are already newest-first from storage)
       caseMessages = caseMessages.slice(0, limit);
 
-      // Plain text format for systems that cannot parse JSON (e.g. SOS Flow)
+      // HTML format for systems that render HTTP responses as HTML (e.g. SOS Flow)
       if (format === 'text') {
         if (caseMessages.length === 0) {
-          return res.type('text/plain').send('No messages found for this case.');
+          const emptyHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+            <style>body{font-family:Segoe UI,Arial,sans-serif;background:#f5f5f5;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;}
+            .empty{background:#fff;border-radius:8px;padding:32px 48px;text-align:center;color:#888;box-shadow:0 1px 4px rgba(0,0,0,.08);}
+            .empty svg{margin-bottom:12px;opacity:.4;}p{margin:0;font-size:14px;}</style></head>
+            <body><div class="empty"><p>No messages found for this case.</p></div></body></html>`;
+          return res.type('text/html').send(emptyHtml);
         }
-        const lines = caseMessages.map(m => {
+
+        const messageCards = caseMessages.map(m => {
           const date = new Date(m.createdAt).toLocaleDateString('en-GB', {
             day: '2-digit', month: 'short', year: 'numeric'
           });
@@ -5175,10 +5181,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
             hour: '2-digit', minute: '2-digit'
           });
           const sender = (m.senderName || '').trim() || m.senderEmail || 'Unknown';
-          const attachment = m.attachmentFileName ? `\n[Attachment: ${m.attachmentFileName}]` : '';
-          return `[${date} ${time}]  ${sender}\n${m.subject}\n${m.content}${attachment}`;
-        });
-        return res.type('text/plain').send(lines.join('\n\n---\n\n'));
+          const isAdmin = m.senderIsAdmin;
+          const contentHtml = (m.content || '')
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/\r\n|\n/g, '<br>');
+          const attachmentHtml = m.attachmentFileName
+            ? `<div class="attachment">&#128206; ${m.attachmentFileName}</div>` : '';
+          const badgeClass = isAdmin ? 'badge badge-admin' : 'badge badge-client';
+          const badgeLabel = isAdmin ? 'Admin' : 'Client';
+          return `
+            <div class="card">
+              <div class="card-header">
+                <div class="header-left">
+                  <span class="sender">${sender}</span>
+                  <span class="${badgeClass}">${badgeLabel}</span>
+                </div>
+                <span class="date">${date} &nbsp;${time}</span>
+              </div>
+              <div class="subject">${(m.subject || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+              <div class="content">${contentHtml}</div>
+              ${attachmentHtml}
+            </div>`;
+        }).join('');
+
+        const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f0f2f5;
+      padding: 20px;
+      font-size: 13px;
+      color: #1a1a2e;
+    }
+    .header {
+      background: linear-gradient(135deg, #1a6b6b 0%, #2a9d8f 100%);
+      color: #fff;
+      padding: 14px 20px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header h1 { font-size: 15px; font-weight: 600; letter-spacing: .3px; }
+    .header .count { font-size: 12px; opacity: .85; background: rgba(255,255,255,.2); padding: 3px 10px; border-radius: 12px; }
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.08);
+      border-left: 4px solid #2a9d8f;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .header-left { display: flex; align-items: center; gap: 8px; }
+    .sender { font-weight: 600; font-size: 13px; color: #1a1a2e; }
+    .badge {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 10px;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+    }
+    .badge-admin { background: #e0f2f1; color: #00796b; }
+    .badge-client { background: #e8eaf6; color: #3949ab; }
+    .date { font-size: 11px; color: #888; white-space: nowrap; }
+    .subject {
+      font-weight: 600;
+      font-size: 12px;
+      color: #444;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: .3px;
+    }
+    .content { font-size: 13px; color: #333; line-height: 1.6; }
+    .attachment {
+      margin-top: 10px;
+      font-size: 11px;
+      color: #666;
+      background: #f5f5f5;
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Portal Messages &mdash; ${case_.caseName}</h1>
+    <span class="count">${caseMessages.length} message${caseMessages.length !== 1 ? 's' : ''}</span>
+  </div>
+  ${messageCards}
+</body>
+</html>`;
+        return res.type('text/html').send(html);
       }
 
       return res.json({
