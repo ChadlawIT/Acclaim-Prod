@@ -5351,28 +5351,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Case not found" });
       }
       
-      // Resolve (or create) a system user record per sender name so the name
+      // Resolve (or upsert) a system user record per sender name so the name
       // is stored in the users table and retrieved correctly by existing queries.
       const nameParts = senderName.trim().split(/\s+/);
       const firstName = nameParts[0] || senderName;
       const lastName = nameParts.slice(1).join(' ') || '';
       const senderSlug = senderName.toLowerCase().replace(/[^a-z0-9]+/g, '.');
+      const senderSystemId = `sos-system-${senderSlug}`;
       const senderEmail = `sos-system.${senderSlug}@acclaim.law`;
 
-      let systemUser = await storage.getUserByEmail(senderEmail);
-      if (!systemUser) {
-        systemUser = await storage.createUser({
-          id: `sos-system-${senderSlug}`,
-          email: senderEmail,
-          firstName,
-          lastName,
-          isAdmin: false,
-          emailNotifications: false,
-          documentNotifications: false,
-          pushNotifications: false,
-          loginNotifications: false,
-        });
-        console.log(`[External Messages] Created SOS system user for sender: ${senderName}`);
+      // Use upsertUser so duplicate ID or email conflicts never cause a throw
+      const systemUser = await storage.upsertUser({
+        id: senderSystemId,
+        email: senderEmail,
+        firstName,
+        lastName,
+        isAdmin: false,
+        emailNotifications: false,
+        documentNotifications: false,
+        pushNotifications: false,
+        loginNotifications: false,
+      });
+      console.log(`[External Messages] Resolved SOS system user for sender: ${senderName} (id: ${systemUser?.id})`);
+
+      if (!systemUser?.id) {
+        return res.status(500).json({ message: "Failed to resolve sender user for message" });
       }
       const systemUserId = systemUser.id;
 
