@@ -353,6 +353,16 @@ export interface IStorage {
   getAdminRestrictedCasesForUser(userId: string): Promise<number[]>; // Only admin-set restrictions, not user muting
 }
 
+// Detects the "SenderName:\n\nContent" prefix embedded by the external API
+// and returns the message with senderName as "Acclaim (SenderName)" and clean content.
+function resolveEmbeddedSender(m: any): any {
+  const match = (m.content || '').match(/^([^\n]+):\n\n([\s\S]*)$/);
+  if (match) {
+    return { ...m, senderName: `Acclaim (${match[1].trim()})`, content: match[2] };
+  }
+  return m;
+}
+
 export class DatabaseStorage implements IStorage {
   sessionStore: SessionStore;
 
@@ -1183,7 +1193,7 @@ export class DatabaseStorage implements IStorage {
         }
       }
       
-      return result.map(m => ({
+      return result.map(m => resolveEmbeddedSender({
         ...m,
         organisationName: m.caseOrganisationId ? orgNameMap[m.caseOrganisationId] : undefined,
       }));
@@ -1273,14 +1283,14 @@ export class DatabaseStorage implements IStorage {
     
     // Filter out messages from restricted cases
     if (restrictedCaseIds.length > 0) {
-      return messagesWithOrgNames.filter(m => !m.caseId || !restrictedCaseIds.includes(m.caseId));
+      return messagesWithOrgNames.filter(m => !m.caseId || !restrictedCaseIds.includes(m.caseId)).map(resolveEmbeddedSender);
     }
     
-    return messagesWithOrgNames;
+    return messagesWithOrgNames.map(resolveEmbeddedSender);
   }
 
   async getMessagesForCase(caseId: number): Promise<any[]> {
-    return await db
+    const rows = await db
       .select({
         id: messages.id,
         senderId: messages.senderId,
@@ -1305,6 +1315,7 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(organisations, eq(users.organisationId, organisations.id))
       .where(eq(messages.caseId, caseId))
       .orderBy(desc(messages.createdAt));
+    return rows.map(resolveEmbeddedSender);
   }
 
   async createMessage(message: InsertMessage): Promise<Message> {

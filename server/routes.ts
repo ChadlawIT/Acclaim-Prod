@@ -5181,14 +5181,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             hour: '2-digit', minute: '2-digit'
           });
 
-          // Detect embedded sender prefix: "Name:\n\nContent"
-          let displaySender = (m.senderName || '').trim() || m.senderEmail || 'Acclaim';
-          let displayContent = m.content || '';
-          const embeddedMatch = displayContent.match(/^([^\n]+):\n\n([\s\S]*)$/);
-          if (embeddedMatch) {
-            displaySender = embeddedMatch[1].trim();
-            displayContent = embeddedMatch[2];
-          }
+          const displaySender = (m.senderName || '').trim() || m.senderEmail || 'Acclaim';
+          const displayContent = m.content || '';
 
           const contentHtml = displayContent
             .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
