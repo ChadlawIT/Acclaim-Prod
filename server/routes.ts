@@ -2919,7 +2919,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.json({ 
-        tempPassword, 
+        tempPassword,
+        email: targetUser?.email ?? '',
         message: "Password reset successfully. Please provide the temporary password to the user." 
       });
     } catch (error) {
