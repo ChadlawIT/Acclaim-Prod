@@ -2996,7 +2996,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         username: user.username,
         organisationName: organisation.name,
         adminName: `${admin.firstName} ${admin.lastName}`,
-        portalUrl: 'https://acclaim-api-uat-uks-001.azurewebsites.net/'
+        portalUrl: 'https://acclaim-api-prod-uks-001.azurewebsites.net/auth'
       };
 
       let welcomeEmailSent = false;

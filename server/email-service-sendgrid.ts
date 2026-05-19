@@ -520,7 +520,7 @@ class SendGridEmailService {
                       
                       <!-- CTA Button -->
                       <div style="text-align: center;">
-                        <a href="https://acclaim-api.azurewebsites.net/auth" style="display: inline-block; background-color: #008b8b; background: linear-gradient(135deg, #008b8b 0%, #006666 100%); color: #ffffff !important; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 12px rgba(0,139,139,0.3);">
+                        <a href="https://acclaim-api-prod-uks-001.azurewebsites.net/auth" style="display: inline-block; background-color: #008b8b; background: linear-gradient(135deg, #008b8b 0%, #006666 100%); color: #ffffff !important; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 12px rgba(0,139,139,0.3);">
                           View in Portal →
                         </a>
                       </div>
@@ -564,7 +564,7 @@ Message:
 ${data.messageContent}
 
 Please log in to the Acclaim Portal to view and respond to this message.
-Portal: https://acclaim-api.azurewebsites.net/auth
+Portal: https://acclaim-api-prod-uks-001.azurewebsites.net/auth
       `;
 
       // Prepare attachments for APIM
@@ -898,7 +898,7 @@ Please log in to the Acclaim Portal to view and respond to this message.
                       
                       <!-- CTA Button -->
                       <div style="text-align: center;">
-                        <a href="https://acclaim-api.azurewebsites.net/auth" style="display: inline-block; background-color: #008b8b; background: linear-gradient(135deg, #008b8b 0%, #006666 100%); color: #ffffff !important; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 12px rgba(0,139,139,0.3);">
+                        <a href="https://acclaim-api-prod-uks-001.azurewebsites.net/auth" style="display: inline-block; background-color: #008b8b; background: linear-gradient(135deg, #008b8b 0%, #006666 100%); color: #ffffff !important; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 12px rgba(0,139,139,0.3);">
                           View in Portal →
                         </a>
                       </div>
@@ -930,7 +930,7 @@ Message:
 ${data.messageContent}
 
 Please log in to the Acclaim Portal to view this message and respond if needed.
-Portal: https://acclaim-api.azurewebsites.net/auth
+Portal: https://acclaim-api-prod-uks-001.azurewebsites.net/auth
       `;
 
       // Prepare attachments for APIM
@@ -980,7 +980,7 @@ Portal: https://acclaim-api.azurewebsites.net/auth
     }
 
     try {
-      const portalUrl = data.portalUrl || 'https://acclaim-api-uat-uks-001.azurewebsites.net/';
+      const portalUrl = data.portalUrl || 'https://acclaim-api-prod-uks-001.azurewebsites.net/auth';
       const subject = `Welcome to the Acclaim Credit Management & Recovery Portal!`;
 
       const htmlContent = `
@@ -2266,7 +2266,7 @@ Please log in to the Acclaim Portal to view this document.
                       
                       <!-- CTA Button -->
                       <div style="text-align: center;">
-                        <a href="https://acclaim-api.azurewebsites.net/auth" style="display: inline-block; background-color: #008b8b; background: linear-gradient(135deg, #008b8b 0%, #006666 100%); color: #ffffff !important; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 12px rgba(0,139,139,0.3);">
+                        <a href="https://acclaim-api-prod-uks-001.azurewebsites.net/auth" style="display: inline-block; background-color: #008b8b; background: linear-gradient(135deg, #008b8b 0%, #006666 100%); color: #ffffff !important; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 12px rgba(0,139,139,0.3);">
                           View in Portal →
                         </a>
                       </div>
@@ -2300,7 +2300,7 @@ File Size: ${formatFileSize(data.fileSize)}
 Uploaded: ${data.uploadedAt.toLocaleString('en-GB')}
 
 Please log in to the Acclaim Portal to view and download this document.
-Portal: https://acclaim-api.azurewebsites.net/auth
+Portal: https://acclaim-api-prod-uks-001.azurewebsites.net/auth
       `;
 
       const attachments: Array<{ content: string; filename: string; type: string; disposition?: string; content_id?: string }> = [];
