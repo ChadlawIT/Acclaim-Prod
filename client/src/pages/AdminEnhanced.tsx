@@ -245,7 +245,8 @@ interface CaseSubmission {
   processedBy?: string;
 }
 
-const ITEMS_PER_PAGE = 20;
+const DEFAULT_PAGE_SIZE = 10;
+const PAGE_SIZE_OPTIONS = [10, 25, 50];
 
 function Pagination({ currentPage, totalPages, onPageChange }: { currentPage: number; totalPages: number; onPageChange: (page: number) => void }) {
   if (totalPages <= 1) return null;
@@ -294,6 +295,25 @@ function Pagination({ currentPage, totalPages, onPageChange }: { currentPage: nu
   );
 }
 
+function PageSizeSelector({ pageSize, onPageSizeChange }: { pageSize: number; onPageSizeChange: (size: number) => void }) {
+  return (
+    <div className="flex items-center gap-2 text-sm text-gray-600">
+      <span className="whitespace-nowrap">Show</span>
+      <Select value={String(pageSize)} onValueChange={(v) => onPageSizeChange(Number(v))}>
+        <SelectTrigger className="w-20 h-8">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {PAGE_SIZE_OPTIONS.map(n => (
+            <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <span className="whitespace-nowrap">per page</span>
+    </div>
+  );
+}
+
 function CaseManagementTab({ isSuperAdmin = false }: { isSuperAdmin?: boolean }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -301,6 +321,7 @@ function CaseManagementTab({ isSuperAdmin = false }: { isSuperAdmin?: boolean })
   const [archiveConfirmCase, setArchiveConfirmCase] = useState<Case | null>(null);
   const [showNewCaseDialog, setShowNewCaseDialog] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [caseSearchFilter, setCaseSearchFilter] = useState("");
   const [restrictAccessCase, setRestrictAccessCase] = useState<Case | null>(null);
   const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
@@ -674,8 +695,8 @@ function CaseManagementTab({ isSuperAdmin = false }: { isSuperAdmin?: boolean })
     : cases;
 
   // Pagination logic for cases
-  const totalPages = Math.ceil((filteredCases?.length || 0) / ITEMS_PER_PAGE);
-  const paginatedCases = filteredCases.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  const totalPages = Math.ceil((filteredCases?.length || 0) / pageSize);
+  const paginatedCases = filteredCases.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   if (isLoading) {
     return <div>Loading cases...</div>;
@@ -701,11 +722,12 @@ function CaseManagementTab({ isSuperAdmin = false }: { isSuperAdmin?: boolean })
             value={caseSearchFilter}
             onChange={(e) => {
               setCaseSearchFilter(e.target.value);
-              setCurrentPage(1); // Reset to first page when searching
+              setCurrentPage(1);
             }}
             className="pl-10"
           />
         </div>
+        <PageSizeSelector pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }} />
         <div className="flex gap-2">
           <Button
             onClick={() => setShowNewCaseDialog(true)}
@@ -1275,6 +1297,7 @@ function CaseSubmissionsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
   const [selectedSubmissions, setSelectedSubmissions] = useState<Set<number>>(new Set());
   const [selectAll, setSelectAll] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   // Fetch case submissions
   const { data: submissions = [], isLoading, error } = useQuery({
@@ -1505,8 +1528,8 @@ function CaseSubmissionsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
   };
 
   // Pagination logic for submissions
-  const totalPages = Math.ceil((submissions?.length || 0) / ITEMS_PER_PAGE);
-  const paginatedSubmissions = submissions.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  const totalPages = Math.ceil((submissions?.length || 0) / pageSize);
+  const paginatedSubmissions = submissions.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   if (isLoading) return <div>Loading case submissions...</div>;
   if (error) return <div>Error loading case submissions</div>;
@@ -1515,8 +1538,8 @@ function CaseSubmissionsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
     <div className="space-y-4">
       {/* Header with filters and export */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex items-center gap-4">
-          <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+        <div className="flex items-center gap-4 flex-wrap">
+          <Select value={selectedStatus} onValueChange={(v) => { setSelectedStatus(v); setCurrentPage(1); }}>
             <SelectTrigger className="w-48">
               <SelectValue />
             </SelectTrigger>
@@ -1527,6 +1550,7 @@ function CaseSubmissionsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
               <SelectItem value="rejected">Rejected</SelectItem>
             </SelectContent>
           </Select>
+          <PageSizeSelector pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }} />
           <Badge variant="outline" className="text-sm">
             {submissions.length} submission{submissions.length !== 1 ? 's' : ''}
           </Badge>
@@ -2180,7 +2204,11 @@ export default function AdminEnhanced() {
 
   // Pagination state
   const [usersPage, setUsersPage] = useState(1);
+  const [usersPageSize, setUsersPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [orgsPage, setOrgsPage] = useState(1);
+  const [orgsPageSize, setOrgsPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [reportsPage, setReportsPage] = useState(1);
+  const [reportsPageSize, setReportsPageSize] = useState(DEFAULT_PAGE_SIZE);
   
   // Search filter state
   const [userSearchFilter, setUserSearchFilter] = useState("");
@@ -3107,10 +3135,19 @@ export default function AdminEnhanced() {
     : organisations;
 
   // Pagination calculations
-  const usersTotalPages = Math.ceil((filteredUsers?.length || 0) / ITEMS_PER_PAGE);
-  const paginatedUsers = filteredUsers.slice((usersPage - 1) * ITEMS_PER_PAGE, usersPage * ITEMS_PER_PAGE);
-  const orgsTotalPages = Math.ceil((filteredOrgs?.length || 0) / ITEMS_PER_PAGE);
-  const paginatedOrgs = filteredOrgs.slice((orgsPage - 1) * ITEMS_PER_PAGE, orgsPage * ITEMS_PER_PAGE);
+  const usersTotalPages = Math.ceil((filteredUsers?.length || 0) / usersPageSize);
+  const paginatedUsers = filteredUsers.slice((usersPage - 1) * usersPageSize, usersPage * usersPageSize);
+  const orgsTotalPages = Math.ceil((filteredOrgs?.length || 0) / orgsPageSize);
+  const paginatedOrgs = filteredOrgs.slice((orgsPage - 1) * orgsPageSize, orgsPage * orgsPageSize);
+
+  // Reports pagination
+  const sortedReports = [...(scheduledReports || [])].sort((a: any, b: any) => {
+    const nameA = a.recipientEmail ? (a.recipientName || a.recipientEmail) : (a.userName || '');
+    const nameB = b.recipientEmail ? (b.recipientName || b.recipientEmail) : (b.userName || '');
+    return nameA.localeCompare(nameB);
+  });
+  const reportsTotalPages = Math.ceil(sortedReports.length / reportsPageSize);
+  const paginatedReports = sortedReports.slice((reportsPage - 1) * reportsPageSize, reportsPage * reportsPageSize);
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
@@ -3570,6 +3607,7 @@ export default function AdminEnhanced() {
                     <SelectItem value="not_registered">Not Registered</SelectItem>
                   </SelectContent>
                 </Select>
+                <PageSizeSelector pageSize={usersPageSize} onPageSizeChange={(s) => { setUsersPageSize(s); setUsersPage(1); }} />
                 <div className="text-sm text-gray-600">
                   Showing {paginatedUsers.length} of {filteredUsers?.length || 0} users
                   {(userSearchFilter || userTypeFilter !== "all") && ` (filtered from ${users?.length || 0})`}
@@ -4390,6 +4428,7 @@ export default function AdminEnhanced() {
                     className="pl-10"
                   />
                 </div>
+                <PageSizeSelector pageSize={orgsPageSize} onPageSizeChange={(s) => { setOrgsPageSize(s); setOrgsPage(1); }} />
                 <div className="text-sm text-gray-600">
                   Showing {paginatedOrgs.length} of {filteredOrgs?.length || 0} organisations
                   {orgSearchFilter && ` (filtered from ${organisations?.length || 0})`}
@@ -4697,7 +4736,8 @@ export default function AdminEnhanced() {
                     </CardDescription>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <PageSizeSelector pageSize={reportsPageSize} onPageSizeChange={(s) => { setReportsPageSize(s); setReportsPage(1); }} />
                   <Button
                     variant="outline"
                     size="sm"
@@ -4724,15 +4764,7 @@ export default function AdminEnhanced() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {[...scheduledReports].sort((a: any, b: any) => {
-                    const orgA = organisations?.find((o: any) => o.id === a.organisationId);
-                    const orgB = organisations?.find((o: any) => o.id === b.organisationId);
-                    const nameA = a.recipientEmail ? (a.recipientName || a.recipientEmail) : (a.userName || '');
-                    const nameB = b.recipientEmail ? (b.recipientName || b.recipientEmail) : (b.userName || '');
-                    const nameCompare = nameA.localeCompare(nameB);
-                    if (nameCompare !== 0) return nameCompare;
-                    return (orgA?.name || '').localeCompare(orgB?.name || '');
-                  }).map((report: any) => {
+                  {paginatedReports.map((report: any) => {
                     const org = organisations?.find((o: any) => o.id === report.organisationId);
                     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
                     const formatTime = (hour: number) => {
@@ -4986,6 +5018,7 @@ export default function AdminEnhanced() {
                       <p><strong>Organisation reports:</strong> Configure via the Calendar icon in the Organisations tab (sends to external recipients).</p>
                     </div>
                   </div>
+                  <Pagination currentPage={reportsPage} totalPages={reportsTotalPages} onPageChange={setReportsPage} />
                 </div>
               )}
             </CardContent>
