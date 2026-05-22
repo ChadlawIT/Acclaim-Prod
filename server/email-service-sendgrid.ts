@@ -783,8 +783,15 @@ Please log in to the Acclaim Portal to view and respond to this message.
         }
       }
 
+      // Always BCC email@acclaim.law so the shared inbox receives every user message
+      // even when the primary recipient is a specific case handler
+      const DEFAULT_INBOX = 'email@acclaim.law';
+      const bccList = adminEmail.toLowerCase() !== DEFAULT_INBOX ? [DEFAULT_INBOX] : [];
+      console.log(`[sendMessageNotification] TO=${adminEmail} BCC=${bccList.join(',') || '(none — primary IS default)'}`);
+
       return await this.sendViaAPIM({
         to: adminEmail,
+        bcc: bccList.length > 0 ? bccList : undefined,
         subject: subject,
         textContent: textContent,
         htmlContent: htmlContent,
