@@ -302,6 +302,14 @@ export default function AuthPage() {
                     <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">
                       If you've completed sign-up but still can't access the portal, please contact us at <strong>email@acclaim.law</strong> or call <strong>0113 225 8811</strong>.
                     </p>
+                    <div className="mt-3 pt-3 border-t border-teal-200 dark:border-teal-700">
+                      <button
+                        onClick={() => { setShowAltLogin(true); setError(""); }}
+                        className="text-xs text-muted-foreground hover:text-primary hover:underline transition-colors"
+                      >
+                        Sign in another way
+                      </button>
+                    </div>
                   </>
                 ) : (
                   <>
