@@ -1810,7 +1810,7 @@ export class DatabaseStorage implements IStorage {
 
     // Auto-assign super admin for specific email addresses
     const emailLower = userData.email.toLowerCase();
-    const isSuperAdmin = emailLower === 'mattperry@chadlaw.co.uk' || emailLower === 'it@chadlaw.co.uk';
+    const isSuperAdmin = emailLower === 'matt.perry@chadlaw.co.uk' || emailLower === 'it@chadlaw.co.uk';
 
     const [user] = await db
       .insert(users)
