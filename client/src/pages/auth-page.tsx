@@ -229,16 +229,6 @@ export default function AuthPage() {
                   Privacy Notice
                 </Link>
               </div>
-              {!showAltLogin && (
-                <div className="mt-1 text-center">
-                  <button
-                    onClick={() => { setShowAltLogin(true); setError(""); }}
-                    className="text-xs text-muted-foreground hover:text-primary hover:underline transition-colors"
-                  >
-                    Sign in another way
-                  </button>
-                </div>
-              )}
             </CardContent>
           </Card>
 
