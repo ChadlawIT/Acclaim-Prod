@@ -269,7 +269,7 @@ export default function AuthPage() {
             >
               <span className="flex items-center gap-2 font-medium">
                 <Info className="h-4 w-4 text-teal-600" />
-                First time using the portal?
+                Need help signing in?
               </span>
               {showFirstTimeGuide ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </button>
