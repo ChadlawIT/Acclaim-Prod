@@ -5027,16 +5027,6 @@ export default function AdminEnhanced() {
 
       </Tabs>
 
-      <div className="flex justify-center pt-6">
-        <Button
-          variant="outline"
-          onClick={() => toast({ title: "Hello Matt" })}
-          data-testid="button-hello-matt"
-        >
-          Hello Matt
-        </Button>
-      </div>
-
       {/* Edit Organization Dialog */}
       <Dialog open={showEditOrg} onOpenChange={setShowEditOrg}>
         <DialogContent>
