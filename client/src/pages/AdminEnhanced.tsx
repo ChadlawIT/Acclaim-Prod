@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Users, Building, Plus, Edit, Trash2, Shield, UserPlus, AlertTriangle, ShieldCheck, ShieldAlert, ArrowLeft, Activity, FileText, CreditCard, Archive, ArchiveRestore, Download, Check, Eye, EyeOff, Mail, Bell, BellOff, FilePlus, FileX, BarChart3, Search, Crown, Calendar, CalendarOff, Pencil, LogOut, RefreshCw, ChevronDown, ChevronUp, Clock, Send, History } from "lucide-react";
+import { Users, Building, Plus, Edit, Trash2, Shield, UserPlus, AlertTriangle, ShieldCheck, ShieldAlert, ArrowLeft, Activity, FileText, CreditCard, Archive, ArchiveRestore, Download, Check, Eye, EyeOff, Mail, Bell, BellOff, FilePlus, FileX, BarChart3, Search, Crown, Calendar, CalendarOff, Pencil, LogOut, RefreshCw, ChevronDown, ChevronUp, Clock, Send, History, KeyRound, Copy } from "lucide-react";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { createUserSchema, updateUserSchema, createOrganisationSchema, updateOrganisationSchema } from "@shared/schema";
@@ -245,7 +245,8 @@ interface CaseSubmission {
   processedBy?: string;
 }
 
-const ITEMS_PER_PAGE = 20;
+const DEFAULT_PAGE_SIZE = 10;
+const PAGE_SIZE_OPTIONS = [10, 25, 50];
 
 function Pagination({ currentPage, totalPages, onPageChange }: { currentPage: number; totalPages: number; onPageChange: (page: number) => void }) {
   if (totalPages <= 1) return null;
@@ -294,6 +295,25 @@ function Pagination({ currentPage, totalPages, onPageChange }: { currentPage: nu
   );
 }
 
+function PageSizeSelector({ pageSize, onPageSizeChange }: { pageSize: number; onPageSizeChange: (size: number) => void }) {
+  return (
+    <div className="flex items-center gap-2 text-sm text-gray-600">
+      <span className="whitespace-nowrap">Show</span>
+      <Select value={String(pageSize)} onValueChange={(v) => onPageSizeChange(Number(v))}>
+        <SelectTrigger className="w-20 h-8">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {PAGE_SIZE_OPTIONS.map(n => (
+            <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <span className="whitespace-nowrap">per page</span>
+    </div>
+  );
+}
+
 function CaseManagementTab({ isSuperAdmin = false }: { isSuperAdmin?: boolean }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -301,6 +321,7 @@ function CaseManagementTab({ isSuperAdmin = false }: { isSuperAdmin?: boolean })
   const [archiveConfirmCase, setArchiveConfirmCase] = useState<Case | null>(null);
   const [showNewCaseDialog, setShowNewCaseDialog] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [caseSearchFilter, setCaseSearchFilter] = useState("");
   const [restrictAccessCase, setRestrictAccessCase] = useState<Case | null>(null);
   const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
@@ -674,8 +695,8 @@ function CaseManagementTab({ isSuperAdmin = false }: { isSuperAdmin?: boolean })
     : cases;
 
   // Pagination logic for cases
-  const totalPages = Math.ceil((filteredCases?.length || 0) / ITEMS_PER_PAGE);
-  const paginatedCases = filteredCases.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  const totalPages = Math.ceil((filteredCases?.length || 0) / pageSize);
+  const paginatedCases = filteredCases.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   if (isLoading) {
     return <div>Loading cases...</div>;
@@ -701,11 +722,12 @@ function CaseManagementTab({ isSuperAdmin = false }: { isSuperAdmin?: boolean })
             value={caseSearchFilter}
             onChange={(e) => {
               setCaseSearchFilter(e.target.value);
-              setCurrentPage(1); // Reset to first page when searching
+              setCurrentPage(1);
             }}
             className="pl-10"
           />
         </div>
+        <PageSizeSelector pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }} />
         <div className="flex gap-2">
           <Button
             onClick={() => setShowNewCaseDialog(true)}
@@ -1275,6 +1297,7 @@ function CaseSubmissionsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
   const [selectedSubmissions, setSelectedSubmissions] = useState<Set<number>>(new Set());
   const [selectAll, setSelectAll] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   // Fetch case submissions
   const { data: submissions = [], isLoading, error } = useQuery({
@@ -1505,8 +1528,8 @@ function CaseSubmissionsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
   };
 
   // Pagination logic for submissions
-  const totalPages = Math.ceil((submissions?.length || 0) / ITEMS_PER_PAGE);
-  const paginatedSubmissions = submissions.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  const totalPages = Math.ceil((submissions?.length || 0) / pageSize);
+  const paginatedSubmissions = submissions.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   if (isLoading) return <div>Loading case submissions...</div>;
   if (error) return <div>Error loading case submissions</div>;
@@ -1515,8 +1538,8 @@ function CaseSubmissionsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
     <div className="space-y-4">
       {/* Header with filters and export */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex items-center gap-4">
-          <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+        <div className="flex items-center gap-4 flex-wrap">
+          <Select value={selectedStatus} onValueChange={(v) => { setSelectedStatus(v); setCurrentPage(1); }}>
             <SelectTrigger className="w-48">
               <SelectValue />
             </SelectTrigger>
@@ -1527,6 +1550,7 @@ function CaseSubmissionsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
               <SelectItem value="rejected">Rejected</SelectItem>
             </SelectContent>
           </Select>
+          <PageSizeSelector pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }} />
           <Badge variant="outline" className="text-sm">
             {submissions.length} submission{submissions.length !== 1 ? 's' : ''}
           </Badge>
@@ -2171,13 +2195,20 @@ export default function AdminEnhanced() {
   });
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [createdUserId, setCreatedUserId] = useState<string | null>(null);
+  const [showResetPasswordDialog, setShowResetPasswordDialog] = useState(false);
+  const [resetPasswordUser, setResetPasswordUser] = useState<User | null>(null);
+  const [resetPasswordResult, setResetPasswordResult] = useState<{ tempPassword: string; email: string } | null>(null);
   const [sendingWelcomeEmail, setSendingWelcomeEmail] = useState(false);
   const [showConfirmCreateUser, setShowConfirmCreateUser] = useState(false);
   const [orgSearchTerm, setOrgSearchTerm] = useState("");
 
   // Pagination state
   const [usersPage, setUsersPage] = useState(1);
+  const [usersPageSize, setUsersPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [orgsPage, setOrgsPage] = useState(1);
+  const [orgsPageSize, setOrgsPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [reportsPage, setReportsPage] = useState(1);
+  const [reportsPageSize, setReportsPageSize] = useState(DEFAULT_PAGE_SIZE);
   
   // Search filter state
   const [userSearchFilter, setUserSearchFilter] = useState("");
@@ -2950,6 +2981,25 @@ export default function AdminEnhanced() {
     },
   });
 
+  // Reset password mutation — generates a new temp password for the user
+  const resetPasswordMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const response = await apiRequest("POST", `/api/admin/users/${userId}/reset-password`);
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      setResetPasswordResult({ tempPassword: data.tempPassword, email: data.email });
+      setShowResetPasswordDialog(true);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to reset password. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Force logout mutation (invalidate all sessions for a user)
   const forceLogoutMutation = useMutation({
     mutationFn: async ({ userId, reason }: { userId: string; reason?: string }) => {
@@ -3085,10 +3135,19 @@ export default function AdminEnhanced() {
     : organisations;
 
   // Pagination calculations
-  const usersTotalPages = Math.ceil((filteredUsers?.length || 0) / ITEMS_PER_PAGE);
-  const paginatedUsers = filteredUsers.slice((usersPage - 1) * ITEMS_PER_PAGE, usersPage * ITEMS_PER_PAGE);
-  const orgsTotalPages = Math.ceil((filteredOrgs?.length || 0) / ITEMS_PER_PAGE);
-  const paginatedOrgs = filteredOrgs.slice((orgsPage - 1) * ITEMS_PER_PAGE, orgsPage * ITEMS_PER_PAGE);
+  const usersTotalPages = Math.ceil((filteredUsers?.length || 0) / usersPageSize);
+  const paginatedUsers = filteredUsers.slice((usersPage - 1) * usersPageSize, usersPage * usersPageSize);
+  const orgsTotalPages = Math.ceil((filteredOrgs?.length || 0) / orgsPageSize);
+  const paginatedOrgs = filteredOrgs.slice((orgsPage - 1) * orgsPageSize, orgsPage * orgsPageSize);
+
+  // Reports pagination
+  const sortedReports = [...(scheduledReports || [])].sort((a: any, b: any) => {
+    const nameA = a.recipientEmail ? (a.recipientName || a.recipientEmail) : (a.userName || '');
+    const nameB = b.recipientEmail ? (b.recipientName || b.recipientEmail) : (b.userName || '');
+    return nameA.localeCompare(nameB);
+  });
+  const reportsTotalPages = Math.ceil(sortedReports.length / reportsPageSize);
+  const paginatedReports = sortedReports.slice((reportsPage - 1) * reportsPageSize, reportsPage * reportsPageSize);
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
@@ -3548,6 +3607,7 @@ export default function AdminEnhanced() {
                     <SelectItem value="not_registered">Not Registered</SelectItem>
                   </SelectContent>
                 </Select>
+                <PageSizeSelector pageSize={usersPageSize} onPageSizeChange={(s) => { setUsersPageSize(s); setUsersPage(1); }} />
                 <div className="text-sm text-gray-600">
                   Showing {paginatedUsers.length} of {filteredUsers?.length || 0} users
                   {(userSearchFilter || userTypeFilter !== "all") && ` (filtered from ${users?.length || 0})`}
@@ -3760,6 +3820,22 @@ export default function AdminEnhanced() {
                       >
                         <Mail className="h-3 w-3 mr-1" />
                         Email
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const confirmation = confirm(`Reset password for ${user.firstName} ${user.lastName}?\n\nThis will generate a new temporary password. The user will need to change it on next sign in.`);
+                          if (confirmation) {
+                            setResetPasswordUser(user);
+                            resetPasswordMutation.mutate(user.id);
+                          }
+                        }}
+                        disabled={resetPasswordMutation.isPending}
+                        title="Reset temporary password"
+                      >
+                        <KeyRound className="h-3 w-3 mr-1" />
+                        Reset Pwd
                       </Button>
                       <Button
                         variant="outline"
@@ -4107,6 +4183,21 @@ export default function AdminEnhanced() {
                               variant="outline"
                               size="sm"
                               onClick={() => {
+                                const confirmation = confirm(`Reset password for ${user.firstName} ${user.lastName}?\n\nThis will generate a new temporary password. The user will need to change it on next sign in.`);
+                                if (confirmation) {
+                                  setResetPasswordUser(user);
+                                  resetPasswordMutation.mutate(user.id);
+                                }
+                              }}
+                              disabled={resetPasswordMutation.isPending}
+                              title="Reset temporary password"
+                            >
+                              <KeyRound className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
                                 // Check if trying to grant admin to non-chadlaw email
                                 if (!user.isAdmin && !user.email?.endsWith('@chadlaw.co.uk')) {
                                   alert('Admin privileges can only be granted to @chadlaw.co.uk email addresses.');
@@ -4337,6 +4428,7 @@ export default function AdminEnhanced() {
                     className="pl-10"
                   />
                 </div>
+                <PageSizeSelector pageSize={orgsPageSize} onPageSizeChange={(s) => { setOrgsPageSize(s); setOrgsPage(1); }} />
                 <div className="text-sm text-gray-600">
                   Showing {paginatedOrgs.length} of {filteredOrgs?.length || 0} organisations
                   {orgSearchFilter && ` (filtered from ${organisations?.length || 0})`}
@@ -4644,7 +4736,8 @@ export default function AdminEnhanced() {
                     </CardDescription>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <PageSizeSelector pageSize={reportsPageSize} onPageSizeChange={(s) => { setReportsPageSize(s); setReportsPage(1); }} />
                   <Button
                     variant="outline"
                     size="sm"
@@ -4671,15 +4764,7 @@ export default function AdminEnhanced() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {[...scheduledReports].sort((a: any, b: any) => {
-                    const orgA = organisations?.find((o: any) => o.id === a.organisationId);
-                    const orgB = organisations?.find((o: any) => o.id === b.organisationId);
-                    const nameA = a.recipientEmail ? (a.recipientName || a.recipientEmail) : (a.userName || '');
-                    const nameB = b.recipientEmail ? (b.recipientName || b.recipientEmail) : (b.userName || '');
-                    const nameCompare = nameA.localeCompare(nameB);
-                    if (nameCompare !== 0) return nameCompare;
-                    return (orgA?.name || '').localeCompare(orgB?.name || '');
-                  }).map((report: any) => {
+                  {paginatedReports.map((report: any) => {
                     const org = organisations?.find((o: any) => o.id === report.organisationId);
                     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
                     const formatTime = (hour: number) => {
@@ -4933,6 +5018,7 @@ export default function AdminEnhanced() {
                       <p><strong>Organisation reports:</strong> Configure via the Calendar icon in the Organisations tab (sends to external recipients).</p>
                     </div>
                   </div>
+                  <Pagination currentPage={reportsPage} totalPages={reportsTotalPages} onPageChange={setReportsPage} />
                 </div>
               )}
             </CardContent>
@@ -5697,6 +5783,61 @@ export default function AdminEnhanced() {
               className="bg-acclaim-teal hover:bg-acclaim-teal/90"
             >
               {addUserToOrgMutation.isPending ? "Adding..." : "Add to Organisation"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Password Dialog */}
+      <Dialog open={showResetPasswordDialog} onOpenChange={(open) => { setShowResetPasswordDialog(open); if (!open) setResetPasswordResult(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Temporary Password Generated</DialogTitle>
+            <DialogDescription>
+              A new temporary password has been set for {resetPasswordUser?.firstName} {resetPasswordUser?.lastName}. Please share it with them securely — they will be required to set a new password on first sign in.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <p className="text-xs text-amber-700 font-medium mb-2 uppercase tracking-wide">Temporary Password</p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 text-lg font-mono font-bold text-amber-900 bg-amber-100 rounded px-3 py-2 select-all">
+                  {resetPasswordResult?.tempPassword}
+                </code>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (resetPasswordResult?.tempPassword) {
+                      navigator.clipboard.writeText(resetPasswordResult.tempPassword);
+                      toast({ title: "Copied", description: "Temporary password copied to clipboard." });
+                    }
+                  }}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+              <p className="text-xs text-amber-700 mt-2">Account: {resetPasswordResult?.email}</p>
+            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-sm text-blue-700">
+                <strong>Next step:</strong> Use the Email button to send this user a password reset email, or share the temporary password with them directly.
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (resetPasswordUser) sendWelcomeEmailMutation.mutate(resetPasswordUser.id);
+                setShowResetPasswordDialog(false);
+              }}
+            >
+              <Mail className="h-4 w-4 mr-2" />
+              Send Email
+            </Button>
+            <Button onClick={() => { setShowResetPasswordDialog(false); setResetPasswordResult(null); }}>
+              Close
             </Button>
           </div>
         </DialogContent>

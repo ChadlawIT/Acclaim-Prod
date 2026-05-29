@@ -320,6 +320,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Direct email + password login (alternative to Azure SSO)
+  app.post('/api/auth/login/password', async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
+      }
+
+      const ipAddress = req.ip || req.socket?.remoteAddress || 'unknown';
+      const lockStatus = loginRateLimiter.isLocked(ipAddress);
+      if (lockStatus.locked) {
+        return res.status(429).json({ message: `Too many failed attempts. Please try again in ${lockStatus.remainingSeconds} seconds.` });
+      }
+
+      const user = await storage.getUserByEmail(email.toLowerCase().trim());
+      if (!user || !user.hashedPassword) {
+        loginRateLimiter.recordFailedAttempt(ipAddress, email);
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+
+      const passwordValid = await bcrypt.compare(password, user.hashedPassword);
+      if (!passwordValid) {
+        loginRateLimiter.recordFailedAttempt(ipAddress, email);
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+
+      loginRateLimiter.recordSuccessfulLogin(ipAddress);
+
+      (req as any).login(user, async (err: any) => {
+        if (err) {
+          console.error("Login error during password login:", err);
+          return res.status(500).json({ message: "Login failed" });
+        }
+        console.log(`[Password Login] User ${email} signed in via password`);
+        res.json({
+          message: "Login successful",
+          user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            isAdmin: user.isAdmin,
+            isSuperAdmin: user.isSuperAdmin,
+            mustChangePassword: user.mustChangePassword ?? false,
+          }
+        });
+      });
+    } catch (error) {
+      console.error("Error during password login:", error);
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
+
   app.post('/api/auth/login/otp', async (req, res) => {
     try {
       const { email, otp } = req.body;
@@ -2866,7 +2919,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.json({ 
-        tempPassword, 
+        tempPassword,
+        email: targetUser?.email ?? '',
         message: "Password reset successfully. Please provide the temporary password to the user." 
       });
     } catch (error) {
@@ -2942,7 +2996,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         username: user.username,
         organisationName: organisation.name,
         adminName: `${admin.firstName} ${admin.lastName}`,
-        portalUrl: 'https://acclaim-api-uat-uks-001.azurewebsites.net/'
+        portalUrl: 'https://acclaim-api-prod-uks-001.azurewebsites.net/auth'
       };
 
       let welcomeEmailSent = false;
@@ -5085,6 +5139,180 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get messages for a case by external reference (for SOS to display portal messages on the matter)
+  app.get('/api/external/cases/:externalRef/messages', async (req: any, res) => {
+    try {
+      const { externalRef } = req.params;
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+      const since = req.query.since ? new Date(req.query.since as string) : null;
+      const format = (req.query.format as string) || 'json';
+
+      const case_ = await storage.getCaseByExternalRef(externalRef);
+      if (!case_) {
+        if (format === 'text') return res.type('text/plain').status(404).send('Case not found.');
+        return res.status(404).json({ message: "Case not found" });
+      }
+
+      let caseMessages = await storage.getMessagesForCase(case_.id);
+
+      // Optional: only return messages newer than a given ISO timestamp
+      if (since && !isNaN(since.getTime())) {
+        caseMessages = caseMessages.filter(m => new Date(m.createdAt) > since);
+      }
+
+      // Apply limit (messages are already newest-first from storage)
+      caseMessages = caseMessages.slice(0, limit);
+
+      // HTML format for systems that render HTTP responses as HTML (e.g. SOS Flow)
+      if (format === 'text') {
+        if (caseMessages.length === 0) {
+          const emptyHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+            <style>body{font-family:Segoe UI,Arial,sans-serif;background:#f5f5f5;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;}
+            .empty{background:#fff;border-radius:8px;padding:32px 48px;text-align:center;color:#888;box-shadow:0 1px 4px rgba(0,0,0,.08);}
+            .empty svg{margin-bottom:12px;opacity:.4;}p{margin:0;font-size:14px;}</style></head>
+            <body><div class="empty"><p>No messages found for this case.</p></div></body></html>`;
+          return res.type('text/html').send(emptyHtml);
+        }
+
+        const messageCards = caseMessages.map(m => {
+          const date = new Date(m.createdAt).toLocaleDateString('en-GB', {
+            day: '2-digit', month: 'short', year: 'numeric'
+          });
+          const time = new Date(m.createdAt).toLocaleTimeString('en-GB', {
+            hour: '2-digit', minute: '2-digit'
+          });
+
+          const displaySender = (m.senderName || '').trim() || m.senderEmail || 'Acclaim';
+          const displayContent = m.content || '';
+
+          const contentHtml = displayContent
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/\r\n|\n/g, '<br>');
+          const attachmentHtml = m.attachmentFileName
+            ? `<div class="attachment">&#128206; ${m.attachmentFileName}</div>` : '';
+          return `
+            <div class="card">
+              <div class="card-header">
+                <div class="header-left">
+                  <span class="sender">${displaySender.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>
+                </div>
+                <span class="date">${date} &nbsp;${time}</span>
+              </div>
+              <div class="subject">${(m.subject || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+              <div class="content">${contentHtml}</div>
+              ${attachmentHtml}
+            </div>`;
+        }).join('');
+
+        const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f0f2f5;
+      padding: 20px;
+      font-size: 13px;
+      color: #1a1a2e;
+    }
+    .header {
+      background: linear-gradient(135deg, #1a6b6b 0%, #2a9d8f 100%);
+      color: #fff;
+      padding: 14px 20px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header h1 { font-size: 15px; font-weight: 600; letter-spacing: .3px; }
+    .header .count { font-size: 12px; opacity: .85; background: rgba(255,255,255,.2); padding: 3px 10px; border-radius: 12px; }
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.08);
+      border-left: 4px solid #2a9d8f;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .header-left { display: flex; align-items: center; gap: 8px; }
+    .sender { font-weight: 600; font-size: 13px; color: #1a1a2e; }
+    .badge {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 10px;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+    }
+    .badge-admin { background: #e0f2f1; color: #00796b; }
+    .badge-client { background: #e8eaf6; color: #3949ab; }
+    .date { font-size: 11px; color: #888; white-space: nowrap; }
+    .subject {
+      font-weight: 600;
+      font-size: 12px;
+      color: #444;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: .3px;
+    }
+    .content { font-size: 13px; color: #333; line-height: 1.6; }
+    .attachment {
+      margin-top: 10px;
+      font-size: 11px;
+      color: #666;
+      background: #f5f5f5;
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Portal Messages &mdash; ${case_.caseName}</h1>
+    <span class="count">${caseMessages.length} message${caseMessages.length !== 1 ? 's' : ''}</span>
+  </div>
+  ${messageCards}
+</body>
+</html>`;
+        return res.type('text/html').send(html);
+      }
+
+      return res.json({
+        externalRef,
+        caseId: case_.id,
+        caseName: case_.caseName,
+        accountNumber: case_.accountNumber,
+        messageCount: caseMessages.length,
+        messages: caseMessages.map(m => ({
+          id: m.id,
+          subject: m.subject,
+          content: m.content,
+          sentAt: m.createdAt,
+          senderName: m.senderName,
+          senderEmail: m.senderEmail,
+          senderIsAdmin: m.senderIsAdmin,
+          hasAttachment: !!m.attachmentFileName,
+          attachmentFileName: m.attachmentFileName || null,
+          attachmentFileSize: m.attachmentFileSize || null,
+          isRead: m.isRead,
+        })),
+      });
+    } catch (error) {
+      console.error("Error fetching case messages via external API:", error);
+      res.status(500).json({ message: "Failed to fetch case messages" });
+    }
+  });
+
   // Create case message (for external system to send messages to specific cases)
   app.post('/api/external/cases/:externalRef/messages', async (req: any, res) => {
     try {
@@ -5123,26 +5351,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Case not found" });
       }
       
-      // Resolve the dedicated "Acclaim" system user for external API messages.
-      // This keeps the sender name as "Acclaim" without affecting admin UI messages.
+      // Use the shared Acclaim system user for all external API messages.
+      // The sender name is embedded into the message content so no DB schema changes are needed.
       const ACCLAIM_SYSTEM_EMAIL = 'email@acclaim.law';
       let systemUser = await storage.getUserByEmail(ACCLAIM_SYSTEM_EMAIL);
       if (!systemUser) {
-        // Create the system user on first use — no manual setup required
-        systemUser = await storage.createUser({
-          id: 'acclaim-system-user',
-          email: ACCLAIM_SYSTEM_EMAIL,
-          firstName: 'Acclaim',
-          lastName: '',
-          isAdmin: false,
-          emailNotifications: false,
-          documentNotifications: false,
-          pushNotifications: false,
-          loginNotifications: false,
-        });
-        console.log('[External Messages] Created Acclaim system user for API messages');
+        // Fall back to looking up by known ID — never try to create to avoid duplicate key errors
+        systemUser = await storage.getUserById('acclaim-system-user');
+      }
+      if (!systemUser) {
+        return res.status(500).json({ message: 'System user not found. Ensure email@acclaim.law account exists.' });
       }
       const systemUserId = systemUser.id;
+
+      // Prefix the content with the sender name so it displays correctly in the portal and SOS
+      const contentWithSender = `${senderName}:\n\n${message}`;
 
       // Use custom subject if provided, otherwise generate automatically
       const messageSubject = subject || `${messageType}: ${case_.caseName}`;
@@ -5155,7 +5378,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         recipientId: case_.organisationId.toString(),
         caseId: case_.id, // Set the caseId for proper filtering
         subject: messageSubject,
-        content: message,
+        content: contentWithSender,
         isRead: false,
         createdAt: new Date(),
       });

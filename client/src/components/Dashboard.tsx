@@ -100,6 +100,8 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
 
   const { data: messages, isLoading: messagesLoading } = useQuery({
     queryKey: ["/api/messages"],
+    refetchInterval: 10000, // Refresh every 10 seconds
+    staleTime: 0,
     onError: (error) => {
       if (isUnauthorizedError(error)) {
         toast({
