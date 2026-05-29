@@ -5357,7 +5357,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let systemUser = await storage.getUserByEmail(ACCLAIM_SYSTEM_EMAIL);
       if (!systemUser) {
         // Fall back to looking up by known ID — never try to create to avoid duplicate key errors
-        systemUser = await storage.getUserById('acclaim-system-user');
+        systemUser = await storage.getUser('acclaim-system-user');
       }
       if (!systemUser) {
         return res.status(500).json({ message: 'System user not found. Ensure email@acclaim.law account exists.' });
