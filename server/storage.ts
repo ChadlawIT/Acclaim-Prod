@@ -72,7 +72,7 @@ export interface IStorage {
   updateUserPassword(id: string, passwordData: { hashedPassword?: string; tempPassword?: string | null; mustChangePassword?: boolean }): Promise<User>;
   updateUserOrganisation(id: string, organisationId: number | null): Promise<User>;
   getAdminByName(fullName: string): Promise<User | undefined>;
-  
+
   // Organisation operations
   getOrganisation(id: number): Promise<Organization | undefined>;
   createOrganisation(org: InsertOrganization): Promise<Organization>;
@@ -86,7 +86,7 @@ export interface IStorage {
     totalOutstanding: string;
     totalRecovered: string;
   }>;
-  
+
   // Case operations
   getCasesForOrganisation(organisationId: number): Promise<Case[]>;
   getCasesForUser(userId: string): Promise<Case[]>;
@@ -109,14 +109,14 @@ export interface IStorage {
   archiveCase(id: number, userId: string): Promise<Case>; // Admin only - archive case
   unarchiveCase(id: number, userId: string): Promise<Case>; // Admin only - unarchive case
   deleteCase(id: number): Promise<void>; // Admin only - permanently delete case and all related data
-  
+
   // Case submission operations
   createCaseSubmission(submission: InsertCaseSubmission): Promise<CaseSubmission>;
   getCaseSubmissions(): Promise<CaseSubmission[]>; // Admin only - get all pending submissions
   getCaseSubmissionsByStatus(status: string): Promise<CaseSubmission[]>; // Admin only - get submissions by status
   updateCaseSubmissionStatus(id: number, status: string, processedBy: string): Promise<CaseSubmission>;
   deleteCaseSubmission(id: number): Promise<void>; // Admin only - delete submission
-  
+
   // Case submission document operations
   createCaseSubmissionDocument(doc: {
     caseSubmissionId: number;
@@ -134,19 +134,19 @@ export interface IStorage {
     uploadedAt: Date;
   }>>;
   deleteCaseSubmissionDocument(id: number): Promise<void>;
-  
+
   // Case activity operations
   getCaseActivities(caseId: number): Promise<CaseActivity[]>;
   addCaseActivity(activity: InsertCaseActivity): Promise<CaseActivity>;
   deleteCaseActivity(id: number): Promise<void>; // Admin only - delete case activity
-  
+
   // Message operations
   getMessagesForUser(userId: string): Promise<Message[]>;
   getMessagesForCase(caseId: number): Promise<Message[]>;
   createMessage(message: InsertMessage): Promise<Message>;
   markMessageAsRead(messageId: number): Promise<void>;
   deleteMessage(id: number): Promise<void>; // Admin only - delete message by ID
-  
+
   // Document operations
   getDocumentById(id: number): Promise<Document | undefined>;
   getDocumentsForCase(caseId: number): Promise<Document[]>;
@@ -157,7 +157,7 @@ export interface IStorage {
   createDocument(document: InsertDocument): Promise<Document>;
   deleteDocument(id: number, organisationId: number): Promise<void>;
   deleteDocumentById(id: number): Promise<void>; // Admin only - delete document by ID without org restriction
-  
+
   // Payment operations
   getPaymentsForCase(caseId: number): Promise<Payment[]>;
   createPayment(payment: InsertPayment): Promise<Payment>;
@@ -165,7 +165,7 @@ export interface IStorage {
   deletePayment(id: number, organisationId: number): Promise<void>;
   getPaymentByExternalRef(externalRef: string): Promise<Payment | undefined>;
   getCaseByExternalRef(externalRef: string): Promise<Case | undefined>;
-  
+
   // Statistics
   getCaseStats(organisationId: number): Promise<{
     activeCases: number;
@@ -173,14 +173,14 @@ export interface IStorage {
     totalOutstanding: string;
     totalRecovery: string;
   }>;
-  
+
   getGlobalCaseStats(): Promise<{
     activeCases: number;
     closedCases: number;
     totalOutstanding: string;
     totalRecovery: string;
   }>; // Admin only - get stats across all organizations
-  
+
   getCombinedCaseStats(organisationIds: number[], excludeCaseIds?: number[]): Promise<{
     activeCases: number;
     closedCases: number;
@@ -193,7 +193,7 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   getAllOrganisations(): Promise<Organization[]>;
   assignUserToOrganisation(userId: string, organisationId: number): Promise<User | null>;
-  
+
   // Enhanced user management operations
   createUser(userData: {
     firstName: string;
@@ -203,42 +203,42 @@ export interface IStorage {
     organisationId?: number;
     isAdmin?: boolean;
   }): Promise<{ user: User; tempPassword: string }>;
-  
+
   updateUser(userId: string, userData: {
     firstName: string;
     lastName: string;
     phone?: string;
   }): Promise<User | null>;
-  
+
   makeUserAdmin(userId: string): Promise<User | null>;
   removeUserAdmin(userId: string): Promise<User | null>;
-  
+
   resetUserPassword(userId: string): Promise<string>; // Returns temp password
-  
+
   changeUserPassword(userId: string, currentPassword: string, newPassword: string): Promise<boolean>;
-  
+
   setUserPassword(userId: string, newPassword: string): Promise<User | null>;
-  
+
   verifyUserPassword(userId: string, password: string): Promise<boolean>;
-  
+
   checkMustChangePassword(userId: string): Promise<boolean>;
-  
+
   deleteUser(userId: string): Promise<void>;
-  
+
   updateSuperAdminStatus(userId: string, isSuperAdmin: boolean): Promise<User | null>;
 
   // System monitoring operations
   logUserActivity(activity: InsertUserActivityLog): Promise<UserActivityLog>;
   getUserActivityLogs(userId?: string, limit?: number): Promise<UserActivityLog[]>;
-  
+
   logLoginAttempt(attempt: InsertLoginAttempt): Promise<LoginAttempt>;
   getLoginAttempts(limit?: number): Promise<LoginAttempt[]>;
   getFailedLoginAttempts(limit?: number): Promise<LoginAttempt[]>;
   isNewLoginLocation(email: string, ipAddress: string, userAgent: string): Promise<boolean>;
-  
+
   recordSystemMetric(metric: InsertSystemMetric): Promise<SystemMetric>;
   getSystemMetrics(metricName?: string, limit?: number): Promise<SystemMetric[]>;
-  
+
   // Comprehensive audit functionality
   logAuditEvent(auditData: InsertAuditLog): Promise<AuditLog>;
   getAuditLogs(filters?: {
@@ -256,7 +256,7 @@ export interface IStorage {
     topUsers: { userId: string; userEmail: string; changeCount: number }[];
     topTables: { tableName: string; changeCount: number }[];
   }>;
-  
+
   // Audit log retention
   deleteOldAuditLogs(retentionDays: number): Promise<number>; // Returns count of deleted logs
   getAuditLogStats(): Promise<{
@@ -265,11 +265,11 @@ export interface IStorage {
     newestLog: Date | null;
     logsByAge: { period: string; count: number }[];
   }>;
-  
+
   // Session management
   invalidateUserSessions(userId: string): Promise<number>; // Returns count of deleted sessions
   getUserActiveSessions(userId: string): Promise<{ sid: string; lastAccess: Date; userAgent?: string; ipAddress?: string }[]>;
-  
+
   getSystemAnalytics(): Promise<{
     totalUsers: number;
     activeUsers: number;
@@ -391,18 +391,18 @@ export class DatabaseStorage implements IStorage {
 
   async getAdminByName(fullName: string): Promise<User | undefined> {
     if (!fullName) return undefined;
-    
+
     const allAdmins = await db.select().from(users).where(eq(users.isAdmin, true));
-    
+
     const normalizedSearch = fullName.toLowerCase().trim();
-    
+
     for (const admin of allAdmins) {
       const adminFullName = `${admin.firstName || ''} ${admin.lastName || ''}`.toLowerCase().trim();
       if (adminFullName === normalizedSearch) {
         return admin;
       }
     }
-    
+
     return undefined;
   }
 
@@ -447,7 +447,7 @@ export class DatabaseStorage implements IStorage {
   }): Promise<{ user: User; tempPassword: string }> {
     const tempPassword = nanoid(12);
     const hashedPassword = await bcrypt.hash(tempPassword, 10);
-    
+
     const [user] = await db
       .insert(users)
       .values({
@@ -534,7 +534,7 @@ export class DatabaseStorage implements IStorage {
     for (const case_ of orgCases) {
       const casePayments = await db.select().from(payments).where(eq(payments.caseId, case_.id));
       const totalPayments = casePayments.reduce((sum, payment) => sum + parseFloat(payment.amount), 0);
-      
+
       totalRecovered += totalPayments;
       totalOutstanding += parseFloat(case_.outstandingAmount || "0");
     }
@@ -611,17 +611,23 @@ export class DatabaseStorage implements IStorage {
     );
   }
 
-  async setUserOrgRole(userId: string, organisationId: number, role: string): Promise<UserOrganisation | null> {
-    const [userOrg] = await db
-      .update(userOrganisations)
-      .set({ role })
-      .where(and(
-        eq(userOrganisations.userId, userId),
-        eq(userOrganisations.organisationId, organisationId)
-      ))
-      .returning();
-    return userOrg || null;
-  }
+ async setUserOrgRole(userId: string, organisationId: number, role: string): Promise<UserOrganisation | null> {
+  const [updated] = await db
+    .update(userOrganisations)
+    .set({ role })
+    .where(and(
+      eq(userOrganisations.userId, userId),
+      eq(userOrganisations.organisationId, organisationId)
+    ))
+    .returning();
+  if (updated) return updated;
+
+  const [inserted] = await db
+    .insert(userOrganisations)
+    .values({ userId, organisationId, role })
+    .returning();
+  return inserted || null;
+}
 
   async isUserOrgOwner(userId: string, organisationId: number): Promise<boolean> {
     const [result] = await db
@@ -673,7 +679,7 @@ export class DatabaseStorage implements IStorage {
 
   async getUsersWithOrganisations(): Promise<(User & { organisations: (Organization & { role?: string })[] })[]> {
     const allUsers = await db.select().from(users).where(isNotNull(users.email)).orderBy(users.lastName, users.firstName);
-    
+
     const usersWithOrgs = await Promise.all(
       allUsers.map(async (user) => {
         // Get user's assigned organisations from junction table with roles
@@ -692,12 +698,12 @@ export class DatabaseStorage implements IStorage {
 
         // Combine organisations (avoid duplicates), include role from junction table
         const orgMap = new Map<number, Organization & { role?: string }>();
-        
+
         // Add legacy organisation (no role)
         if (legacyOrg.length > 0) {
           orgMap.set(legacyOrg[0].id, { ...legacyOrg[0], role: undefined });
         }
-        
+
         // Add junction table organisations with roles
         userOrgs.forEach(uo => {
           if (uo.organisation) {
@@ -734,10 +740,10 @@ export class DatabaseStorage implements IStorage {
           .select()
           .from(payments)
           .where(eq(payments.caseId, case_.id));
-        
+
         const totalPayments = casePayments.reduce((sum, payment) => 
           sum + parseFloat(payment.amount), 0);
-        
+
         // Get the most recent message for this case
         const latestMessage = await db
           .select()
@@ -745,7 +751,7 @@ export class DatabaseStorage implements IStorage {
           .where(eq(messages.caseId, case_.id))
           .orderBy(desc(messages.createdAt))
           .limit(1);
-        
+
         // Get the most recent activity for this case
         const latestActivity = await db
           .select()
@@ -753,14 +759,14 @@ export class DatabaseStorage implements IStorage {
           .where(eq(caseActivities.caseId, case_.id))
           .orderBy(desc(caseActivities.createdAt))
           .limit(1);
-        
+
         // Determine the most recent update time
         const caseUpdateTime = case_.updatedAt ? new Date(case_.updatedAt).getTime() : 0;
         const messageUpdateTime = latestMessage.length > 0 ? new Date(latestMessage[0].createdAt).getTime() : 0;
         const activityUpdateTime = latestActivity.length > 0 ? new Date(latestActivity[0].createdAt).getTime() : 0;
-        
+
         const lastActivityTime = Math.max(caseUpdateTime, messageUpdateTime, activityUpdateTime);
-        
+
         return {
           ...case_,
           outstandingAmount: case_.outstandingAmount,
@@ -796,10 +802,10 @@ export class DatabaseStorage implements IStorage {
           .select()
           .from(payments)
           .where(eq(payments.caseId, case_.id));
-        
+
         const totalPayments = casePayments.reduce((sum, payment) => 
           sum + parseFloat(payment.amount), 0);
-        
+
         // Get the most recent message for this case
         const latestMessage = await db
           .select()
@@ -807,7 +813,7 @@ export class DatabaseStorage implements IStorage {
           .where(eq(messages.caseId, case_.id))
           .orderBy(desc(messages.createdAt))
           .limit(1);
-        
+
         // Get the most recent activity for this case
         const latestActivity = await db
           .select()
@@ -815,14 +821,14 @@ export class DatabaseStorage implements IStorage {
           .where(eq(caseActivities.caseId, case_.id))
           .orderBy(desc(caseActivities.createdAt))
           .limit(1);
-        
+
         // Determine the most recent update time
         const caseUpdateTime = case_.updatedAt ? new Date(case_.updatedAt).getTime() : 0;
         const messageUpdateTime = latestMessage.length > 0 ? new Date(latestMessage[0].createdAt).getTime() : 0;
         const activityUpdateTime = latestActivity.length > 0 ? new Date(latestActivity[0].createdAt).getTime() : 0;
-        
+
         const lastActivityTime = Math.max(caseUpdateTime, messageUpdateTime, activityUpdateTime);
-        
+
         return {
           ...case_,
           outstandingAmount: case_.outstandingAmount,
@@ -857,10 +863,10 @@ export class DatabaseStorage implements IStorage {
           .select()
           .from(payments)
           .where(eq(payments.caseId, case_.id));
-        
+
         const totalPayments = casePayments.reduce((sum, payment) => 
           sum + parseFloat(payment.amount), 0);
-        
+
         // Get the most recent message for this case
         const latestMessage = await db
           .select()
@@ -868,7 +874,7 @@ export class DatabaseStorage implements IStorage {
           .where(eq(messages.caseId, case_.id))
           .orderBy(desc(messages.createdAt))
           .limit(1);
-        
+
         // Get the most recent activity for this case
         const latestActivity = await db
           .select()
@@ -876,14 +882,14 @@ export class DatabaseStorage implements IStorage {
           .where(eq(caseActivities.caseId, case_.id))
           .orderBy(desc(caseActivities.createdAt))
           .limit(1);
-        
+
         // Determine the most recent update time
         const caseUpdateTime = case_.updatedAt ? new Date(case_.updatedAt).getTime() : 0;
         const messageUpdateTime = latestMessage.length > 0 ? new Date(latestMessage[0].createdAt).getTime() : 0;
         const activityUpdateTime = latestActivity.length > 0 ? new Date(latestActivity[0].createdAt).getTime() : 0;
-        
+
         const lastActivityTime = Math.max(caseUpdateTime, messageUpdateTime, activityUpdateTime);
-        
+
         return {
           ...case_,
           outstandingAmount: case_.outstandingAmount,
@@ -904,7 +910,7 @@ export class DatabaseStorage implements IStorage {
     // Admin only - get closed cases with optional date filter on updatedAt
     // Use 'Closed' with capital C to match database convention
     let conditions = [eq(cases.status, 'Closed')];
-    
+
     if (startDate) {
       conditions.push(gte(cases.updatedAt, startDate));
     }
@@ -914,7 +920,7 @@ export class DatabaseStorage implements IStorage {
       endOfDay.setDate(endOfDay.getDate() + 1);
       conditions.push(lt(cases.updatedAt, endOfDay));
     }
-    
+
     const closedCases = await db
       .select({
         ...cases,
@@ -935,7 +941,7 @@ export class DatabaseStorage implements IStorage {
           .where(eq(messages.caseId, case_.id))
           .orderBy(desc(messages.createdAt))
           .limit(1);
-        
+
         // Get the most recent activity for this case
         const latestActivity = await db
           .select()
@@ -943,14 +949,14 @@ export class DatabaseStorage implements IStorage {
           .where(eq(caseActivities.caseId, case_.id))
           .orderBy(desc(caseActivities.createdAt))
           .limit(1);
-        
+
         // Determine the most recent update time
         const caseUpdateTime = case_.updatedAt ? new Date(case_.updatedAt).getTime() : 0;
         const messageUpdateTime = latestMessage.length > 0 ? new Date(latestMessage[0].createdAt).getTime() : 0;
         const activityUpdateTime = latestActivity.length > 0 ? new Date(latestActivity[0].createdAt).getTime() : 0;
-        
+
         const lastActivityTime = Math.max(caseUpdateTime, messageUpdateTime, activityUpdateTime);
-        
+
         return {
           ...case_,
           lastActivityTime: new Date(lastActivityTime).toISOString(),
@@ -1006,10 +1012,10 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(cases.id, id))
       .returning();
-    
+
     // Timeline activities are only created by SOS pushes, not portal actions
     // Case archiving does not create timeline entry
-    
+
     return archivedCase;
   }
 
@@ -1024,10 +1030,10 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(cases.id, id))
       .returning();
-    
+
     // Timeline activities are only created by SOS pushes, not portal actions
     // Case unarchiving does not create timeline entry
-    
+
     return unarchivedCase;
   }
 
@@ -1035,16 +1041,16 @@ export class DatabaseStorage implements IStorage {
     // Delete in order to respect foreign key constraints
     // 1. Delete case activities
     await db.delete(caseActivities).where(eq(caseActivities.caseId, id));
-    
+
     // 2. Delete case messages
     await db.delete(messages).where(eq(messages.caseId, id));
-    
+
     // 3. Delete case documents
     await db.delete(documents).where(eq(documents.caseId, id));
-    
+
     // 4. Delete case payments
     await db.delete(payments).where(eq(payments.caseId, id));
-    
+
     // 5. Finally delete the case
     await db.delete(cases).where(eq(cases.id, id));
   }
@@ -1067,7 +1073,7 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(users, eq(caseSubmissions.submittedBy, users.id))
       .leftJoin(organisations, eq(caseSubmissions.organisationId, organisations.id))
       .orderBy(desc(caseSubmissions.submittedAt));
-    
+
     return submissions;
   }
 
@@ -1084,7 +1090,7 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(organisations, eq(caseSubmissions.organisationId, organisations.id))
       .where(eq(caseSubmissions.status, status))
       .orderBy(desc(caseSubmissions.submittedAt));
-    
+
     return submissions;
   }
 
@@ -1098,7 +1104,7 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(caseSubmissions.id, id))
       .returning();
-    
+
     return updatedSubmission;
   }
 
@@ -1132,16 +1138,16 @@ export class DatabaseStorage implements IStorage {
     }
 
     const userRecord = user[0];
-    
+
     // Get all organisation IDs the user has access to (both legacy and junction table)
     const userOrgs = await this.getUserOrganisations(userId);
     const allUserOrgIds = new Set<number>();
-    
+
     // Add legacy organisation if exists
     if (userRecord.organisationId) {
       allUserOrgIds.add(userRecord.organisationId);
     }
-    
+
     // Add junction table organisations
     userOrgs.forEach(uo => allUserOrgIds.add(uo.organisationId));
 
@@ -1182,7 +1188,7 @@ export class DatabaseStorage implements IStorage {
           )
         )
         .orderBy(desc(messages.createdAt));
-      
+
       // Get organisation names for each case
       const caseOrgIds = [...new Set(result.filter(m => m.caseOrganisationId).map(m => m.caseOrganisationId))];
       const orgNameMap: Record<number, string> = {};
@@ -1192,7 +1198,7 @@ export class DatabaseStorage implements IStorage {
           if (org) orgNameMap[orgId] = org.name;
         }
       }
-      
+
       return result.map(m => resolveEmbeddedSender({
         ...m,
         organisationName: m.caseOrganisationId ? orgNameMap[m.caseOrganisationId] : undefined,
@@ -1205,11 +1211,11 @@ export class DatabaseStorage implements IStorage {
     }
 
     const orgIdArray = Array.from(allUserOrgIds);
-    
+
     // Get user's admin-restricted case IDs to exclude them
     // Note: User-muted cases still appear (muting is for notifications only)
     const restrictedCaseIds = await this.getAdminRestrictedCasesForUser(userId);
-    
+
     const result = await db
       .select({
         id: messages.id,
@@ -1265,7 +1271,7 @@ export class DatabaseStorage implements IStorage {
         )
       ))
       .orderBy(desc(messages.createdAt));
-    
+
     // Get organisation names for each case
     const caseOrgIds = [...new Set(result.filter(m => m.caseOrganisationId).map(m => m.caseOrganisationId))];
     const orgNameMap: Record<number, string> = {};
@@ -1275,17 +1281,17 @@ export class DatabaseStorage implements IStorage {
         if (org) orgNameMap[orgId] = org.name;
       }
     }
-    
+
     const messagesWithOrgNames = result.map(m => ({
       ...m,
       organisationName: m.caseOrganisationId ? orgNameMap[m.caseOrganisationId] : undefined,
     }));
-    
+
     // Filter out messages from restricted cases
     if (restrictedCaseIds.length > 0) {
       return messagesWithOrgNames.filter(m => !m.caseId || !restrictedCaseIds.includes(m.caseId)).map(resolveEmbeddedSender);
     }
-    
+
     return messagesWithOrgNames.map(resolveEmbeddedSender);
   }
 
@@ -1373,7 +1379,7 @@ export class DatabaseStorage implements IStorage {
         eq(cases.isArchived, false)
       ))
       .orderBy(desc(documents.createdAt));
-    
+
     return results;
   }
 
@@ -1412,19 +1418,19 @@ export class DatabaseStorage implements IStorage {
           )
         )
         .orderBy(desc(documents.createdAt));
-      
+
       return results;
     }
 
     // Get all organisation IDs the user has access to (both legacy and junction table)
     const userOrgs = await this.getUserOrganisations(userId);
     const allUserOrgIds = new Set<number>();
-    
+
     // Add legacy organisation if exists
     if (userRecord.organisationId) {
       allUserOrgIds.add(userRecord.organisationId);
     }
-    
+
     // Add junction table organisations
     userOrgs.forEach(uo => allUserOrgIds.add(uo.organisationId));
 
@@ -1434,7 +1440,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     const orgIdArray = Array.from(allUserOrgIds);
-    
+
     const results = await db
       .select({
         id: documents.id,
@@ -1460,7 +1466,7 @@ export class DatabaseStorage implements IStorage {
         )
       ))
       .orderBy(desc(documents.createdAt));
-    
+
     return results;
   }
 
@@ -1491,7 +1497,7 @@ export class DatabaseStorage implements IStorage {
         )
       ))
       .orderBy(desc(documents.createdAt));
-    
+
     return results;
   }
 
@@ -1518,7 +1524,7 @@ export class DatabaseStorage implements IStorage {
         isNull(documents.caseId)
       ))
       .orderBy(desc(documents.createdAt));
-    
+
     return results;
   }
 
@@ -1545,11 +1551,11 @@ export class DatabaseStorage implements IStorage {
       .from(cases)
       .where(eq(cases.id, caseId))
       .limit(1);
-    
+
     if (caseRecord.length === 0 || caseRecord[0].isArchived) {
       return []; // Return empty array if case doesn't exist or is archived
     }
-    
+
     // Get payments for non-archived case
     return await db.select()
       .from(payments)
@@ -1692,12 +1698,12 @@ export class DatabaseStorage implements IStorage {
       eq(cases.isArchived, false),
       inArray(cases.organisationId, organisationIds)
     ];
-    
+
     // Add exclusion filter if there are cases to exclude
     if (excludeCaseIds.length > 0) {
       conditions.push(notInArray(cases.id, excludeCaseIds));
     }
-    
+
     // Get combined stats from multiple organizations (excluding archived cases and optionally excluded cases)
     const [stats] = await db
       .select({
@@ -1714,7 +1720,7 @@ export class DatabaseStorage implements IStorage {
       inArray(cases.organisationId, organisationIds),
       sql`LOWER(${cases.status}) != 'closed'`
     ];
-    
+
     if (excludeCaseIds.length > 0) {
       recoveryConditions.push(notInArray(cases.id, excludeCaseIds));
     }
@@ -1763,7 +1769,7 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(organisations, eq(users.organisationId, organisations.id))
       .where(isNotNull(users.email))
       .orderBy(users.createdAt);
-    
+
     return result;
   }
 
@@ -1781,7 +1787,7 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(users, eq(organisations.id, users.organisationId))
       .groupBy(organisations.id, organisations.name, organisations.externalRef, organisations.createdAt, organisations.scheduledReportsEnabled)
       .orderBy(organisations.createdAt);
-    
+
     return result;
   }
 
@@ -1791,7 +1797,7 @@ export class DatabaseStorage implements IStorage {
       .set({ organisationId: organisationId, updatedAt: new Date() })
       .where(eq(users.id, userId))
       .returning();
-    
+
     return user || null;
   }
 
@@ -1852,7 +1858,7 @@ export class DatabaseStorage implements IStorage {
     if (userData.lastName !== undefined) updateData.lastName = userData.lastName;
     if (userData.phone !== undefined) updateData.phone = userData.phone;
     if (userData.email !== undefined) updateData.email = userData.email;
-    
+
     const [user] = await db
       .update(users)
       .set(updateData)
@@ -1886,27 +1892,27 @@ export class DatabaseStorage implements IStorage {
   async getUsersByOrganisationId(organisationId: number): Promise<User[]> {
     // Get users via legacy organisationId field
     const legacyUsers = await db.select().from(users).where(eq(users.organisationId, organisationId));
-    
+
     // Get users via junction table
     const junctionUsers = await db
       .select({ user: users })
       .from(userOrganisations)
       .leftJoin(users, eq(userOrganisations.userId, users.id))
       .where(eq(userOrganisations.organisationId, organisationId));
-    
+
     // Combine and deduplicate users
     const userMap = new Map<string, User>();
-    
+
     // Add legacy users
     legacyUsers.forEach(user => userMap.set(user.id, user));
-    
+
     // Add junction users
     junctionUsers.forEach(ju => {
       if (ju.user) {
         userMap.set(ju.user.id, ju.user);
       }
     });
-    
+
     return Array.from(userMap.values());
   }
 
@@ -2124,7 +2130,7 @@ export class DatabaseStorage implements IStorage {
   async isNewLoginLocation(email: string, ipAddress: string, userAgent: string): Promise<boolean> {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
+
     const previousLogins = await db.select().from(loginAttempts)
       .where(
         and(
@@ -2135,7 +2141,7 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .limit(1);
-    
+
     return previousLogins.length === 0;
   }
 
@@ -2280,7 +2286,7 @@ export class DatabaseStorage implements IStorage {
       const totalRecovered = paymentMap.get(result.organisationId) || "0";
       const originalAmount = parseFloat(result.totalOriginalAmount) || 0;
       const recoveredAmount = parseFloat(totalRecovered) || 0;
-      
+
       // Recovery rate = (amount recovered / original debt amount) * 100
       const recoveryRate = originalAmount > 0 ? (recoveredAmount / originalAmount) * 100 : 0;
 
@@ -2450,7 +2456,7 @@ export class DatabaseStorage implements IStorage {
     // This is a simplified version - in production, you'd want more robust query building
     try {
       let query = db.select();
-      
+
       // For demo purposes, support common table combinations
       if (reportConfig.tables.includes('cases') && reportConfig.tables.includes('organisations')) {
         query = db.select({
@@ -2569,43 +2575,43 @@ export class DatabaseStorage implements IStorage {
     limit?: number;
   }): Promise<AuditLog[]> {
     let query = db.select().from(auditLog);
-    
+
     const conditions = [];
-    
+
     if (filters?.tableName) {
       conditions.push(eq(auditLog.tableName, filters.tableName));
     }
-    
+
     if (filters?.recordId) {
       conditions.push(eq(auditLog.recordId, filters.recordId));
     }
-    
+
     if (filters?.operation) {
       conditions.push(eq(auditLog.operation, filters.operation));
     }
-    
+
     if (filters?.userId) {
       conditions.push(eq(auditLog.userId, filters.userId));
     }
-    
+
     if (filters?.startDate) {
       conditions.push(sql`${auditLog.timestamp} >= ${filters.startDate}`);
     }
-    
+
     if (filters?.endDate) {
       conditions.push(sql`${auditLog.timestamp} <= ${filters.endDate}`);
     }
-    
+
     if (conditions.length > 0) {
       query = query.where(and(...conditions));
     }
-    
+
     query = query.orderBy(desc(auditLog.timestamp));
-    
+
     if (filters?.limit) {
       query = query.limit(filters.limit);
     }
-    
+
     return await query;
   }
 
@@ -2623,7 +2629,7 @@ export class DatabaseStorage implements IStorage {
     // Get recent changes (last 24 hours)
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    
+
     const [recentChanges] = await db
       .select({ count: sql<number>`count(*)` })
       .from(auditLog)
@@ -2671,10 +2677,10 @@ export class DatabaseStorage implements IStorage {
   async deleteOldAuditLogs(retentionDays: number): Promise<number> {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
-    
+
     const result = await db.delete(auditLog)
       .where(sql`${auditLog.timestamp} < ${cutoffDate}`);
-    
+
     return result.rowCount || 0;
   }
 
@@ -2758,7 +2764,7 @@ export class DatabaseStorage implements IStorage {
     const result = await db.execute(
       sql`DELETE FROM user_sessions WHERE sess->'passport'->>'user' = ${userId}`
     );
-    
+
     return (result as any).rowCount || 0;
   }
 
@@ -2800,7 +2806,7 @@ export class DatabaseStorage implements IStorage {
       if (operation === 'UPDATE' && oldData && newData) {
         // For updates, log individual field changes
         const changes = this.getFieldChanges(oldData, newData);
-        
+
         for (const change of changes) {
           await this.logAuditEvent({
             tableName,
@@ -2841,19 +2847,19 @@ export class DatabaseStorage implements IStorage {
 
   private getFieldChanges(oldData: any, newData: any): { field: string; oldValue: string; newValue: string }[] {
     const changes = [];
-    
+
     // Compare all fields
     const allKeys = new Set([...Object.keys(oldData), ...Object.keys(newData)]);
-    
+
     for (const key of allKeys) {
       const oldValue = oldData[key];
       const newValue = newData[key];
-      
+
       // Skip system fields that change automatically
       if (['updatedAt', 'lastModified'].includes(key)) {
         continue;
       }
-      
+
       // Compare values (handle null/undefined)
       if (oldValue !== newValue) {
         changes.push({
@@ -2863,7 +2869,7 @@ export class DatabaseStorage implements IStorage {
         });
       }
     }
-    
+
     return changes;
   }
 
@@ -2895,7 +2901,7 @@ export class DatabaseStorage implements IStorage {
     const results = await db.select().from(caseSubmissionDocuments)
       .where(eq(caseSubmissionDocuments.caseSubmissionId, caseSubmissionId))
       .orderBy(desc(caseSubmissionDocuments.uploadedAt));
-    
+
     return results.map(doc => ({
       id: doc.id,
       fileName: doc.fileName,
@@ -2914,7 +2920,7 @@ export class DatabaseStorage implements IStorage {
   async createPasswordResetToken(userId: string, hashedToken: string, expiresAt: Date): Promise<PasswordResetToken> {
     // Invalidate any existing tokens for this user first
     await this.invalidatePasswordResetTokensForUser(userId);
-    
+
     const [token] = await db.insert(passwordResetTokens).values({
       userId,
       hashedToken,
@@ -2962,7 +2968,7 @@ export class DatabaseStorage implements IStorage {
       .from(mutedCases)
       .where(and(eq(mutedCases.userId, userId), eq(mutedCases.caseId, caseId)))
       .limit(1);
-    
+
     if (existing.length === 0) {
       await db.insert(mutedCases).values({ userId, caseId });
     }
@@ -2999,7 +3005,7 @@ export class DatabaseStorage implements IStorage {
         eq(caseAccessRestrictions.blockedUserId, blockedUserId)
       ))
       .limit(1);
-    
+
     if (existing.length === 0) {
       await db.insert(caseAccessRestrictions).values({
         caseId,
@@ -3058,7 +3064,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Scheduled reports operations - supports multiple reports per user
-  
+
   async getScheduledReportById(id: number): Promise<ScheduledReport | undefined> {
     const [result] = await db.select()
       .from(scheduledReports)
