@@ -32,11 +32,11 @@ export default function Messages() {
   const [linkedCaseId, setLinkedCaseId] = useState<string>("");
   const [selectedCase, setSelectedCase] = useState<any>(null);
   const [caseDialogOpen, setCaseDialogOpen] = useState(false);
-  
+
   // Audit dialog state (admin only)
   const [auditDialogOpen, setAuditDialogOpen] = useState(false);
   const [auditMessageId, setAuditMessageId] = useState<number | null>(null);
-  
+
   // Search state
   const [searchTerm, setSearchTerm] = useState("");
   const [searchDateFrom, setSearchDateFrom] = useState("");
@@ -45,7 +45,7 @@ export default function Messages() {
   const [searchCaseId, setSearchCaseId] = useState("");
   const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
   const [caseSearchTerm, setCaseSearchTerm] = useState("");
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const messagesPerPage = 20; // Show 20 messages per page
@@ -101,11 +101,11 @@ export default function Messages() {
       formData.append("recipientId", messageData.recipientId);
       formData.append("subject", messageData.subject);
       formData.append("content", messageData.content);
-      
+
       if (messageData.caseId) {
         formData.append("caseId", messageData.caseId);
       }
-      
+
       if (selectedFile) {
         formData.append("attachment", selectedFile);
         if (customFileName.trim()) {
@@ -236,7 +236,7 @@ export default function Messages() {
     }
 
     let messageContent = newMessage;
-    
+
     // If this is a reply, include the original message
     if (replyingTo) {
       const fromName = replyingTo.senderName || replyingTo.senderEmail || replyingTo.senderId;
@@ -252,12 +252,17 @@ export default function Messages() {
     });
   };
 
-  const handleReply = (message: any) => {
-    setReplyingTo(message);
-    setNewSubject(`Re: ${message.subject}`);
-    setNewMessage("");
-    setDialogOpen(true);
-  };
+const handleReply = (message: any) => {
+  setReplyingTo(message);
+  setNewSubject(`Re: ${message.subject}`);
+  setNewMessage("");
+  if (message.caseId) {
+    setLinkedCaseId(message.caseId.toString());
+  } else {
+    setLinkedCaseId("");
+  }
+  setDialogOpen(true);
+};
 
   const handleCloseDialog = () => {
     setDialogOpen(false);
@@ -323,7 +328,7 @@ export default function Messages() {
   // Filter messages based on search criteria
   const filteredMessages = useMemo(() => {
     if (!messages) return [];
-    
+
     return messages.filter((message: any) => {
       // Text search in subject, content, and organisation
       if (searchTerm) {
@@ -337,21 +342,21 @@ export default function Messages() {
           caseData?.caseName?.toLowerCase().includes(searchLower);
         if (!matchesText) return false;
       }
-      
+
       // Date range filter
       if (searchDateFrom) {
         const messageDate = new Date(message.createdAt);
         const fromDate = new Date(searchDateFrom);
         if (messageDate < fromDate) return false;
       }
-      
+
       if (searchDateTo) {
         const messageDate = new Date(message.createdAt);
         const toDate = new Date(searchDateTo);
         toDate.setHours(23, 59, 59, 999); // End of day
         if (messageDate > toDate) return false;
       }
-      
+
       // Sender filter
       if (searchSender) {
         const senderLower = searchSender.toLowerCase();
@@ -360,7 +365,7 @@ export default function Messages() {
           message.senderEmail?.toLowerCase().includes(senderLower);
         if (!matchesSender) return false;
       }
-      
+
       // Case ID filter
       if (searchCaseId) {
         const caseSearchTerm = searchCaseId.toLowerCase();
@@ -375,7 +380,7 @@ export default function Messages() {
           return false; // No case associated with this message
         }
       }
-      
+
       return true;
     });
   }, [messages, searchTerm, searchDateFrom, searchDateTo, searchSender, searchCaseId, cases]);
@@ -435,7 +440,7 @@ export default function Messages() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      
+
       // Extract filename from Content-Disposition header or use default
       const contentDisposition = response.headers.get('Content-Disposition');
       let filename = 'Messages_Export.xlsx';
@@ -443,7 +448,7 @@ export default function Messages() {
         const match = contentDisposition.match(/filename="(.+)"/);
         if (match) filename = match[1];
       }
-      
+
       a.download = filename;
       document.body.appendChild(a);
       a.click();
@@ -524,50 +529,66 @@ export default function Messages() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="linkedCase">Link to Case (optional)</Label>
-                    <Select value={linkedCaseId} onValueChange={setLinkedCaseId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a case to link this message to..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <div className="p-2 border-b" onKeyDown={(e) => e.stopPropagation()}>
-                          <Input
-                            placeholder="Search cases..."
-                            value={caseSearchTerm}
-                            onChange={(e) => setCaseSearchTerm(e.target.value)}
-                            className="h-8"
-                            onClick={(e) => e.stopPropagation()}
-                            onKeyDown={(e) => e.stopPropagation()}
-                          />
-                        </div>
-                        <SelectItem value="none">No case (general message)</SelectItem>
-                        {cases
-                          ?.filter((c: any) => {
-                            if (!caseSearchTerm) return true;
-                            const search = caseSearchTerm.toLowerCase();
-                            return (
-                              c.caseName?.toLowerCase().includes(search) ||
-                              c.accountNumber?.toLowerCase().includes(search) ||
-                              c.debtorName?.toLowerCase().includes(search)
-                            );
-                          })
-                          .map((c: any) => (
-                            <SelectItem key={c.id} value={c.id.toString()}>
-                              {c.accountNumber} - {c.caseName}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                    {linkedCaseId && linkedCaseId !== "none" ? (
-                      <p className="text-xs text-gray-600 mt-1">
-                        Message will be stored against the selected case and visible to others in your organisation with access to this case.
-                      </p>
-                    ) : (
-                      <p className="text-xs text-amber-600 mt-1">
-                        As this message is not linked to a case, it will only be visible to you and Acclaim - not others in your organisation.
-                      </p>
-                    )}
-                  </div>
+  <Label htmlFor="linkedCase">
+    Link to Case {replyingTo?.caseId ? "" : "(optional)"}
+  </Label>
+  {replyingTo?.caseId ? (
+    <div className="mt-1 flex items-center gap-2 px-3 py-2 bg-teal-50 border border-teal-200 rounded-md text-sm text-teal-800">
+      <span className="font-medium">
+        {cases?.find((c: any) => c.id === replyingTo.caseId)
+          ? `${cases.find((c: any) => c.id === replyingTo.caseId).accountNumber} — ${cases.find((c: any) => c.id === replyingTo.caseId).caseName}`
+          : `Case #${replyingTo.caseId}`}
+      </span>
+    </div>
+  ) : (
+    <Select value={linkedCaseId} onValueChange={setLinkedCaseId}>
+      <SelectTrigger>
+        <SelectValue placeholder="Select a case to link this message to..." />
+      </SelectTrigger>
+      <SelectContent>
+        <div className="p-2 border-b" onKeyDown={(e) => e.stopPropagation()}>
+          <Input
+            placeholder="Search cases..."
+            value={caseSearchTerm}
+            onChange={(e) => setCaseSearchTerm(e.target.value)}
+            className="h-8"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+          />
+        </div>
+        <SelectItem value="none">No case (general message)</SelectItem>
+        {cases
+          ?.filter((c: any) => {
+            if (!caseSearchTerm) return true;
+            const search = caseSearchTerm.toLowerCase();
+            return (
+              c.caseName?.toLowerCase().includes(search) ||
+              c.accountNumber?.toLowerCase().includes(search) ||
+              c.debtorName?.toLowerCase().includes(search)
+            );
+          })
+          .map((c: any) => (
+            <SelectItem key={c.id} value={c.id.toString()}>
+              {c.accountNumber} - {c.caseName}
+            </SelectItem>
+          ))}
+      </SelectContent>
+    </Select>
+  )}
+  {replyingTo?.caseId ? (
+    <p className="text-xs text-teal-700 mt-1">
+      This reply is automatically linked to the same case as the original message.
+    </p>
+  ) : linkedCaseId && linkedCaseId !== "none" ? (
+    <p className="text-xs text-gray-600 mt-1">
+      Message will be stored against the selected case and visible to others in your organisation with access to this case.
+    </p>
+  ) : (
+    <p className="text-xs text-amber-600 mt-1">
+      As this message is not linked to a case, it will only be visible to you and Acclaim - not others in your organisation.
+    </p>
+  )}
+</div>
                   <div>
                     <Label htmlFor="attachment">Attachment (optional)</Label>
                     {linkedCaseId && linkedCaseId !== "none" ? (
@@ -739,7 +760,7 @@ export default function Messages() {
                     />
                   </div>
                 </div>
-                
+
                 {/* Export to Excel Button */}
                 <div className="flex items-center justify-end p-3 sm:p-4 bg-gray-50 rounded-lg border-t border-gray-200">
                   <Button
@@ -757,7 +778,7 @@ export default function Messages() {
                     <span className="sm:hidden ml-1">XLS</span>
                   </Button>
                 </div>
-                
+
               </div>
             )}
 
@@ -869,7 +890,7 @@ export default function Messages() {
                   </div>
                 </div>
               </div>
-              
+
               {/* Case info - shown prominently after sender */}
               {viewingMessage.caseId && (
                 <div className="bg-acclaim-teal/5 border border-acclaim-teal/20 p-3 rounded-lg">
@@ -892,7 +913,7 @@ export default function Messages() {
                   </p>
                 </div>
               )}
-              
+
               <div className="prose max-w-none">
                 <div className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">
                   {viewingMessage.content}
@@ -1025,7 +1046,7 @@ export default function Messages() {
             </div>
           )}
         </CardContent>
-        
+
         {/* Pagination Controls */}
         {totalPages > 1 && (
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-3 sm:px-6 py-3 sm:py-4 border-t bg-gray-50">
@@ -1043,7 +1064,7 @@ export default function Messages() {
                 <span className="hidden sm:inline">Previous</span>
                 <span className="sm:hidden">&lt;</span>
               </Button>
-              
+
               {/* Page numbers - show fewer on mobile */}
               <div className="flex items-center gap-1">
                 {Array.from({ length: Math.min(3, totalPages) }, (_, index) => {
@@ -1057,7 +1078,7 @@ export default function Messages() {
                   } else {
                     pageNumber = currentPage - 1 + index;
                   }
-                  
+
                   return (
                     <Button
                       key={pageNumber}
@@ -1074,7 +1095,7 @@ export default function Messages() {
                   );
                 })}
               </div>
-              
+
               <Button
                 variant="outline"
                 size="sm"
