@@ -1,0 +1,1 @@
+- [Organisation filter combobox](organisation-filter-combobox.md) — shared searchable+alphabetical org dropdown for report filters; values are String(org.id), sentinel "all".

@@ -3403,6 +3403,7 @@ export default function AdminEnhanced() {
                                 return org.name.toLowerCase().includes(search) || 
                                        (org.externalRef?.toLowerCase().includes(search) ?? false);
                               })
+                              .sort((a: Organisation, b: Organisation) => a.name.localeCompare(b.name))
                               .map((org: Organisation) => (
                               <SelectItem key={org.id} value={org.id.toString()}>
                                 <div className="flex flex-col">
@@ -5725,7 +5726,7 @@ export default function AdminEnhanced() {
                           // Filter out already assigned organisations
                           const currentOrgIds = (selectedUser as any)?.organisations?.map((o: Organisation) => o.id) || [];
                           return !currentOrgIds.includes(org.id) && org.id !== selectedUser?.organisationId;
-                        }).map((org: Organisation) => (
+                        }).sort((a: Organisation, b: Organisation) => a.name.localeCompare(b.name)).map((org: Organisation) => (
                           <CommandItem
                             key={org.id}
                             value={`${org.name} ${org.externalRef || ''}`}

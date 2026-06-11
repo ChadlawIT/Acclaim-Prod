@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { OrganisationFilterCombobox } from "@/components/OrganisationFilterCombobox";
 import { ArrowLeft, Download, FileText, TrendingUp, Calendar, PoundSterling, User, CreditCard, Building2, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -372,19 +373,12 @@ export default function MonthlyStatementReport() {
               <div className="flex items-center gap-2 flex-1 sm:max-w-xs">
                 <Building2 className="h-4 w-4 text-gray-500" />
                 <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Organisation:</label>
-                <Select value={orgFilter} onValueChange={setOrgFilter}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="All Organisations" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Organisations</SelectItem>
-                    {organisations?.map((org: any) => (
-                      <SelectItem key={org.id} value={String(org.id)}>
-                        {org.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <OrganisationFilterCombobox
+                  organisations={organisations}
+                  value={orgFilter}
+                  onValueChange={setOrgFilter}
+                  className="w-full"
+                />
               </div>
             )}
             <div className="flex items-center gap-2 flex-1 sm:max-w-xs">

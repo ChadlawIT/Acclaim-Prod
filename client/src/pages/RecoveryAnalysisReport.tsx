@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { OrganisationFilterCombobox } from "@/components/OrganisationFilterCombobox";
 import { ArrowLeft, Download, FileSpreadsheet, FileText, BarChart3, TrendingUp, PieChart, Calendar, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -713,19 +714,12 @@ export default function RecoveryAnalysisReport() {
                 <Building2 className="h-5 w-5 text-amber-600" />
                 <span className="font-medium text-amber-800">Filter by Organisation</span>
               </div>
-              <Select value={selectedOrganisation} onValueChange={setSelectedOrganisation}>
-                <SelectTrigger className="w-full sm:w-64">
-                  <SelectValue placeholder="Select organisation" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Organisations</SelectItem>
-                  {organisations?.map((org: any) => (
-                    <SelectItem key={org.id} value={org.id.toString()}>
-                      {org.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <OrganisationFilterCombobox
+                organisations={organisations as any}
+                value={selectedOrganisation}
+                onValueChange={setSelectedOrganisation}
+                className="w-full sm:w-64"
+              />
               <Badge variant="outline" className="text-sm w-fit">
                 {filteredCases?.length || 0} cases found
               </Badge>

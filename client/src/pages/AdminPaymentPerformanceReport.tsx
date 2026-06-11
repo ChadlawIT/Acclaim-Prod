@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { OrganisationFilterCombobox } from "@/components/OrganisationFilterCombobox";
 import { ArrowLeft, Download, FileText, TrendingUp, CreditCard, PoundSterling, User, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -450,19 +451,12 @@ export default function AdminPaymentPerformanceReport() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <Select value={selectedOrganisation} onValueChange={setSelectedOrganisation}>
-              <SelectTrigger className="w-full sm:w-64">
-                <SelectValue placeholder="Select organisation" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Organisations</SelectItem>
-                {organisations?.map((org) => (
-                  <SelectItem key={org.id} value={org.id.toString()}>
-                    {org.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <OrganisationFilterCombobox
+              organisations={organisations as any}
+              value={selectedOrganisation}
+              onValueChange={setSelectedOrganisation}
+              className="w-full sm:w-64"
+            />
             <Badge variant="outline" className="text-sm w-fit">
               {filteredPayments?.length || 0} payments found
             </Badge>

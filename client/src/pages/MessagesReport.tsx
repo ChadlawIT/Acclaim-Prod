@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { OrganisationFilterCombobox } from "@/components/OrganisationFilterCombobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, FileSpreadsheet, FileText, MessageSquare, Calendar, Building2, Filter, RefreshCw, Paperclip, ChevronDown, ChevronRight } from "lucide-react";
@@ -481,20 +482,13 @@ export default function MessagesReport() {
             {organisations && (user?.isAdmin ? organisations.length > 0 : organisations.length > 1) && (
               <div className="space-y-1">
                 <Label className="text-xs text-gray-500">Organisation</Label>
-                <Select value={orgFilter} onValueChange={setOrgFilter}>
-                  <SelectTrigger className="w-64">
-                    <Building2 className="h-4 w-4 mr-2 text-gray-400" />
-                    <SelectValue placeholder="All Organisations" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Organisations</SelectItem>
-                    {organisations.map((org: any) => (
-                      <SelectItem key={org.id} value={org.id.toString()}>
-                        {org.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <OrganisationFilterCombobox
+                  organisations={organisations}
+                  value={orgFilter}
+                  onValueChange={setOrgFilter}
+                  className="w-64"
+                  triggerIcon={<Building2 className="h-4 w-4 mr-2 text-gray-400" />}
+                />
               </div>
             )}
           </CardContent>

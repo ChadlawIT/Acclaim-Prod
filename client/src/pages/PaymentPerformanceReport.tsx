@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { OrganisationFilterCombobox } from "@/components/OrganisationFilterCombobox";
 import { ArrowLeft, Download, FileSpreadsheet, FileText, TrendingUp, Calendar, Clock, CreditCard, Building2, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -494,19 +495,12 @@ export default function PaymentPerformanceReport() {
               <div className="flex items-center gap-2 flex-1">
                 <Building2 className="h-4 w-4 text-gray-500" />
                 <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Organisation:</label>
-                <Select value={orgFilter} onValueChange={setOrgFilter}>
-                  <SelectTrigger className="w-full sm:w-48">
-                    <SelectValue placeholder="All Organisations" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Organisations</SelectItem>
-                    {organisations?.map((org: any) => (
-                      <SelectItem key={org.id} value={String(org.id)}>
-                        {org.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <OrganisationFilterCombobox
+                  organisations={organisations}
+                  value={orgFilter}
+                  onValueChange={setOrgFilter}
+                  className="w-full sm:w-48"
+                />
               </div>
               <div className="text-xs sm:text-sm text-gray-600">
                 Showing {filteredPayments?.length || 0} payments
