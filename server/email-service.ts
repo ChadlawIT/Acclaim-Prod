@@ -64,6 +64,7 @@ interface WelcomeEmailData {
   temporaryPassword?: string;
   organisationName: string;
   adminName: string;
+  isAdmin?: boolean;
 }
 
 interface ExternalMessageNotificationData {
@@ -752,6 +753,13 @@ To manage your notification preferences, visit your Profile settings in the port
             </div>
 
             <div style="background: #e0f7f6; border: 1px solid #14b8a6; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+              ${data.isAdmin ? `
+              <h3 style="color: #0f766e; margin-top: 0; margin-bottom: 10px;">How to sign in</h3>
+              <ol style="color: #0f766e; line-height: 1.8; padding-left: 20px; margin: 0; font-size: 14px;">
+                <li>Click <strong>Access the Portal</strong> below.</li>
+                <li>Click <strong>"Sign in with Microsoft"</strong> and sign in with your usual Microsoft password (and MFA if required).</li>
+              </ol>
+              ` : `
               <h3 style="color: #0f766e; margin-top: 0; margin-bottom: 10px;">How to sign in for the first time</h3>
               <ol style="color: #0f766e; line-height: 1.8; padding-left: 20px; margin: 0; font-size: 14px;">
                 <li>Click <strong>Access the Portal</strong> below.</li>
@@ -759,6 +767,7 @@ To manage your notification preferences, visit your Profile settings in the port
                 <li>On the Microsoft page, click <strong>"No account? Create one!"</strong> and register using this email address.</li>
                 <li>Once registered, return to the portal and sign in with your Microsoft account.</li>
               </ol>
+              `}
             </div>
 
             <div style="text-align: center; margin: 30px 0;">
@@ -787,11 +796,13 @@ Hello ${data.firstName},
 
 Your account has been created and you can now access the system to view and manage your cases.
 
-How to sign in for the first time:
+${data.isAdmin ? `How to sign in:
+1. Visit https://acclaim-api-prod-uks-001.azurewebsites.net/auth
+2. Click "Sign in with Microsoft" and sign in with your usual Microsoft password (and MFA if required).` : `How to sign in for the first time:
 1. Visit https://acclaim-api-prod-uks-001.azurewebsites.net/auth
 2. Click "Sign in with Microsoft" on the login page.
 3. On the Microsoft page, click "No account? Create one!" and register using this email address.
-4. Once registered, return to the portal and sign in with your Microsoft account.
+4. Once registered, return to the portal and sign in with your Microsoft account.`}
 
 If you have any questions, please contact our support team.
       `;
@@ -808,11 +819,11 @@ If you have any questions, please contact our support team.
             path: path.join(__dirname, '../attached_assets/Acclaim rose.Cur_1752271300769.png'),
             cid: 'logo'
           },
-          {
+          ...(data.isAdmin ? [] : [{
             filename: 'Acclaim Portal User Guide.pdf',
             path: path.join(__dirname, '../attached_assets/Acclaim Portal User Guide.pdf'),
             contentType: 'application/pdf'
-          }
+          }])
         ]
       });
 

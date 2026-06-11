@@ -167,6 +167,7 @@ interface WelcomeEmailData {
   organisationName: string;
   adminName: string;
   portalUrl?: string;
+  isAdmin?: boolean;
 }
 
 interface TemporaryPasswordEmailData {
@@ -1110,8 +1111,25 @@ Portal: https://acclaim-api-prod-uks-001.azurewebsites.net/auth
                         </ul>
                       </div>
 
-                      <!-- Sign-up steps -->
+                      <!-- Sign-in steps -->
                       <div style="background: #e0f7f6; border-radius: 12px; padding: 20px; margin-bottom: 16px;">
+                        ${data.isAdmin ? `
+                        <p style="color: #00695c; margin: 0 0 12px 0; font-size: 14px; font-weight: 600;">How to sign in:</p>
+                        <table role="presentation" cellspacing="0" cellpadding="0" width="100%">
+                          <tr>
+                            <td style="padding: 6px 0; vertical-align: top;">
+                              <span style="display: inline-block; width: 22px; height: 22px; background: #008b8b; color: #fff; border-radius: 50%; text-align: center; font-size: 12px; font-weight: 700; line-height: 22px; margin-right: 10px;">1</span>
+                              <span style="color: #00695c; font-size: 13px;">Click <strong>Access the Portal</strong> above.</span>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style="padding: 6px 0; vertical-align: top;">
+                              <span style="display: inline-block; width: 22px; height: 22px; background: #008b8b; color: #fff; border-radius: 50%; text-align: center; font-size: 12px; font-weight: 700; line-height: 22px; margin-right: 10px;">2</span>
+                              <span style="color: #00695c; font-size: 13px;">Click <strong>"Sign in with Microsoft"</strong> and sign in with your usual Microsoft password (and MFA if required).</span>
+                            </td>
+                          </tr>
+                        </table>
+                        ` : `
                         <p style="color: #00695c; margin: 0 0 12px 0; font-size: 14px; font-weight: 600;">How to sign in for the first time:</p>
                         <table role="presentation" cellspacing="0" cellpadding="0" width="100%">
                           <tr>
@@ -1139,6 +1157,7 @@ Portal: https://acclaim-api-prod-uks-001.azurewebsites.net/auth
                             </td>
                           </tr>
                         </table>
+                        `}
                       </div>
                       
                     </td>
@@ -1168,12 +1187,15 @@ Welcome to the Acclaim Credit Management & Recovery Portal! Your account has bee
 
 Access the portal here: ${portalUrl}
 
-How to sign in for the first time:
+${data.isAdmin ? `How to sign in:
+
+1. Click the link above to visit the portal.
+2. Click "Sign in with Microsoft" and sign in with your usual Microsoft password (and MFA if required).` : `How to sign in for the first time:
 
 1. Click the link above to visit the portal.
 2. Click "Sign in with Microsoft" on the login page.
 3. On the Microsoft sign-in page, click "No account? Create one!" and register using this email address.
-4. Once registered, return to the portal and sign in with your Microsoft account.
+4. Once registered, return to the portal and sign in with your Microsoft account.`}
 
 What you can do in the portal:
 - View and track your cases
@@ -1192,9 +1214,12 @@ If you have any questions, please contact our support team.
       }
 
       // Attach the Portal User Guide PDF so new users receive it with their welcome email
-      const userGuideBase64 = getUserGuideBase64();
-      if (userGuideBase64) {
-        attachments.push(userGuideBase64);
+      // (not included for admin users)
+      if (!data.isAdmin) {
+        const userGuideBase64 = getUserGuideBase64();
+        if (userGuideBase64) {
+          attachments.push(userGuideBase64);
+        }
       }
 
       return await this.sendViaAPIM({
