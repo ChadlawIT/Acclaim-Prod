@@ -59,6 +59,34 @@ function getLogoBase64(): { content: string; filename: string; type: string; con
   return null;
 }
 
+// Get the Portal User Guide PDF as base64 for attaching to welcome emails
+function getUserGuideBase64(): { content: string; filename: string; type: string; disposition: string } | null {
+  const possiblePaths = [
+    path.join(__dirname, '../attached_assets/Acclaim Portal User Guide.pdf'),
+    path.join(__dirname, '../../attached_assets/Acclaim Portal User Guide.pdf'),
+    path.join(process.cwd(), 'attached_assets/Acclaim Portal User Guide.pdf'),
+  ];
+
+  for (const guidePath of possiblePaths) {
+    if (fs.existsSync(guidePath)) {
+      try {
+        const fileContent = fs.readFileSync(guidePath);
+        return {
+          content: fileContent.toString('base64'),
+          filename: 'Acclaim Portal User Guide.pdf',
+          type: 'application/pdf',
+          disposition: 'attachment'
+        };
+      } catch (error) {
+        console.log('[Email] Failed to read Portal User Guide file:', error);
+      }
+    }
+  }
+
+  console.log('[Email] Portal User Guide file not found for base64 encoding');
+  return null;
+}
+
 // Helper function to detect video/movie files that should not be attached to emails
 function isVideoFile(fileName: string, mimeType?: string): boolean {
   // Check MIME type first if available
@@ -1161,6 +1189,12 @@ If you have any questions, please contact our support team.
       const logoBase64 = getLogoBase64();
       if (logoBase64) {
         attachments.push(logoBase64);
+      }
+
+      // Attach the Portal User Guide PDF so new users receive it with their welcome email
+      const userGuideBase64 = getUserGuideBase64();
+      if (userGuideBase64) {
+        attachments.push(userGuideBase64);
       }
 
       return await this.sendViaAPIM({

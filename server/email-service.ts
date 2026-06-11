@@ -807,6 +807,11 @@ If you have any questions, please contact our support team.
             filename: 'logo.png',
             path: path.join(__dirname, '../attached_assets/Acclaim rose.Cur_1752271300769.png'),
             cid: 'logo'
+          },
+          {
+            filename: 'Acclaim Portal User Guide.pdf',
+            path: path.join(__dirname, '../attached_assets/Acclaim Portal User Guide.pdf'),
+            contentType: 'application/pdf'
           }
         ]
       });
