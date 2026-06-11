@@ -291,9 +291,6 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
         formData.append("recipientId", messageData.recipientId);
         formData.append("subject", messageData.subject);
         formData.append("content", messageData.content);
-        if (messageData.replyToMessageId) {
-          formData.append("replyToMessageId", messageData.replyToMessageId.toString());
-        }
         formData.append("attachment", messageAttachment);
         
         const response = await fetch("/api/messages", {
@@ -507,7 +504,6 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
       recipientId: "support",
       subject: `Re: ${selectedMessageForView.subject || 'Message'}`,
       content: replyContent,
-      replyToMessageId: selectedMessageForView.id,
     }, {
       onSuccess: () => {
         setDialogReplyMessage("");

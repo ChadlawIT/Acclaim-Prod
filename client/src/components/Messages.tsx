@@ -106,10 +106,6 @@ export default function Messages() {
         formData.append("caseId", messageData.caseId);
       }
 
-      if (messageData.replyToMessageId) {
-        formData.append("replyToMessageId", messageData.replyToMessageId.toString());
-      }
-
       if (selectedFile) {
         formData.append("attachment", selectedFile);
         if (customFileName.trim()) {
@@ -253,7 +249,6 @@ export default function Messages() {
       subject: newSubject,
       content: messageContent,
       caseId: linkedCaseId && linkedCaseId !== "none" ? linkedCaseId : undefined,
-      replyToMessageId: replyingTo?.id,
     });
   };
 

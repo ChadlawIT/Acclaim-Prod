@@ -308,7 +308,6 @@ class SendGridEmailService {
   // Send email via Azure APIM to SendGrid HTTP API
   private async sendViaAPIM(payload: {
     to: string;
-    cc?: string[];
     bcc?: string[];
     subject: string;
     textContent?: string;
@@ -341,16 +340,6 @@ class SendGridEmailService {
       const personalization: any = {
         to: [{ email: payload.to }]
       };
-      
-      // Add CC recipients if provided (exclude any that duplicate the primary recipient)
-      if (payload.cc && payload.cc.length > 0) {
-        const ccFiltered = payload.cc.filter(
-          email => email.toLowerCase() !== payload.to.toLowerCase()
-        );
-        if (ccFiltered.length > 0) {
-          personalization.cc = ccFiltered.map(email => ({ email }));
-        }
-      }
       
       // Add BCC recipients if provided
       if (payload.bcc && payload.bcc.length > 0) {
@@ -639,7 +628,7 @@ Portal: https://acclaim-api-prod-uks-001.azurewebsites.net/auth
     }
   }
 
-  async sendMessageNotification(data: EmailNotificationData, adminEmail: string, ccEmails: string[] = []): Promise<boolean> {
+  async sendMessageNotification(data: EmailNotificationData, adminEmail: string): Promise<boolean> {
     if (!this.initialized) {
       console.log('❌ SendGrid not configured - email not sent');
       return false;
@@ -839,20 +828,10 @@ Please log in to the Acclaim Portal to view and respond to this message.
       // even when the primary recipient is a specific case handler
       const DEFAULT_INBOX = 'email@acclaim.law';
       const bccList = adminEmail.toLowerCase() !== DEFAULT_INBOX ? [DEFAULT_INBOX] : [];
-
-      // CC the original sender of the message being replied to (e.g. the admin who
-      // first messaged the user), excluding the primary recipient and shared inbox
-      const ccList = Array.from(new Set(
-        (ccEmails || [])
-          .filter(Boolean)
-          .map(email => email.toLowerCase())
-          .filter(email => email !== adminEmail.toLowerCase() && email !== DEFAULT_INBOX)
-      ));
-      console.log(`[sendMessageNotification] TO=${adminEmail} CC=${ccList.join(',') || '(none)'} BCC=${bccList.join(',') || '(none — primary IS default)'}`);
+      console.log(`[sendMessageNotification] TO=${adminEmail} BCC=${bccList.join(',') || '(none — primary IS default)'}`);
 
       return await this.sendViaAPIM({
         to: adminEmail,
-        cc: ccList.length > 0 ? ccList : undefined,
         bcc: bccList.length > 0 ? bccList : undefined,
         subject: subject,
         textContent: textContent,

@@ -1556,30 +1556,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Route to case handler's email if available, otherwise default
           const adminEmail = await getAdminEmailForCase(caseHandler);
 
-          // If this is a reply, also CC the original sender of the message being
-          // replied to (e.g. the admin who first messaged the user), so the
-          // response goes back to them as well as the case handler.
-          const ccEmails: string[] = [];
-          const replyToMessageId = parseInt(req.body.replyToMessageId);
-          if (Number.isInteger(replyToMessageId) && replyToMessageId > 0) {
-            try {
-              const originalMessage = await storage.getMessage(replyToMessageId);
-              // Ensure the referenced message is one the user can legitimately reply to:
-              // for case replies it must belong to the same case
-              const sameCase = !messageData.caseId
-                || (originalMessage?.caseId === messageData.caseId);
-              if (originalMessage && originalMessage.senderId && sameCase) {
-                const originalSender = await storage.getUser(originalMessage.senderId);
-                // Only CC internal/admin senders (never leak client email addresses)
-                if (originalSender && originalSender.isAdmin && originalSender.email) {
-                  ccEmails.push(originalSender.email);
-                }
-              }
-            } catch (replyLookupError) {
-              console.error('Failed to resolve original sender for reply CC:', replyLookupError);
-            }
-          }
-
           // Prepare attachment data if present
           let attachmentData = undefined;
           if (messageData.attachmentFileName && messageData.attachmentFilePath) {
@@ -1604,8 +1580,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               organisationName,
               attachment: attachmentData,
             },
-            adminEmail,
-            ccEmails
+            adminEmail
           );
         } catch (emailError) {
           // Log email error but don't fail the message creation
