@@ -583,7 +583,7 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
 
       {/* Case Detail Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-7xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-[90vw] max-h-[92vh] overflow-y-auto w-[95vw]">
           <DialogHeader>
             <DialogTitle>Case Details</DialogTitle>
             <DialogDescription>

@@ -1113,7 +1113,7 @@ const handleReply = (message: any) => {
 
       {/* Case Detail Dialog */}
       <Dialog open={caseDialogOpen} onOpenChange={setCaseDialogOpen}>
-        <DialogContent className="max-w-7xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-[90vw] max-h-[92vh] overflow-y-auto w-[95vw]">
           <DialogHeader>
             <DialogTitle>Case Details - {selectedCase?.caseName}</DialogTitle>
             <DialogDescription>

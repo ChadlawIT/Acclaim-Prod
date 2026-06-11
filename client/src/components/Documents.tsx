@@ -744,7 +744,7 @@ export default function Documents() {
       {/* Case Details Popup */}
       {selectedCase && (
         <Dialog open={caseDetailsOpen} onOpenChange={setCaseDetailsOpen}>
-          <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto w-[95vw]">
+          <DialogContent className="max-w-[90vw] max-h-[92vh] overflow-y-auto w-[95vw]">
             <DialogHeader>
               <DialogTitle>Case Details</DialogTitle>
               <DialogDescription>

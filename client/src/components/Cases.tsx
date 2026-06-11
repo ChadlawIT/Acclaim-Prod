@@ -347,7 +347,7 @@ export default function Cases() {
                         <span className="hidden sm:inline">View Details</span>
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto w-[95vw]">
+                    <DialogContent className="max-w-[90vw] max-h-[92vh] overflow-y-auto w-[95vw]">
                       <DialogHeader>
                         <DialogTitle>Case Details - {case_.caseName}</DialogTitle>
                         <DialogDescription>
