@@ -223,13 +223,11 @@ function generateHtmlReport(
     caseData.messages.forEach((m: any) => {
       const sender = m.isAdminSender ? 'Acclaim' : (m.senderName || 'Unknown');
       const rowClass = m.isAdminSender ? 'msg-acclaim' : 'msg-user';
-      const direction = m.isAdminSender ? 'From Acclaim' : 'Sent by you';
       caseMessagesRows += `
         <tr class="${rowClass}">
           <td>${formatDate(m.createdAt)}</td>
           <td>${m.subject || ''}</td>
           <td>${sender}</td>
-          <td>${direction}</td>
           <td class="message-content">${m.content || ''}</td>
         </tr>
       `;
@@ -244,7 +242,6 @@ function generateHtmlReport(
               <th>Date & Time</th>
               <th>Subject</th>
               <th>From</th>
-              <th>Direction</th>
               <th>Message</th>
             </tr>
           </thead>
@@ -584,7 +581,7 @@ function addMessagesSheet(workbook: ExcelJS.Workbook, messages: any[], frequency
     });
     emptyRow.font = { italic: true, color: { argb: "FF666666" } };
   } else {
-    messages.forEach((m, index) => {
+    messages.forEach((m) => {
       const row = sheet.addRow({
         date: formatDate(m.createdAt),
         caseName: m.caseName || "",
@@ -593,15 +590,13 @@ function addMessagesSheet(workbook: ExcelJS.Workbook, messages: any[], frequency
         senderName: m.senderName || "",
         content: truncateMessage(m.content, 200),
       });
-      
-      // Alternate row colours for readability
-      if (index % 2 === 1) {
-        row.fill = {
-          type: "pattern",
-          pattern: "solid",
-          fgColor: { argb: "FFF5F5F5" },
-        };
-      }
+
+      // Shade rows by sender: teal for messages from Acclaim, amber for those sent by the user
+      row.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: m.isAdminSender ? "FFF0FDFA" : "FFFFFBEB" },
+      };
       row.alignment = { vertical: "top", wrapText: true };
     });
   }
