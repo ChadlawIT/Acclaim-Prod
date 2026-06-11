@@ -222,11 +222,14 @@ function generateHtmlReport(
     let caseMessagesRows = '';
     caseData.messages.forEach((m: any) => {
       const sender = m.isAdminSender ? 'Acclaim' : (m.senderName || 'Unknown');
+      const rowClass = m.isAdminSender ? 'msg-acclaim' : 'msg-user';
+      const direction = m.isAdminSender ? 'From Acclaim' : 'Sent by you';
       caseMessagesRows += `
-        <tr>
+        <tr class="${rowClass}">
           <td>${formatDate(m.createdAt)}</td>
           <td>${m.subject || ''}</td>
           <td>${sender}</td>
+          <td>${direction}</td>
           <td class="message-content">${m.content || ''}</td>
         </tr>
       `;
@@ -241,6 +244,7 @@ function generateHtmlReport(
               <th>Date & Time</th>
               <th>Subject</th>
               <th>From</th>
+              <th>Direction</th>
               <th>Message</th>
             </tr>
           </thead>
@@ -283,6 +287,13 @@ function generateHtmlReport(
         .message-content { white-space: pre-wrap; word-wrap: break-word; max-width: 400px; }
         .case-messages { margin-bottom: 20px; }
         .case-header { font-size: 14px; color: #0d9488; margin: 15px 0 8px 0; padding-bottom: 5px; border-bottom: 2px solid #0d9488; }
+        .msg-acclaim td { background-color: #f0fdfa; }
+        .msg-user td { background-color: #fffbeb; }
+        .legend { margin: 8px 0 12px 0; font-size: 9px; color: #555; }
+        .legend .swatch { display: inline-block; width: 11px; height: 11px; border: 1px solid #ddd; border-radius: 2px; vertical-align: middle; margin: 0 4px 0 12px; }
+        .legend .swatch:first-child { margin-left: 0; }
+        .swatch-acclaim { background-color: #f0fdfa; }
+        .swatch-user { background-color: #fffbeb; }
       </style>
     </head>
     <body>
@@ -354,6 +365,7 @@ function generateHtmlReport(
       ${settings.includeActivityReport ? `
         <div class="section">
           <h2>Messages Report</h2>
+          ${messages.length > 0 ? `<div class="legend"><span class="swatch swatch-acclaim"></span>From Acclaim<span class="swatch swatch-user"></span>Sent by you</div>` : ''}
           ${messages.length > 0 ? messagesSections : `<div class="no-data">No messages in the ${settings.frequency === "daily" ? "last 24 hours" : settings.frequency === "weekly" ? "last 7 days" : "last month"}</div>`}
         </div>
       ` : ''}
@@ -524,6 +536,7 @@ async function getRecentMessages(
       accountNumber: message.accountNumber || "",
       subject: message.subject || "",
       senderName: displayName,
+      isAdminSender: !!message.senderIsAdmin,
       content: message.content,
       createdAt: message.createdAt,
       hasAttachment: !!message.attachmentFileName,
