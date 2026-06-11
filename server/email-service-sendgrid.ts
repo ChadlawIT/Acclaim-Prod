@@ -416,9 +416,22 @@ class SendGridEmailService {
     }
 
     try {
-      const subject = data.caseReference 
-        ? `${data.messageType}: ${data.messageSubject} [${data.caseReference}] - Acclaim Portal`
+      const caseName = data.caseDetails?.caseName;
+      const caseLabel = caseName
+        ? (data.caseReference ? `${caseName} (${data.caseReference})` : caseName)
+        : (data.caseReference || '');
+
+      const subject = caseLabel
+        ? `${caseLabel} – ${data.messageType}: ${data.messageSubject}`
         : `${data.messageType}: ${data.messageSubject} - Acclaim Portal`;
+
+      const caseHeaderHtml = (caseName || data.caseReference)
+        ? `<div style="margin: 18px auto 0 auto; display: inline-block; background: rgba(255,255,255,0.15); border-radius: 8px; padding: 10px 22px;">
+                        <p style="margin: 0; color: rgba(255,255,255,0.75); font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px;">Case</p>
+                        <p style="margin: 4px 0 0 0; color: #ffffff; font-size: 18px; font-weight: 700;">${caseName ? caseName : data.caseReference}${caseName && data.caseReference ? ` <span style="font-weight: 400; font-size: 14px; color: rgba(255,255,255,0.8);">(${data.caseReference})</span>` : ''}</p>
+                      </div>`
+        : '';
+
       const htmlContent = `
         <!DOCTYPE html>
         <html>
@@ -437,7 +450,7 @@ class SendGridEmailService {
                     <td style="background-color: #008b8b; background: linear-gradient(135deg, #008b8b 0%, #006666 100%); padding: 40px 40px 30px 40px; text-align: center;">
                       <img src="cid:logo" alt="Acclaim" style="height: 36px; width: auto; margin-bottom: 16px;" />
                       <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600; letter-spacing: -0.5px;">Case Update</h1>
-                      ${data.caseReference ? `<p style="margin: 8px 0 0 0; color: rgba(255,255,255,0.85); font-size: 14px;">Reference: ${data.caseReference}</p>` : ''}
+                      ${caseHeaderHtml}
                     </td>
                   </tr>
                   
@@ -810,13 +823,25 @@ Please log in to the Acclaim Portal to view and respond to this message.
     }
 
     try {
-      const subject = data.caseReference 
-        ? data.messageSubject 
-          ? `Message from Admin: ${data.messageSubject} [${data.caseReference}] - Acclaim Portal`
-          : `New Message from Administrator [${data.caseReference}] - Acclaim Portal`
-        : data.messageSubject 
-          ? `Message from Admin: ${data.messageSubject} - Acclaim Portal`
-          : 'New Message from Administrator - Acclaim Portal';
+      const caseName = data.caseDetails?.caseName;
+      const caseLabel = caseName
+        ? (data.caseReference ? `${caseName} (${data.caseReference})` : caseName)
+        : (data.caseReference || '');
+
+      const subject = caseLabel
+        ? (data.messageSubject
+            ? `${caseLabel} – Message from Acclaim: ${data.messageSubject}`
+            : `${caseLabel} – New Message from Acclaim`)
+        : (data.messageSubject
+            ? `Message from Acclaim: ${data.messageSubject} - Acclaim Portal`
+            : 'New Message from Acclaim - Acclaim Portal');
+
+      const caseHeaderHtml = (caseName || data.caseReference)
+        ? `<div style="margin: 18px auto 0 auto; display: inline-block; background: rgba(255,255,255,0.15); border-radius: 8px; padding: 10px 22px;">
+                        <p style="margin: 0; color: rgba(255,255,255,0.75); font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px;">Case</p>
+                        <p style="margin: 4px 0 0 0; color: #ffffff; font-size: 18px; font-weight: 700;">${caseName ? caseName : data.caseReference}${caseName && data.caseReference ? ` <span style="font-weight: 400; font-size: 14px; color: rgba(255,255,255,0.8);">(${data.caseReference})</span>` : ''}</p>
+                      </div>`
+        : '';
 
       const htmlContent = `
         <!DOCTYPE html>
@@ -836,7 +861,7 @@ Please log in to the Acclaim Portal to view and respond to this message.
                     <td style="background-color: #008b8b; background: linear-gradient(135deg, #008b8b 0%, #006666 100%); padding: 40px 40px 30px 40px; text-align: center;">
                       <img src="cid:logo" alt="Acclaim" style="height: 36px; width: auto; margin-bottom: 16px;" />
                       <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600; letter-spacing: -0.5px;">Message from Acclaim</h1>
-                      ${data.caseReference && data.caseDetails?.caseName ? `<p style="margin: 8px 0 0 0; color: rgba(255,255,255,0.85); font-size: 14px;">${data.caseDetails.caseName} (${data.caseReference})</p>` : data.caseReference ? `<p style="margin: 8px 0 0 0; color: rgba(255,255,255,0.85); font-size: 14px;">Case: ${data.caseReference}</p>` : ''}
+                      ${caseHeaderHtml}
                     </td>
                   </tr>
                   
@@ -2196,9 +2221,20 @@ Please log in to the Acclaim Portal to view this document.
     }
 
     try {
-      const subject = data.caseReference 
-        ? `New Document Available [${data.caseReference}] - Acclaim Portal`
+      const caseLabel = data.caseName
+        ? (data.caseReference ? `${data.caseName} (${data.caseReference})` : data.caseName)
+        : (data.caseReference || '');
+
+      const subject = caseLabel
+        ? `${caseLabel} – New Document Available`
         : `New Document Available - Acclaim Portal`;
+
+      const caseHeaderHtml = (data.caseName || data.caseReference)
+        ? `<div style="margin: 18px auto 0 auto; display: inline-block; background: rgba(255,255,255,0.15); border-radius: 8px; padding: 10px 22px;">
+                        <p style="margin: 0; color: rgba(255,255,255,0.75); font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px;">Case</p>
+                        <p style="margin: 4px 0 0 0; color: #ffffff; font-size: 18px; font-weight: 700;">${data.caseName ? data.caseName : data.caseReference}${data.caseName && data.caseReference ? ` <span style="font-weight: 400; font-size: 14px; color: rgba(255,255,255,0.8);">(${data.caseReference})</span>` : ''}</p>
+                      </div>`
+        : '';
 
       const formatFileSize = (bytes: number) => {
         if (bytes === 0) return '0 Bytes';
@@ -2226,7 +2262,7 @@ Please log in to the Acclaim Portal to view this document.
                     <td style="background-color: #008b8b; background: linear-gradient(135deg, #008b8b 0%, #006666 100%); padding: 40px 40px 30px 40px; text-align: center;">
                       <img src="cid:logo" alt="Acclaim" style="height: 36px; width: auto; margin-bottom: 16px;" />
                       <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600; letter-spacing: -0.5px;">New Document Available</h1>
-                      ${data.caseReference && data.caseName ? `<p style="margin: 8px 0 0 0; color: rgba(255,255,255,0.85); font-size: 14px;">${data.caseName} (${data.caseReference})</p>` : data.caseReference ? `<p style="margin: 8px 0 0 0; color: rgba(255,255,255,0.85); font-size: 14px;">Case: ${data.caseReference}</p>` : ''}
+                      ${caseHeaderHtml}
                     </td>
                   </tr>
                   
