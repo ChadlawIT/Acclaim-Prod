@@ -5417,7 +5417,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   caseReference: case_.accountNumber,
                   organisationName: organisation?.name || 'Unknown Organisation',
                   senderName: senderName,
-                  messageType: messageType
+                  messageType: messageType,
+                  caseDetails: {
+                    caseName: case_.caseName,
+                    debtorType: case_.debtorType,
+                    originalAmount: case_.originalAmount,
+                    outstandingAmount: case_.outstandingAmount,
+                    status: case_.status,
+                    stage: case_.stage,
+                  }
                 });
                 
                 if (emailSent) {
