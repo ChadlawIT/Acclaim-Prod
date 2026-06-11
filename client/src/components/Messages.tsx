@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-import { Send, MessageSquare, Plus, User, Paperclip, Download, Trash2, Search, Filter, Calendar, X, FileSpreadsheet, Info, History, Eye } from "lucide-react";
+import { Send, MessageSquare, Plus, User, Paperclip, Download, Trash2, Search, Filter, Calendar, X, FileSpreadsheet, History, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { useAuth } from "@/hooks/use-auth";
@@ -781,15 +781,6 @@ const handleReply = (message: any) => {
 
               </div>
             )}
-
-            {/* Report Tip - Always visible */}
-            <div className="flex gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs sm:text-sm text-blue-800">
-              <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
-              <div>
-                <span className="font-medium">Tip:</span> Create a message report by clicking "Filters" above, setting your date range and filters, then click "Export to Excel". 
-                In Excel, you can further filter and organise columns to view specific message types, such as those with subject "Instructions Required" or "Information Only".
-              </div>
-            </div>
 
             {/* Search Results Summary with Pagination Info */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-1 text-xs sm:text-sm text-gray-600">
