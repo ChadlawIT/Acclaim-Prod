@@ -1251,22 +1251,6 @@ export default function UserProfile() {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between space-x-2">
-                    <div className="space-y-1">
-                      <Label htmlFor="loginNotifications" className="text-base font-medium">
-                        Login Notifications
-                      </Label>
-                      <p className="text-sm text-gray-500">Receive email alerts when someone logs into your account, including device and location information.</p>
-                    </div>
-                    <Switch
-                      id="loginNotifications"
-                      checked={notificationData.loginNotifications}
-                      onCheckedChange={(checked) => 
-                        setNotificationData(prev => ({ ...prev, loginNotifications: checked }))
-                      }
-                    />
-                  </div>
-
                   {/* Warning note about disabled notifications */}
                   <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                     <p className="text-sm text-amber-800">
