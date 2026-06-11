@@ -556,7 +556,7 @@ class SendGridEmailService {
                       <!-- Message Content -->
                       <div style="background: #fafbfc; border-radius: 12px; padding: 24px; margin-bottom: 30px;">
                         <h3 style="margin: 0 0 12px 0; color: #0f172a; font-size: 15px; font-weight: 600;">Message</h3>
-                        <div style="color: #475569; line-height: 1.7; font-size: 14px; white-space: pre-wrap;">${data.messageContent}</div>
+                        <div style="color: #475569; line-height: 1.7; font-size: 14px; white-space: pre-wrap;">${data.messageContent.replace(/\r\n/g, '\n').replace(/\n/g, '<br>')}</div>
                       </div>
                       
                       <!-- CTA Button -->
@@ -755,7 +755,7 @@ Portal: https://acclaim-api-prod-uks-001.azurewebsites.net/auth
                       <!-- Message Content -->
                       <div style="background: #fafbfc; border-radius: 12px; padding: 24px; margin-bottom: 30px;">
                         <h3 style="margin: 0 0 12px 0; color: #0f172a; font-size: 15px; font-weight: 600;">Message</h3>
-                        <div style="color: #475569; line-height: 1.7; font-size: 14px; white-space: pre-wrap;">${data.messageContent}</div>
+                        <div style="color: #475569; line-height: 1.7; font-size: 14px; white-space: pre-wrap;">${data.messageContent.replace(/\r\n/g, '\n').replace(/\n/g, '<br>')}</div>
                       </div>
                       
                     </td>
@@ -953,7 +953,7 @@ Please log in to the Acclaim Portal to view and respond to this message.
                       <!-- Message Content -->
                       <div style="background: #fafbfc; border-radius: 12px; padding: 24px; margin-bottom: 30px;">
                         <h3 style="margin: 0 0 12px 0; color: #0f172a; font-size: 15px; font-weight: 600;">Message</h3>
-                        <div style="color: #475569; line-height: 1.7; font-size: 14px; white-space: pre-wrap;">${data.messageContent}</div>
+                        <div style="color: #475569; line-height: 1.7; font-size: 14px; white-space: pre-wrap;">${data.messageContent.replace(/\r\n/g, '\n').replace(/\n/g, '<br>')}</div>
                       </div>
                       
                       <!-- CTA Button -->
