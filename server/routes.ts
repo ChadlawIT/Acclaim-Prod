@@ -1309,7 +1309,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         subject: m.subject || '',
         content: m.content,
         createdAt: m.createdAt,
-        senderName: m.senderIsAdmin ? 'Acclaim' : (m.senderName || m.senderEmail || 'Unknown'),
+        senderName: (m.senderName && m.senderName.startsWith('Acclaim'))
+          ? m.senderName
+          : (m.senderIsAdmin ? 'Acclaim' : (m.senderName || m.senderEmail || 'Unknown')),
         senderIsAdmin: m.senderIsAdmin,
         hasAttachment: !!m.attachmentFileName,
         attachmentFileName: m.attachmentFileName || null,

@@ -355,10 +355,28 @@ export interface IStorage {
 
 // Detects the "SenderName:\n\nContent" prefix embedded by the external API
 // and returns the message with senderName as "Acclaim (SenderName)" and clean content.
+// The external/SOS API stores all Acclaim-side messages under this shared
+// system account, embedding the real handler name in the content.
+const ACCLAIM_SYSTEM_EMAIL = 'email@acclaim.law';
+const ACCLAIM_SYSTEM_USER_ID = 'acclaim-system-user';
+
 function resolveEmbeddedSender(m: any): any {
+  // Only treat the "Name:\n\nbody" prefix as an embedded sender when the message
+  // actually originates from the Acclaim system account. This avoids misreading a
+  // genuine client message that happens to start with "Something:\n\n...".
+  const isSystemSender =
+    (m.senderEmail && m.senderEmail.toLowerCase() === ACCLAIM_SYSTEM_EMAIL) ||
+    m.senderId === ACCLAIM_SYSTEM_USER_ID;
+
+  if (!isSystemSender) {
+    return m;
+  }
+
   const match = (m.content || '').match(/^([^\n]+):\n\n([\s\S]*)$/);
   if (match) {
-    return { ...m, senderName: `Acclaim (${match[1].trim()})`, content: match[2] };
+    // These are always outgoing from Acclaim, regardless of whether the system
+    // account itself is flagged as an admin in the database.
+    return { ...m, senderName: `Acclaim (${match[1].trim()})`, senderIsAdmin: true, content: match[2] };
   }
   return m;
 }
