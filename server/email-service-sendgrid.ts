@@ -3164,9 +3164,20 @@ The Acclaim Team
       disposition: 'attachment'
     });
 
+    // Support multiple recipients separated by semicolons (or commas)
+    const recipientList = recipientEmail
+      .split(/[;,]/)
+      .map((email) => email.trim())
+      .filter((email) => email.length > 0);
+
+    if (recipientList.length === 0) {
+      console.error('[ScheduledReport] No valid recipient email addresses provided');
+      return false;
+    }
+
     const emailPayload = {
       personalizations: [{
-        to: [{ email: recipientEmail }]
+        to: recipientList.map((email) => ({ email }))
       }],
       from: { email: 'email@acclaim.law', name: 'Acclaim Credit Management' },
       subject: `Your ${frequencyText} Report from Acclaim`,

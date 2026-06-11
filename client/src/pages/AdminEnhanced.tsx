@@ -5100,11 +5100,14 @@ export default function AdminEnhanced() {
               <Label htmlFor="recipientEmail">Recipient Email *</Label>
               <Input
                 id="recipientEmail"
-                type="email"
+                type="text"
                 value={orgScheduleForm.recipientEmail}
                 onChange={(e) => setOrgScheduleForm({ ...orgScheduleForm, recipientEmail: e.target.value })}
-                placeholder="email@example.com"
+                placeholder="email@example.com; another@example.com"
               />
+              <p className="text-xs text-gray-500">
+                To send to more than one address, separate them with a semicolon (;).
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="recipientName">Recipient Name</Label>
@@ -5461,11 +5464,14 @@ export default function AdminEnhanced() {
                     <Label htmlFor="editRecipientEmail">Recipient Email</Label>
                     <Input
                       id="editRecipientEmail"
-                      type="email"
+                      type="text"
                       value={orgScheduleForm.recipientEmail}
                       onChange={(e) => setOrgScheduleForm({ ...orgScheduleForm, recipientEmail: e.target.value })}
-                      placeholder="email@example.com"
+                      placeholder="email@example.com; another@example.com"
                     />
+                    <p className="text-xs text-gray-500">
+                      To send to more than one address, separate them with a semicolon (;).
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="editRecipientName">Recipient Name (optional)</Label>

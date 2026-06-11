@@ -19,9 +19,23 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 
+// Validates one or more email addresses separated by semicolons (or commas)
+const multipleEmailsSchema = z
+  .string()
+  .min(1, "At least one email address is required")
+  .refine((value) => {
+    const emails = value
+      .split(/[;,]/)
+      .map((email) => email.trim())
+      .filter((email) => email.length > 0);
+    if (emails.length === 0) return false;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emails.every((email) => emailRegex.test(email));
+  }, "One or more email addresses are invalid. Separate multiple addresses with a semicolon (;).");
+
 // Schema for org-level scheduled report creation with custom recipient
 const orgScheduledReportSchema = z.object({
-  recipientEmail: z.string().email("Invalid email format"),
+  recipientEmail: multipleEmailsSchema,
   recipientName: z.string().optional(),
   frequency: z.enum(["daily", "weekly", "monthly"]).default("weekly"),
   dayOfWeek: z.number().int().min(0).max(6).optional(),
@@ -3459,6 +3473,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existing = await storage.getScheduledReportById(id);
       if (!existing) {
         return res.status(404).json({ message: "Scheduled report not found" });
+      }
+
+      // Validate recipient email(s) if provided (supports semicolon/comma-separated list)
+      if (recipientEmail !== undefined && recipientEmail !== null && recipientEmail !== "") {
+        const emailValidation = multipleEmailsSchema.safeParse(recipientEmail);
+        if (!emailValidation.success) {
+          return res.status(400).json({ message: emailValidation.error.errors[0]?.message || "Invalid email format" });
+        }
       }
       
       // Get organisation name for audit log
