@@ -3044,7 +3044,9 @@ export async function sendScheduledReportEmailWithAttachments(
   frequencyText: string,
   excelBuffer: Buffer,
   htmlBuffer: Buffer,
-  baseFileName: string
+  baseFileName: string,
+  includeCaseSummary: boolean = true,
+  includeActivityReport: boolean = true
 ): Promise<boolean> {
   try {
     const APIM_KEY = process.env.APIM_SUBSCRIPTION_KEY;
@@ -3054,6 +3056,16 @@ export async function sendScheduledReportEmailWithAttachments(
     }
 
     const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    const reportItemsHtml = [
+      includeCaseSummary ? '<li><strong>Case Summary</strong> - Overview of your cases including status and amounts</li>' : '',
+      includeActivityReport ? '<li><strong>Messages Report</strong> - Recent messages and document activity</li>' : '',
+    ].filter(Boolean).join('\n                      ');
+
+    const reportItemsText = [
+      includeCaseSummary ? '- Case Summary: Overview of your cases including status and amounts' : '',
+      includeActivityReport ? '- Messages Report: Recent messages and document activity' : '',
+    ].filter(Boolean).join('\n');
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -3086,8 +3098,7 @@ export async function sendScheduledReportEmailWithAttachments(
                     </p>
                     
                     <ul style="margin: 0 0 24px 0; padding-left: 20px; color: #374151; font-size: 16px; line-height: 28px;">
-                      <li><strong>Case Summary</strong> - Overview of your cases including status and amounts</li>
-                      <li><strong>Messages Report</strong> - Recent messages and document activity</li>
+                      ${reportItemsHtml}
                     </ul>
                     
                     <p style="margin: 0 0 24px 0; color: #374151; font-size: 16px; line-height: 24px;">
@@ -3129,8 +3140,7 @@ Dear ${recipientName},
 Please find attached your ${frequencyText.toLowerCase()} report from the Acclaim Client Portal.
 
 This report contains:
-- Case Summary: Overview of your cases including status and amounts
-- Messages Report: Recent messages and document activity
+${reportItemsText}
 
 Two files are attached:
 - HTML for quick viewing in any browser

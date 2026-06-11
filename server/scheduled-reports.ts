@@ -60,7 +60,9 @@ export async function generateScheduledReportForId(reportId: number): Promise<vo
     frequencyText,
     reportBuffers.excel,
     reportBuffers.html,
-    baseFileName
+    baseFileName,
+    report.includeCaseSummary ?? true,
+    report.includeActivityReport ?? true
   );
 }
 
@@ -776,7 +778,9 @@ export async function processScheduledReports(): Promise<void> {
         frequencyText,
         reportBuffers.excel,
         reportBuffers.html,
-        baseFileName
+        baseFileName,
+        settings.includeCaseSummary ?? true,
+        settings.includeActivityReport ?? true
       );
 
       if (emailSuccess) {
