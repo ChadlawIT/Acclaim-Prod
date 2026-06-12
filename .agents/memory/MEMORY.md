@@ -3,3 +3,4 @@
 - [Dialog mobile scroll & pinned close](dialog-mobile-scroll.md) — base DialogContent = non-scrolling flex-col outer + scrolling inner div, X absolute on outer; padding lives on inner (command.tsx needs [&>div]:p-0).
 - [Case restriction lift/restore](case-restriction-lift.md) — temporary lift deletes rows; "previously blocked" rebuilt from audit_log (newValue=userId, recordId=caseId); audit-before-delete / add-before-audit ordering guarantees no missed case.
 - [Case org-scoping & moving cases](case-org-scoping.md) — moving a case must cascade org to documents+payments (tx); case-linked message visibility is gated by the case current org, not stale recipientId.
+- [Payment report date semantics](payment-report-dates.md) — all payment reports must date from payments.paymentDate (real payment date), never createdAt (portal-ingest date).

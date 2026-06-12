@@ -114,9 +114,9 @@ export default function PaymentPerformanceReport() {
     const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
     const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
 
-    const last30Days = filteredPayments.filter((p: any) => new Date(p.createdAt) >= thirtyDaysAgo);
-    const last60Days = filteredPayments.filter((p: any) => new Date(p.createdAt) >= sixtyDaysAgo);
-    const last90Days = filteredPayments.filter((p: any) => new Date(p.createdAt) >= ninetyDaysAgo);
+    const last30Days = filteredPayments.filter((p: any) => new Date(p.paymentDate) >= thirtyDaysAgo);
+    const last60Days = filteredPayments.filter((p: any) => new Date(p.paymentDate) >= sixtyDaysAgo);
+    const last90Days = filteredPayments.filter((p: any) => new Date(p.paymentDate) >= ninetyDaysAgo);
 
     const totalPayments = filteredPayments.reduce((sum: number, p: any) => sum + parseFloat(p.amount), 0);
     const avgPaymentAmount = filteredPayments.length > 0 ? totalPayments / filteredPayments.length : 0;
@@ -130,7 +130,7 @@ export default function PaymentPerformanceReport() {
 
     // Monthly payment trends
     const monthlyTrends = filteredPayments.reduce((acc: any, payment: any) => {
-      const month = new Date(payment.createdAt).toLocaleString('en-GB', { month: 'short', year: 'numeric' });
+      const month = new Date(payment.paymentDate).toLocaleString('en-GB', { month: 'short', year: 'numeric' });
       if (!acc[month]) {
         acc[month] = { total: 0, count: 0 };
       }
@@ -175,7 +175,7 @@ export default function PaymentPerformanceReport() {
           'Account Number': case_?.accountNumber || 'N/A',
           'Case Name': case_?.organisationName ? `${case_.caseName} (${case_.organisationName})` : (case_?.caseName || 'N/A'),
           'Payment Amount': parseFloat(payment.amount),
-          'Payment Date': formatDate(payment.createdAt),
+          'Payment Date': formatDate(payment.paymentDate),
           'Payment Method': payment.paymentMethod || 'Not Specified',
 
           'Case Status': case_?.status || 'N/A',
