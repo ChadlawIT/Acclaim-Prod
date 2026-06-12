@@ -3031,6 +3031,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Send the "you are now a super admin" welcome email (triggered by an admin after granting)
+  app.post('/api/admin/users/:userId/super-admin/notify', isAuthenticated, isAdmin, isSuperAdmin, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const targetUser = await storage.getUser(userId);
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      if (!targetUser.isSuperAdmin) {
+        return res.status(400).json({ message: "This user is not a super admin" });
+      }
+      if (!targetUser.email) {
+        return res.status(400).json({ message: "This user has no email address on file" });
+      }
+
+      const adminUser = await storage.getUser(req.user.id);
+      const grantedByName = adminUser
+        ? ([adminUser.firstName, adminUser.lastName].filter(Boolean).join(' ') || adminUser.email)
+        : 'an administrator';
+
+      const sent = await sendGridEmailService.sendSuperAdminGrantedNotification({
+        firstName: targetUser.firstName || 'there',
+        userName: [targetUser.firstName, targetUser.lastName].filter(Boolean).join(' ') || targetUser.email,
+        userEmail: targetUser.email,
+        grantedByName,
+      });
+
+      if (!sent) {
+        return res.status(500).json({ message: "Failed to send notification email" });
+      }
+
+      // Audit the notification
+      if (adminUser) {
+        const userName = [targetUser.firstName, targetUser.lastName].filter(Boolean).join(' ') || targetUser.email;
+        await logAdminAction({
+          adminUser,
+          tableName: 'users',
+          recordId: userId,
+          operation: 'UPDATE',
+          fieldName: 'superAdminNotification',
+          description: `Sent super admin welcome email to user "${userName}"`,
+          ipAddress: req.ip,
+          userAgent: req.get('user-agent'),
+        });
+      }
+
+      res.json({ sent: true, message: "Notification email sent" });
+    } catch (error) {
+      console.error("Error sending super admin notification email:", error);
+      res.status(500).json({ message: "Failed to send notification email" });
+    }
+  });
+
   // Toggle case submission permission
   app.put('/api/admin/users/:userId/case-submission', isAuthenticated, isAdmin, async (req: any, res) => {
     try {

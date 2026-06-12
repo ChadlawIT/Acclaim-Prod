@@ -9,6 +9,15 @@ const __dirname = path.dirname(__filename);
 // APIM endpoint for SendGrid
 const APIM_ENDPOINT = 'https://acclaim-api-apim.azure-api.net/sendgrid/v3/mail/send';
 
+function escapeHtml(value: string): string {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function getLogoAttachment(): { filename: string; path: string; cid: string } | null {
   const possiblePaths = [
     path.join(__dirname, '../attached_assets/Acclaim rose.Cur_1752271300769.png'),
@@ -841,6 +850,157 @@ Please log in to the Acclaim Portal to view and respond to this message.
       });
     } catch (error) {
       console.error('❌ Failed to send user-to-admin email via SendGrid:', error);
+      return false;
+    }
+  }
+
+  async sendSuperAdminGrantedNotification(data: {
+    firstName: string;
+    userName: string;
+    userEmail: string;
+    grantedByName: string;
+  }): Promise<boolean> {
+    if (!this.initialized) {
+      console.log('❌ SendGrid not configured - email not sent');
+      return false;
+    }
+
+    try {
+      const subject = 'You have been granted Super Admin access - Acclaim Portal';
+
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 0; background-color: #f0f4f8; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f0f4f8;">
+            <tr>
+              <td align="center" style="padding: 40px 20px;">
+                <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width: 600px; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08);">
+
+                  <!-- Header -->
+                  <tr>
+                    <td style="background-color: #7c3aed; background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%); padding: 40px 40px 32px 40px; text-align: center;">
+                      <img src="cid:logo" alt="Acclaim" style="height: 32px; width: auto; margin-bottom: 20px;" />
+                      <!-- Purple shield badge -->
+                      <table role="presentation" cellspacing="0" cellpadding="0" align="center" style="margin: 0 auto 16px auto;">
+                        <tr>
+                          <td style="width: 72px; height: 72px; background: rgba(255,255,255,0.15); border-radius: 50%; text-align: center; vertical-align: middle;">
+                            <span style="font-size: 36px; line-height: 72px;">&#128737;</span>
+                          </td>
+                        </tr>
+                      </table>
+                      <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600; letter-spacing: -0.5px;">Super Admin Access Granted</h1>
+                      <p style="margin: 8px 0 0 0; color: rgba(255,255,255,0.85); font-size: 14px;">Acclaim Client Portal</p>
+                    </td>
+                  </tr>
+
+                  <!-- Body -->
+                  <tr>
+                    <td style="padding: 40px;">
+
+                      <p style="margin: 0 0 16px 0; color: #1e293b; font-size: 16px;">Hi ${escapeHtml(data.firstName)},</p>
+                      <p style="margin: 0 0 24px 0; color: #475569; font-size: 14px; line-height: 1.7;">
+                        Your account has been upgraded to <strong style="color: #6d28d9;">Super Admin</strong> on the Acclaim Client Portal by ${escapeHtml(data.grantedByName)}. This is the highest level of access in the portal, so we wanted to let you know exactly what it gives you &mdash; and which actions to treat with care.
+                      </p>
+
+                      <!-- What you can now do -->
+                      <div style="background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
+                        <h3 style="margin: 0 0 16px 0; color: #5b21b6; font-size: 15px; font-weight: 600;">
+                          <span style="display: inline-block; width: 4px; height: 16px; background: #7c3aed; border-radius: 2px; margin-right: 10px; vertical-align: middle;"></span>
+                          What you can now do
+                        </h3>
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="font-size: 14px; color: #475569; line-height: 1.6;">
+                          <tr><td style="padding: 6px 0;">&#10003;&nbsp; Delete users, organisations, case submissions, messages and documents</td></tr>
+                          <tr><td style="padding: 6px 0;">&#10003;&nbsp; Change the organisation a case is linked to</td></tr>
+                          <tr><td style="padding: 6px 0;">&#10003;&nbsp; Manage scheduled email reports (create, edit, delete and test-send)</td></tr>
+                          <tr><td style="padding: 6px 0;">&#10003;&nbsp; Access Audit Management and the full system audit logs</td></tr>
+                          <tr><td style="padding: 6px 0;">&#10003;&nbsp; Grant or remove super admin access for other &#64;chadlaw.co.uk colleagues</td></tr>
+                        </table>
+                      </div>
+
+                      <!-- Use with care -->
+                      <div style="background: #fef2f2; border: 1px solid #fecaca; border-left: 4px solid #ef4444; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
+                        <h3 style="margin: 0 0 12px 0; color: #b91c1c; font-size: 15px; font-weight: 600;">
+                          &#9888;&nbsp; Please use with care &mdash; some actions cannot be undone
+                        </h3>
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="font-size: 14px; color: #7f1d1d; line-height: 1.6;">
+                          <tr><td style="padding: 6px 0;">&bull;&nbsp; Deleting a user, organisation, case, message or document is <strong>permanent</strong> and cannot be reversed.</td></tr>
+                          <tr><td style="padding: 6px 0;">&bull;&nbsp; Moving a case to another organisation changes who can see that case and all of its documents and payments.</td></tr>
+                          <tr><td style="padding: 6px 0;">&bull;&nbsp; Removing someone's access takes effect immediately.</td></tr>
+                        </table>
+                        <p style="margin: 14px 0 0 0; color: #7f1d1d; font-size: 13px; line-height: 1.6;">When in doubt, pause before deleting &mdash; there is no &ldquo;undo&rdquo; for these actions.</p>
+                      </div>
+
+                      <p style="margin: 0 0 24px 0; color: #475569; font-size: 14px; line-height: 1.7;">
+                        If you weren&rsquo;t expecting this change, please contact your administrator straight away.
+                      </p>
+
+                      <!-- CTA -->
+                      <div style="text-align: center;">
+                        <a href="https://acclaim-api-prod-uks-001.azurewebsites.net/auth" style="display: inline-block; background-color: #7c3aed; background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%); color: #ffffff !important; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 12px rgba(124,58,237,0.3);">Open the Portal</a>
+                      </div>
+
+                    </td>
+                  </tr>
+
+                  <!-- Footer -->
+                  <tr>
+                    <td style="background-color: #1f2937; padding: 24px 40px; text-align: center; border-radius: 0 0 12px 12px;">
+                      <p style="margin: 0; color: #9ca3af; font-size: 12px;">This is an automated notification from the Acclaim Client Portal</p>
+                    </td>
+                  </tr>
+
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+      `;
+
+      const textContent = `
+Hi ${data.firstName},
+
+Your account has been upgraded to SUPER ADMIN on the Acclaim Client Portal by ${data.grantedByName}. This is the highest level of access in the portal.
+
+WHAT YOU CAN NOW DO:
+- Delete users, organisations, case submissions, messages and documents
+- Change the organisation a case is linked to
+- Manage scheduled email reports (create, edit, delete and test-send)
+- Access Audit Management and the full system audit logs
+- Grant or remove super admin access for other @chadlaw.co.uk colleagues
+
+PLEASE USE WITH CARE - SOME ACTIONS CANNOT BE UNDONE:
+- Deleting a user, organisation, case, message or document is permanent and cannot be reversed.
+- Moving a case to another organisation changes who can see that case and all of its documents and payments.
+- Removing someone's access takes effect immediately.
+
+When in doubt, pause before deleting - there is no "undo" for these actions.
+
+If you weren't expecting this change, please contact your administrator straight away.
+
+Open the portal: https://acclaim-api-prod-uks-001.azurewebsites.net/auth
+      `;
+
+      const attachments: Array<{ content: string; filename: string; type: string; disposition?: string; content_id?: string }> = [];
+      const logoBase64 = getLogoBase64();
+      if (logoBase64) {
+        attachments.push(logoBase64);
+      }
+
+      return await this.sendViaAPIM({
+        to: data.userEmail,
+        subject,
+        textContent,
+        htmlContent,
+        attachments,
+      });
+    } catch (error) {
+      console.error('❌ Failed to send super admin granted email via SendGrid:', error);
       return false;
     }
   }

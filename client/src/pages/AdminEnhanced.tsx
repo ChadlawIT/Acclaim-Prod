@@ -2957,17 +2957,48 @@ export default function AdminEnhanced() {
   });
 
   // Toggle super admin status mutation (super admins only)
-  const toggleSuperAdminMutation = useMutation({
-    mutationFn: async ({ userId, makeSuperAdmin }: { userId: string; makeSuperAdmin: boolean }) => {
-      const response = await apiRequest("PUT", `/api/admin/users/${userId}/super-admin`, { isSuperAdmin: makeSuperAdmin });
+  const notifySuperAdminMutation = useMutation({
+    mutationFn: async ({ userId }: { userId: string; userName?: string }) => {
+      const response = await apiRequest("POST", `/api/admin/users/${userId}/super-admin/notify`, {});
       return await response.json();
     },
     onSuccess: (data) => {
+      toast({
+        title: "Email sent",
+        description: data.message || "Notification email sent",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Email not sent",
+        description: error?.message || "Failed to send notification email",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const toggleSuperAdminMutation = useMutation({
+    mutationFn: async ({ userId, makeSuperAdmin }: { userId: string; makeSuperAdmin: boolean; userName?: string }) => {
+      const response = await apiRequest("PUT", `/api/admin/users/${userId}/super-admin`, { isSuperAdmin: makeSuperAdmin });
+      return await response.json();
+    },
+    onSuccess: (data, variables) => {
       toast({
         title: "Success",
         description: data.message,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users-with-orgs"] });
+
+      // After granting super admin, offer to email the user about their new access
+      if (variables.makeSuperAdmin) {
+        const who = variables.userName || "this user";
+        const sendEmail = confirm(
+          `${who} now has super admin access.\n\nWould you like to email them to explain what they can now do — including which actions can't be undone?`
+        );
+        if (sendEmail) {
+          notifySuperAdminMutation.mutate({ userId: variables.userId, userName: variables.userName });
+        }
+      }
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
@@ -4027,7 +4058,8 @@ export default function AdminEnhanced() {
                             if (confirmation) {
                               toggleSuperAdminMutation.mutate({
                                 userId: user.id,
-                                makeSuperAdmin: !(user as any).isSuperAdmin
+                                makeSuperAdmin: !(user as any).isSuperAdmin,
+                                userName: [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email
                               });
                             }
                           }}
@@ -4398,7 +4430,8 @@ export default function AdminEnhanced() {
                                   if (confirmation) {
                                     toggleSuperAdminMutation.mutate({
                                       userId: user.id,
-                                      makeSuperAdmin: !(user as any).isSuperAdmin
+                                      makeSuperAdmin: !(user as any).isSuperAdmin,
+                                      userName: [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email
                                     });
                                   }
                                 }}
