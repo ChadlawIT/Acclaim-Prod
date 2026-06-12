@@ -380,16 +380,18 @@ function generateHtmlReport(
 
 function addCaseSummarySheet(workbook: ExcelJS.Workbook, cases: any[]) {
   const sheet = workbook.addWorksheet("Case Summary");
+  // Collapsible groups: subtotal rows sit below their cases
+  sheet.properties.outlineProperties = { summaryBelow: true, summaryRight: false };
 
   // Match columns from manual Case Summary Report export
   sheet.columns = [
     { header: "Account Number", key: "accountNumber", width: 15 },
-    { header: "Case Name", key: "caseName", width: 25 },
+    { header: "Case Name", key: "caseName", width: 28 },
     { header: "Status", key: "status", width: 12 },
-    { header: "Stage", key: "stage", width: 15 },
+    { header: "Stage", key: "stage", width: 16 },
     { header: "Original Amount", key: "originalAmount", width: 15 },
     { header: "Costs Added", key: "costsAdded", width: 12 },
-    { header: "Interest Added", key: "interestAdded", width: 12 },
+    { header: "Interest Added", key: "interestAdded", width: 13 },
     { header: "Fees Added", key: "feesAdded", width: 12 },
     { header: "Total Additional Charges", key: "totalAdditionalCharges", width: 18 },
     { header: "Total Debt", key: "totalDebt", width: 15 },
@@ -411,45 +413,72 @@ function addCaseSummarySheet(workbook: ExcelJS.Workbook, cases: any[]) {
   if (cases.length === 0) {
     const emptyRow = sheet.addRow({
       accountNumber: "No cases found matching the selected filter",
-      caseName: "",
-      status: "",
-      stage: "",
-      originalAmount: "",
-      costsAdded: "",
-      interestAdded: "",
-      feesAdded: "",
-      totalAdditionalCharges: "",
-      totalDebt: "",
-      totalPayments: "",
-      outstandingAmount: "",
     });
     emptyRow.font = { italic: true, color: { argb: "FF666666" } };
-  } else {
-    cases.forEach((c, index) => {
-      const originalAmount = parseFloat(c.originalAmount || "0");
-      const costsAdded = parseFloat(c.costsAdded || "0");
-      const interestAdded = parseFloat(c.interestAdded || "0");
-      const feesAdded = parseFloat(c.feesAdded || "0");
+    sheet.views = [{ state: "frozen", ySplit: 1 }];
+    return;
+  }
+
+  // Apply the GBP number format (real numbers, not text) to the money columns
+  const applyCurrencyFormat = (row: ExcelJS.Row) => {
+    CURRENCY_KEYS.forEach((key) => {
+      const cell = row.getCell(key);
+      cell.numFmt = GBP_FORMAT;
+      cell.alignment = { horizontal: "right" };
+    });
+  };
+
+  // Group cases by organisation so related matters sit together
+  const groups = new Map<string, any[]>();
+  for (const c of cases) {
+    const org = c.organisationName || "Unassigned";
+    if (!groups.has(org)) groups.set(org, []);
+    groups.get(org)!.push(c);
+  }
+  const sortedOrgNames = Array.from(groups.keys()).sort((a, b) => a.localeCompare(b));
+
+  const grand = { original: 0, additional: 0, debt: 0, payments: 0, outstanding: 0, costs: 0, interest: 0, fees: 0 };
+
+  for (const orgName of sortedOrgNames) {
+    const orgCases = groups.get(orgName)!;
+
+    // Organisation heading row (spans all columns)
+    const groupRow = sheet.addRow([orgName]);
+    sheet.mergeCells(`A${groupRow.number}:L${groupRow.number}`);
+    groupRow.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 12 };
+    groupRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF115E59" } };
+    groupRow.alignment = { vertical: "middle", horizontal: "left" };
+    groupRow.height = 20;
+
+    const sub = { original: 0, additional: 0, debt: 0, payments: 0, outstanding: 0, costs: 0, interest: 0, fees: 0 };
+
+    orgCases.forEach((c, index) => {
+      const originalAmount = toAmount(c.originalAmount);
+      const costsAdded = toAmount(c.costsAdded);
+      const interestAdded = toAmount(c.interestAdded);
+      const feesAdded = toAmount(c.feesAdded);
       const totalAdditionalCharges = costsAdded + interestAdded + feesAdded;
       const totalDebt = originalAmount + totalAdditionalCharges;
-      const totalPayments = parseFloat(c.totalPayments || "0");
-      const outstandingAmount = parseFloat(c.outstandingAmount || "0");
+      const totalPayments = toAmount(c.totalPayments);
+      const outstandingAmount = toAmount(c.outstandingAmount);
 
       const row = sheet.addRow({
         accountNumber: c.accountNumber || "",
-        caseName: c.organisationName ? `${c.caseName} (${c.organisationName})` : c.caseName || "",
+        caseName: c.caseName || "",
         status: formatStatus(c.status),
         stage: formatStage(c.stage),
-        originalAmount: formatCurrency(c.originalAmount),
-        costsAdded: formatCurrency(c.costsAdded),
-        interestAdded: formatCurrency(c.interestAdded),
-        feesAdded: formatCurrency(c.feesAdded),
-        totalAdditionalCharges: formatCurrency(totalAdditionalCharges.toString()),
-        totalDebt: formatCurrency(totalDebt.toString()),
-        totalPayments: formatCurrency(c.totalPayments),
-        outstandingAmount: formatCurrency(c.outstandingAmount),
+        originalAmount,
+        costsAdded,
+        interestAdded,
+        feesAdded,
+        totalAdditionalCharges,
+        totalDebt,
+        totalPayments,
+        outstandingAmount,
       });
-      
+      row.outlineLevel = 1;
+      applyCurrencyFormat(row);
+
       // Alternate row colours for readability
       if (index % 2 === 1) {
         row.fill = {
@@ -458,15 +487,59 @@ function addCaseSummarySheet(workbook: ExcelJS.Workbook, cases: any[]) {
           fgColor: { argb: "FFF5F5F5" },
         };
       }
+
+      sub.original += originalAmount;
+      sub.costs += costsAdded;
+      sub.interest += interestAdded;
+      sub.fees += feesAdded;
+      sub.additional += totalAdditionalCharges;
+      sub.debt += totalDebt;
+      sub.payments += totalPayments;
+      sub.outstanding += outstandingAmount;
     });
+
+    // Organisation subtotal row
+    const subtotalRow = sheet.addRow({
+      caseName: `${orgName} — subtotal (${orgCases.length} ${orgCases.length === 1 ? "case" : "cases"})`,
+      originalAmount: sub.original,
+      costsAdded: sub.costs,
+      interestAdded: sub.interest,
+      feesAdded: sub.fees,
+      totalAdditionalCharges: sub.additional,
+      totalDebt: sub.debt,
+      totalPayments: sub.payments,
+      outstandingAmount: sub.outstanding,
+    });
+    subtotalRow.font = { bold: true };
+    subtotalRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFCCFBF1" } };
+    applyCurrencyFormat(subtotalRow);
+
+    grand.original += sub.original;
+    grand.costs += sub.costs;
+    grand.interest += sub.interest;
+    grand.fees += sub.fees;
+    grand.additional += sub.additional;
+    grand.debt += sub.debt;
+    grand.payments += sub.payments;
+    grand.outstanding += sub.outstanding;
   }
 
-  // Enable autofilter for all columns
-  sheet.autoFilter = {
-    from: "A1",
-    to: "L1",
-  };
-  
+  // Grand total row across all organisations
+  const grandRow = sheet.addRow({
+    caseName: `GRAND TOTAL (${cases.length} ${cases.length === 1 ? "case" : "cases"})`,
+    originalAmount: grand.original,
+    costsAdded: grand.costs,
+    interestAdded: grand.interest,
+    feesAdded: grand.fees,
+    totalAdditionalCharges: grand.additional,
+    totalDebt: grand.debt,
+    totalPayments: grand.payments,
+    outstandingAmount: grand.outstanding,
+  });
+  grandRow.font = { bold: true, size: 12 };
+  grandRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE5E7EB" } };
+  applyCurrencyFormat(grandRow);
+
   // Freeze the header row
   sheet.views = [{ state: "frozen", ySplit: 1 }];
 }
@@ -548,14 +621,14 @@ async function getRecentMessages(
 
 function addMessagesSheet(workbook: ExcelJS.Workbook, messages: any[], frequency: string) {
   const sheet = workbook.addWorksheet("Messages Report");
+  // Collapsible groups: each matter's heading sits above its messages
+  sheet.properties.outlineProperties = { summaryBelow: false, summaryRight: false };
 
   sheet.columns = [
     { header: "Date & Time", key: "date", width: 20 },
-    { header: "Case Name", key: "caseName", width: 28 },
-    { header: "Account Number", key: "accountNumber", width: 18 },
     { header: "Subject", key: "subject", width: 35 },
     { header: "From", key: "senderName", width: 18 },
-    { header: "Message", key: "content", width: 50 },
+    { header: "Message", key: "content", width: 60 },
   ];
 
   // Style header row
@@ -573,23 +646,54 @@ function addMessagesSheet(workbook: ExcelJS.Workbook, messages: any[], frequency
     const periodText = frequency === "daily" ? "the last 24 hours" : frequency === "weekly" ? "the last 7 days" : "the last month";
     const emptyRow = sheet.addRow({
       date: "",
-      caseName: `No messages received in ${periodText}`,
-      accountNumber: "",
-      subject: "",
+      subject: `No messages received in ${periodText}`,
       senderName: "",
       content: "",
     });
     emptyRow.font = { italic: true, color: { argb: "FF666666" } };
-  } else {
-    messages.forEach((m) => {
+    sheet.views = [{ state: "frozen", ySplit: 1 }];
+    return;
+  }
+
+  // Group messages by matter (case) so all correspondence sits together
+  const groups = new Map<string, { header: string; messages: any[]; latest: number }>();
+  for (const m of messages) {
+    const key = m.caseId ? String(m.caseId) : "general";
+    if (!groups.has(key)) {
+      const header = m.accountNumber
+        ? `${m.caseName || "Unknown Case"} — ${m.accountNumber}`
+        : (m.caseName || "General Messages");
+      groups.set(key, { header, messages: [], latest: 0 });
+    }
+    const grp = groups.get(key)!;
+    grp.messages.push(m);
+    const t = new Date(m.createdAt).getTime();
+    if (t > grp.latest) grp.latest = t;
+  }
+
+  // Show the most recently active matters first
+  const orderedGroups = Array.from(groups.values()).sort((a, b) => b.latest - a.latest);
+
+  for (const grp of orderedGroups) {
+    // Matter heading row (spans all columns)
+    const groupRow = sheet.addRow([grp.header]);
+    sheet.mergeCells(`A${groupRow.number}:D${groupRow.number}`);
+    groupRow.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 12 };
+    groupRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF115E59" } };
+    groupRow.alignment = { vertical: "middle", horizontal: "left" };
+    groupRow.height = 20;
+
+    // Newest message first within each matter
+    grp.messages.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    grp.messages.forEach((m) => {
       const row = sheet.addRow({
         date: formatDate(m.createdAt),
-        caseName: m.caseName || "",
-        accountNumber: m.accountNumber || "",
         subject: m.subject || "",
         senderName: m.senderName || "",
         content: truncateMessage(m.content, 200),
       });
+      row.outlineLevel = 1;
 
       // Shade rows by sender: teal for messages from Acclaim, amber for those sent by the user
       row.fill = {
@@ -601,12 +705,6 @@ function addMessagesSheet(workbook: ExcelJS.Workbook, messages: any[], frequency
     });
   }
 
-  // Enable autofilter for all columns
-  sheet.autoFilter = {
-    from: "A1",
-    to: "F1",
-  };
-  
   // Freeze the header row
   sheet.views = [{ state: "frozen", ySplit: 1 }];
 }
@@ -650,6 +748,24 @@ function formatCurrency(amount: string | null): string {
     style: "currency",
     currency: "GBP",
   }).format(num);
+}
+
+// Excel currency number format and the columns it applies to in the Case Summary sheet
+const GBP_FORMAT = "£#,##0.00";
+const CURRENCY_KEYS = [
+  "originalAmount",
+  "costsAdded",
+  "interestAdded",
+  "feesAdded",
+  "totalAdditionalCharges",
+  "totalDebt",
+  "totalPayments",
+  "outstandingAmount",
+];
+
+function toAmount(value: string | number | null | undefined): number {
+  const num = typeof value === "number" ? value : parseFloat(value || "0");
+  return isNaN(num) ? 0 : num;
 }
 
 function formatDate(date: string | Date): string {
