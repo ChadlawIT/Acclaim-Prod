@@ -348,6 +348,7 @@ export interface IStorage {
   addCaseAccessRestriction(caseId: number, blockedUserId: string, createdBy: string): Promise<void>;
   removeCaseAccessRestriction(caseId: number, blockedUserId: string): Promise<void>;
   getCaseAccessRestrictions(caseId: number): Promise<string[]>; // Returns array of blocked user IDs
+  getAllCaseRestrictionCounts(): Promise<Record<number, number>>; // Returns map of caseId -> restricted user count
   isUserBlockedFromCase(userId: string, caseId: number): Promise<boolean>;
   getBlockedCasesForUser(userId: string): Promise<number[]>;
   getAdminRestrictedCasesForUser(userId: string): Promise<number[]>; // Only admin-set restrictions, not user muting
@@ -3048,6 +3049,21 @@ export class DatabaseStorage implements IStorage {
       .from(caseAccessRestrictions)
       .where(eq(caseAccessRestrictions.caseId, caseId));
     return results.map(r => r.blockedUserId);
+  }
+
+  async getAllCaseRestrictionCounts(): Promise<Record<number, number>> {
+    // Returns a map of caseId -> number of users restricted from that case
+    const results = await db.select({
+      caseId: caseAccessRestrictions.caseId,
+      count: sql<number>`count(*)`,
+    })
+      .from(caseAccessRestrictions)
+      .groupBy(caseAccessRestrictions.caseId);
+    const map: Record<number, number> = {};
+    for (const row of results) {
+      map[row.caseId] = Number(row.count);
+    }
+    return map;
   }
 
   async isUserBlockedFromCase(userId: string, caseId: number): Promise<boolean> {

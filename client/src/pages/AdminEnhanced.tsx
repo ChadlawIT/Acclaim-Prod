@@ -419,6 +419,16 @@ function CaseManagementTab({ isSuperAdmin = false }: { isSuperAdmin?: boolean })
     retry: false,
   });
 
+  // Fetch how many users are restricted per case (caseId -> count)
+  const { data: restrictionCounts = {} } = useQuery<Record<number, number>>({
+    queryKey: ['/api/admin/cases/restriction-counts'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/admin/cases/restriction-counts');
+      return await response.json();
+    },
+    retry: false,
+  });
+
   // Fetch organisations for the new case form
   const { data: organisations = [] } = useQuery({
     queryKey: ['/api/admin/organisations'],
@@ -467,6 +477,7 @@ function CaseManagementTab({ isSuperAdmin = false }: { isSuperAdmin?: boolean })
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/cases', variables.caseId, 'access-restrictions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/cases/restriction-counts'] });
       toast({
         title: "Access Updated",
         description: "Case visibility restrictions have been updated.",
@@ -769,7 +780,7 @@ function CaseManagementTab({ isSuperAdmin = false }: { isSuperAdmin?: boolean })
                 <div className="text-sm text-gray-700">{case_.caseName}</div>
                 <div className="text-xs text-gray-500">{case_.organisationName || 'N/A'}</div>
               </div>
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1 items-end">
                 {case_.isArchived ? (
                   <Badge variant="secondary" className="text-xs">
                     <Archive className="h-3 w-3 mr-1" />
@@ -777,6 +788,17 @@ function CaseManagementTab({ isSuperAdmin = false }: { isSuperAdmin?: boolean })
                   </Badge>
                 ) : (
                   <Badge variant="default" className="text-xs">Active</Badge>
+                )}
+                {restrictionCounts[case_.id] > 0 && (
+                  <Badge
+                    variant="destructive"
+                    className="text-xs"
+                    title={`${restrictionCounts[case_.id]} user(s) restricted from this case`}
+                    data-testid={`badge-restricted-${case_.id}`}
+                  >
+                    <EyeOff className="h-3 w-3 mr-1" />
+                    {restrictionCounts[case_.id]} restricted
+                  </Badge>
                 )}
               </div>
             </div>
@@ -881,14 +903,26 @@ function CaseManagementTab({ isSuperAdmin = false }: { isSuperAdmin?: boolean })
                 </TableCell>
                 <TableCell>£{case_.outstandingAmount}</TableCell>
                 <TableCell>
-                  {case_.isArchived ? (
-                    <Badge variant="secondary">
-                      <Archive className="h-3 w-3 mr-1" />
-                      Archived
-                    </Badge>
-                  ) : (
-                    <Badge variant="default">Active</Badge>
-                  )}
+                  <div className="flex flex-col gap-1 items-start">
+                    {case_.isArchived ? (
+                      <Badge variant="secondary">
+                        <Archive className="h-3 w-3 mr-1" />
+                        Archived
+                      </Badge>
+                    ) : (
+                      <Badge variant="default">Active</Badge>
+                    )}
+                    {restrictionCounts[case_.id] > 0 && (
+                      <Badge
+                        variant="destructive"
+                        title={`${restrictionCounts[case_.id]} user(s) restricted from this case`}
+                        data-testid={`badge-restricted-${case_.id}`}
+                      >
+                        <EyeOff className="h-3 w-3 mr-1" />
+                        {restrictionCounts[case_.id]} restricted
+                      </Badge>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center space-x-2">

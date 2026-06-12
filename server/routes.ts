@@ -6597,6 +6597,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/admin/cases/restriction-counts", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const counts = await storage.getAllCaseRestrictionCounts();
+      res.json(counts);
+    } catch (error) {
+      console.error("Error fetching case restriction counts:", error);
+      res.status(500).json({ message: "Failed to fetch case restriction counts" });
+    }
+  });
+
   app.put("/api/admin/cases/:id/archive", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const caseId = parseInt(req.params.id);
