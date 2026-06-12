@@ -1243,11 +1243,15 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
               onClick={handleOpenOrgDialog}
               variant="outline"
               size="sm"
+              title="Super admins only: change which organisation this case belongs to"
               className="border-acclaim-teal text-acclaim-teal hover:bg-acclaim-teal hover:text-white w-full sm:w-auto"
               data-testid="button-change-organisation"
             >
               <Building2 className="h-4 w-4 mr-2" />
               Change Organisation
+              <Badge variant="secondary" className="ml-2 text-[10px] font-medium">
+                Super admin
+              </Badge>
             </Button>
           )}
           <Button 
@@ -1266,11 +1270,16 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
       <Dialog open={orgDialogOpen} onOpenChange={setOrgDialogOpen}>
         <DialogContent data-testid="dialog-change-organisation">
           <DialogHeader>
-            <DialogTitle>Change Organisation</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              Change Organisation
+              <Badge variant="secondary" className="text-[10px] font-medium">
+                Super admin only
+              </Badge>
+            </DialogTitle>
             <DialogDescription>
-              Move this case to a different organisation. Its documents and payments
-              move with it, and it will no longer be visible to the previous
-              organisation's users.
+              This action is only available to super admins. Move this case to a
+              different organisation. Its documents and payments move with it, and it
+              will no longer be visible to the previous organisation's users.
             </DialogDescription>
           </DialogHeader>
           <div className="py-2">
