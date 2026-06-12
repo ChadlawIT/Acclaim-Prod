@@ -6713,6 +6713,151 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Per-user case access restrictions - admin can lift (temporarily remove) some or
+  // all of a user's restrictions, then restore the same cases later. Lifting deletes
+  // the restriction rows; the previously-blocked cases are reconstructed from the
+  // audit log so the admin can re-apply them without missing any.
+  app.get("/api/admin/users/:userId/restrictions", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+
+      const currentCaseIds = await storage.getAdminRestrictedCasesForUser(userId);
+      const lifted = await storage.getLiftedRestrictionsForUser(userId);
+
+      const allCases = await storage.getAllCasesIncludingArchived();
+      const caseMap = new Map(allCases.map((c) => [c.id, c]));
+      const toInfo = (caseId: number) => {
+        const c = caseMap.get(caseId);
+        if (!c) return null;
+        return {
+          caseId,
+          accountNumber: c.accountNumber,
+          caseName: c.caseName,
+          organisationName: (c as any).organisationName ?? null,
+        };
+      };
+
+      const currentSet = new Set(currentCaseIds);
+      const current = currentCaseIds
+        .map(toInfo)
+        .filter((c): c is NonNullable<typeof c> => c !== null);
+
+      const previouslyLifted = lifted
+        .filter((l) => !currentSet.has(l.caseId)) // exclude any that have been re-blocked
+        .map((l) => {
+          const info = toInfo(l.caseId);
+          return info ? { ...info, liftedAt: l.liftedAt } : null;
+        })
+        .filter((c): c is NonNullable<typeof c> => c !== null);
+
+      res.json({ current, previouslyLifted });
+    } catch (error) {
+      console.error("Error fetching user restrictions:", error);
+      res.status(500).json({ message: "Failed to fetch user restrictions" });
+    }
+  });
+
+  app.post("/api/admin/users/:userId/restrictions/lift", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const { caseIds } = req.body;
+
+      if (!Array.isArray(caseIds)) {
+        return res.status(400).json({ message: "caseIds must be an array" });
+      }
+
+      const admin = await storage.getUser(req.user.id);
+      const blockedUser = await storage.getUser(userId);
+      const allCases = await storage.getAllCasesIncludingArchived();
+      const caseMap = new Map(allCases.map((c) => [c.id, c]));
+      const currentSet = new Set(await storage.getAdminRestrictedCasesForUser(userId));
+
+      const liftedCaseIds: number[] = [];
+      for (const rawId of caseIds) {
+        const caseId = parseInt(rawId);
+        if (Number.isNaN(caseId) || !currentSet.has(caseId)) continue;
+
+        // Write the DELETE audit entry BEFORE removing the row. If the audit write
+        // fails, the row stays restricted and we never "lose" a lifted case from the
+        // reconstructed history (the core requirement: re-block without missing any).
+        const c = caseMap.get(caseId);
+        const adminName = `${admin?.firstName ?? ''} ${admin?.lastName ?? ''}`.trim() || admin?.email || 'Admin';
+        await storage.logAuditEvent({
+          tableName: 'case_access_restrictions',
+          recordId: String(caseId),
+          operation: 'DELETE',
+          fieldName: 'blockedUserId',
+          oldValue: userId,
+          newValue: userId,
+          userId: admin?.id ?? req.user.id,
+          userEmail: admin?.email,
+          ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+          organisationId: c?.organisationId ?? null,
+          description: `${adminName} temporarily lifted case access restriction for ${blockedUser?.email ?? userId} on case "${c?.caseName ?? caseId}"`,
+        });
+
+        await storage.removeCaseAccessRestriction(caseId, userId);
+        liftedCaseIds.push(caseId);
+      }
+
+      res.json({ message: "Restrictions lifted", caseIds: liftedCaseIds });
+    } catch (error) {
+      console.error("Error lifting user restrictions:", error);
+      res.status(500).json({ message: "Failed to lift restrictions" });
+    }
+  });
+
+  app.post("/api/admin/users/:userId/restrictions/restore", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const { caseIds } = req.body;
+
+      if (!Array.isArray(caseIds)) {
+        return res.status(400).json({ message: "caseIds must be an array" });
+      }
+
+      const admin = await storage.getUser(req.user.id);
+      const blockedUser = await storage.getUser(userId);
+      const allCases = await storage.getAllCasesIncludingArchived();
+      const caseMap = new Map(allCases.map((c) => [c.id, c]));
+
+      const restoredCaseIds: number[] = [];
+      for (const rawId of caseIds) {
+        const caseId = parseInt(rawId);
+        if (Number.isNaN(caseId) || !caseMap.has(caseId)) continue;
+
+        // Add the row BEFORE writing the INSERT audit entry. If the audit write fails,
+        // the case is already restricted again (visible as "currently restricted"), so
+        // the admin never loses track of it.
+        await storage.addCaseAccessRestriction(caseId, userId, admin?.id ?? req.user.id);
+        restoredCaseIds.push(caseId);
+
+        const c = caseMap.get(caseId);
+        const adminName = `${admin?.firstName ?? ''} ${admin?.lastName ?? ''}`.trim() || admin?.email || 'Admin';
+        await storage.logAuditEvent({
+          tableName: 'case_access_restrictions',
+          recordId: String(caseId),
+          operation: 'INSERT',
+          fieldName: 'blockedUserId',
+          oldValue: null,
+          newValue: userId,
+          userId: admin?.id ?? req.user.id,
+          userEmail: admin?.email,
+          ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+          organisationId: c?.organisationId ?? null,
+          description: `${adminName} restored case access restriction for ${blockedUser?.email ?? userId} on case "${c?.caseName ?? caseId}"`,
+        });
+      }
+
+      res.json({ message: "Restrictions restored", caseIds: restoredCaseIds });
+    } catch (error) {
+      console.error("Error restoring user restrictions:", error);
+      res.status(500).json({ message: "Failed to restore restrictions" });
+    }
+  });
+
   // Closed case management - get closed cases with date range filter
   app.get("/api/admin/closed-cases", isAuthenticated, isAdmin, async (req: any, res) => {
     try {

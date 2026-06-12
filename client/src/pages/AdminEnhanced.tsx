@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -2249,6 +2249,76 @@ export default function AdminEnhanced() {
   const [orgSearchFilter, setOrgSearchFilter] = useState("");
   const [userTypeFilter, setUserTypeFilter] = useState<"all" | "admin" | "user" | "registered" | "not_registered">("all");
 
+  // Per-user case access restrictions dialog state
+  const [manageRestrictionsUser, setManageRestrictionsUser] = useState<User | null>(null);
+  const [selectedLiftCaseIds, setSelectedLiftCaseIds] = useState<number[]>([]);
+  const [selectedRestoreCaseIds, setSelectedRestoreCaseIds] = useState<number[]>([]);
+
+  // Fetch per-user restrictions (current + previously lifted) for the manage dialog
+  type UserRestrictionCase = {
+    caseId: number;
+    accountNumber: string;
+    caseName: string;
+    organisationName: string | null;
+    liftedAt?: string;
+  };
+  const { data: userRestrictions, isLoading: userRestrictionsLoading } = useQuery<{
+    current: UserRestrictionCase[];
+    previouslyLifted: UserRestrictionCase[];
+  }>({
+    queryKey: ['/api/admin/users', manageRestrictionsUser?.id, 'restrictions'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', `/api/admin/users/${manageRestrictionsUser!.id}/restrictions`);
+      return await response.json();
+    },
+    enabled: !!manageRestrictionsUser?.id,
+    retry: false,
+  });
+
+  const liftRestrictionsMutation = useMutation({
+    mutationFn: async ({ userId, caseIds }: { userId: string; caseIds: number[] }) => {
+      return await apiRequest('POST', `/api/admin/users/${userId}/restrictions/lift`, { caseIds });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users', variables.userId, 'restrictions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/cases/restriction-counts'] });
+      setSelectedLiftCaseIds([]);
+      toast({
+        title: "Restrictions Lifted",
+        description: "The selected case restrictions have been lifted for this user.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to lift restrictions.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const restoreRestrictionsMutation = useMutation({
+    mutationFn: async ({ userId, caseIds }: { userId: string; caseIds: number[] }) => {
+      return await apiRequest('POST', `/api/admin/users/${userId}/restrictions/restore`, { caseIds });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users', variables.userId, 'restrictions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/cases/restriction-counts'] });
+      setSelectedRestoreCaseIds([]);
+      toast({
+        title: "Restrictions Restored",
+        description: "The selected case restrictions have been re-applied for this user.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to restore restrictions.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Scheduled reports configuration dialog state
   const [showScheduledReportDialog, setShowScheduledReportDialog] = useState(false);
   const [scheduledReportUser, setScheduledReportUser] = useState<User | null>(null);
@@ -3874,6 +3944,22 @@ export default function AdminEnhanced() {
                         <KeyRound className="h-3 w-3 mr-1" />
                         Reset Pwd
                       </Button>
+                      {!user.isAdmin && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setManageRestrictionsUser(user);
+                            setSelectedLiftCaseIds([]);
+                            setSelectedRestoreCaseIds([]);
+                          }}
+                          title="Manage case access restrictions"
+                          data-testid={`button-manage-restrictions-${user.id}`}
+                        >
+                          <EyeOff className="h-3 w-3 mr-1" />
+                          Restrictions
+                        </Button>
+                      )}
                       <Button
                         variant="outline"
                         size="sm"
@@ -5939,7 +6025,151 @@ export default function AdminEnhanced() {
         </DialogContent>
       </Dialog>
 
-      {/* Scheduled Report Configuration Dialog */}
+      {/* Manage Case Restrictions Dialog */}
+      <Dialog open={!!manageRestrictionsUser} onOpenChange={(open) => {
+        if (!open) {
+          setManageRestrictionsUser(null);
+          setSelectedLiftCaseIds([]);
+          setSelectedRestoreCaseIds([]);
+        }
+      }}>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <EyeOff className="h-5 w-5" />
+              Manage Case Restrictions
+            </DialogTitle>
+            <DialogDescription>
+              Temporarily lift case access restrictions for {manageRestrictionsUser?.firstName} {manageRestrictionsUser?.lastName}, then restore them later. Lifted cases are remembered so you can re-apply the same restrictions without missing any.
+            </DialogDescription>
+          </DialogHeader>
+
+          {userRestrictionsLoading ? (
+            <p className="text-sm text-gray-500 py-4">Loading restrictions…</p>
+          ) : (
+            <div className="space-y-6 py-2">
+              {/* Currently restricted */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-semibold">Currently restricted ({userRestrictions?.current.length ?? 0})</h3>
+                  {(userRestrictions?.current.length ?? 0) > 0 && (
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={selectedLiftCaseIds.length === 0 || liftRestrictionsMutation.isPending}
+                        onClick={() => manageRestrictionsUser && liftRestrictionsMutation.mutate({ userId: manageRestrictionsUser.id, caseIds: selectedLiftCaseIds })}
+                        data-testid="button-lift-selected"
+                      >
+                        Lift selected
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        disabled={liftRestrictionsMutation.isPending}
+                        onClick={() => manageRestrictionsUser && liftRestrictionsMutation.mutate({ userId: manageRestrictionsUser.id, caseIds: (userRestrictions?.current ?? []).map(c => c.caseId) })}
+                        data-testid="button-lift-all"
+                      >
+                        Lift all
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                {(userRestrictions?.current.length ?? 0) === 0 ? (
+                  <p className="text-sm text-gray-500">This user has no active case restrictions.</p>
+                ) : (
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {userRestrictions?.current.map((c) => (
+                      <div key={c.caseId} className="flex items-center space-x-3 p-2 border rounded hover:bg-gray-50">
+                        <Checkbox
+                          id={`lift-${c.caseId}`}
+                          checked={selectedLiftCaseIds.includes(c.caseId)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedLiftCaseIds([...selectedLiftCaseIds, c.caseId]);
+                            } else {
+                              setSelectedLiftCaseIds(selectedLiftCaseIds.filter(id => id !== c.caseId));
+                            }
+                          }}
+                          data-testid={`checkbox-lift-${c.caseId}`}
+                        />
+                        <label htmlFor={`lift-${c.caseId}`} className="flex-1 cursor-pointer">
+                          <p className="text-sm font-medium">{c.caseName}</p>
+                          <p className="text-xs text-gray-500">{c.accountNumber}{c.organisationName ? ` · ${c.organisationName}` : ''}</p>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Previously lifted */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-semibold">Previously lifted ({userRestrictions?.previouslyLifted.length ?? 0})</h3>
+                  {(userRestrictions?.previouslyLifted.length ?? 0) > 0 && (
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={selectedRestoreCaseIds.length === 0 || restoreRestrictionsMutation.isPending}
+                        onClick={() => manageRestrictionsUser && restoreRestrictionsMutation.mutate({ userId: manageRestrictionsUser.id, caseIds: selectedRestoreCaseIds })}
+                        data-testid="button-restore-selected"
+                      >
+                        Restore selected
+                      </Button>
+                      <Button
+                        size="sm"
+                        disabled={restoreRestrictionsMutation.isPending}
+                        onClick={() => manageRestrictionsUser && restoreRestrictionsMutation.mutate({ userId: manageRestrictionsUser.id, caseIds: (userRestrictions?.previouslyLifted ?? []).map(c => c.caseId) })}
+                        data-testid="button-restore-all"
+                      >
+                        Restore all
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                {(userRestrictions?.previouslyLifted.length ?? 0) === 0 ? (
+                  <p className="text-sm text-gray-500">No previously lifted restrictions to restore.</p>
+                ) : (
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {userRestrictions?.previouslyLifted.map((c) => (
+                      <div key={c.caseId} className="flex items-center space-x-3 p-2 border rounded bg-amber-50/50 hover:bg-amber-50">
+                        <Checkbox
+                          id={`restore-${c.caseId}`}
+                          checked={selectedRestoreCaseIds.includes(c.caseId)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedRestoreCaseIds([...selectedRestoreCaseIds, c.caseId]);
+                            } else {
+                              setSelectedRestoreCaseIds(selectedRestoreCaseIds.filter(id => id !== c.caseId));
+                            }
+                          }}
+                          data-testid={`checkbox-restore-${c.caseId}`}
+                        />
+                        <label htmlFor={`restore-${c.caseId}`} className="flex-1 cursor-pointer">
+                          <p className="text-sm font-medium">{c.caseName}</p>
+                          <p className="text-xs text-gray-500">
+                            {c.accountNumber}{c.organisationName ? ` · ${c.organisationName}` : ''}
+                            {c.liftedAt ? ` · lifted ${new Date(c.liftedAt).toLocaleDateString('en-GB')}` : ''}
+                          </p>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setManageRestrictionsUser(null)} data-testid="button-close-restrictions">
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={showScheduledReportDialog} onOpenChange={(open) => {
         setShowScheduledReportDialog(open);
         if (!open) {

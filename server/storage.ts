@@ -352,6 +352,7 @@ export interface IStorage {
   isUserBlockedFromCase(userId: string, caseId: number): Promise<boolean>;
   getBlockedCasesForUser(userId: string): Promise<number[]>;
   getAdminRestrictedCasesForUser(userId: string): Promise<number[]>; // Only admin-set restrictions, not user muting
+  getLiftedRestrictionsForUser(userId: string): Promise<{ caseId: number; liftedAt: Date }[]>; // Cases reconstructed from audit log whose latest restriction event was a lift (DELETE)
 }
 
 // Detects the "SenderName:\n\nContent" prefix embedded by the external API
@@ -3095,6 +3096,40 @@ export class DatabaseStorage implements IStorage {
       .from(caseAccessRestrictions)
       .where(eq(caseAccessRestrictions.blockedUserId, userId));
     return results.map(r => r.caseId);
+  }
+
+  // Reconstruct, from the audit log, which cases were most recently lifted (un-restricted)
+  // for a user. We record both lift (DELETE) and restore (INSERT) events against
+  // tableName 'case_access_restrictions' with newValue = the blocked user's id and
+  // recordId = the caseId. The latest event per case tells us its current audited state.
+  async getLiftedRestrictionsForUser(userId: string): Promise<{ caseId: number; liftedAt: Date }[]> {
+    const events = await db.select()
+      .from(auditLog)
+      .where(and(
+        eq(auditLog.tableName, 'case_access_restrictions'),
+        eq(auditLog.newValue, userId),
+      ))
+      .orderBy(desc(auditLog.timestamp));
+
+    const latestByCase = new Map<number, { operation: string; timestamp: Date }>();
+    for (const event of events) {
+      const caseId = parseInt(event.recordId);
+      if (Number.isNaN(caseId)) continue;
+      if (!latestByCase.has(caseId)) {
+        latestByCase.set(caseId, {
+          operation: event.operation,
+          timestamp: event.timestamp ?? new Date(),
+        });
+      }
+    }
+
+    const lifted: { caseId: number; liftedAt: Date }[] = [];
+    latestByCase.forEach((info, caseId) => {
+      if (info.operation === 'DELETE') {
+        lifted.push({ caseId, liftedAt: info.timestamp });
+      }
+    });
+    return lifted;
   }
 
   // Scheduled reports operations - supports multiple reports per user
