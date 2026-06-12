@@ -163,6 +163,77 @@ async function logAdminAction(params: {
   }
 }
 
+// Apply case-access restrictions pushed from SOS (hide a case from specific users).
+// Accepts hideFromUsers (array) or hide_from_users / hide_from_user / hideFromUser
+// (single value or comma-separated string). Each identifier is matched to a portal
+// user by external ref, then email, then user id. Matched users get a
+// case_access_restrictions row plus an audit_log INSERT (userId=null, "SOS API").
+// Returns the resolved user ids applied and any identifiers that matched no user.
+async function applyExternalCaseRestrictions(
+  caseRecord: { id: number; caseName?: string | null },
+  organisationId: number,
+  hideFromRaw: any,
+  req: any,
+): Promise<{
+  restrictedUserIds: string[];
+  alreadyRestrictedUserIds: string[];
+  unmatchedRestrictionIdentifiers: string[];
+}> {
+  const restrictedUserIds: string[] = [];
+  const alreadyRestrictedUserIds: string[] = [];
+  const unmatchedRestrictionIdentifiers: string[] = [];
+  const seenUserIds = new Set<string>();
+
+  const hideIdentifiers: string[] = Array.isArray(hideFromRaw)
+    ? hideFromRaw.map((v: any) => String(v).trim()).filter(Boolean)
+    : typeof hideFromRaw === 'string'
+      ? hideFromRaw.split(',').map((s) => s.trim()).filter(Boolean)
+      : [];
+
+  for (const identifier of Array.from(new Set(hideIdentifiers))) {
+    let target = await storage.getUserByExternalRef(identifier);
+    if (!target) target = await storage.getUserByEmail(identifier);
+    if (!target) target = await storage.getUser(identifier);
+
+    if (!target) {
+      unmatchedRestrictionIdentifiers.push(identifier);
+      continue;
+    }
+
+    // Skip if a different identifier already resolved to this same user,
+    // to avoid duplicate restriction rows, audit entries and response noise.
+    if (seenUserIds.has(target.id)) {
+      continue;
+    }
+    seenUserIds.add(target.id);
+
+    const inserted = await storage.addCaseAccessRestriction(caseRecord.id, target.id, null);
+    if (!inserted) {
+      // Restriction already existed - no new row, so don't write a false INSERT audit.
+      alreadyRestrictedUserIds.push(target.id);
+      continue;
+    }
+    restrictedUserIds.push(target.id);
+
+    await storage.logAuditEvent({
+      tableName: 'case_access_restrictions',
+      recordId: String(caseRecord.id),
+      operation: 'INSERT',
+      fieldName: 'blockedUserId',
+      oldValue: null,
+      newValue: target.id,
+      userId: null,
+      userEmail: 'SOS API',
+      ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+      userAgent: req.headers['user-agent'] || 'SOS API',
+      organisationId,
+      description: `Case access restriction applied via SOS API for ${target.email ?? target.id} on case "${caseRecord.caseName ?? caseRecord.id}"`,
+    });
+  }
+
+  return { restrictedUserIds, alreadyRestrictedUserIds, unmatchedRestrictionIdentifiers };
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
@@ -5817,60 +5888,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Case activities are now only created via dedicated API endpoint
       // No automatic activity generation
       
-      // Apply access restrictions pushed from SOS (hide this case from specific users).
-      // Accepts hideFromUsers (array) or hide_from_user / hideFromUser (single value or
-      // comma-separated). Each identifier is matched to a portal user by external ref,
-      // then email, then user id. Applied only at creation so later admin lift/restore
-      // actions are never overwritten by subsequent SOS re-syncs.
-      const restrictedUserIds: string[] = [];
-      const unmatchedRestrictionIdentifiers: string[] = [];
+      // Apply access restrictions pushed from SOS (hide this case from specific users)
+      // if supplied as part of the create call. Applied only at creation so later admin
+      // lift/restore actions are never overwritten by subsequent SOS re-syncs. SOS may
+      // instead push restrictions separately via POST /api/external/cases/:externalRef/restrictions
+      // shortly after creation; that dedicated endpoint is kept out of the normal sync update.
+      let restrictedUserIds: string[] = [];
+      let alreadyRestrictedUserIds: string[] = [];
+      let unmatchedRestrictionIdentifiers: string[] = [];
       try {
         const hideFromRaw =
           req.body.hideFromUsers ??
           req.body.hide_from_users ??
           req.body.hide_from_user ??
           req.body.hideFromUser;
-
-        const hideIdentifiers: string[] = Array.isArray(hideFromRaw)
-          ? hideFromRaw.map((v: any) => String(v).trim()).filter(Boolean)
-          : typeof hideFromRaw === 'string'
-            ? hideFromRaw.split(',').map((s) => s.trim()).filter(Boolean)
-            : [];
-
-        for (const identifier of Array.from(new Set(hideIdentifiers))) {
-          let target = await storage.getUserByExternalRef(identifier);
-          if (!target) target = await storage.getUserByEmail(identifier);
-          if (!target) target = await storage.getUser(identifier);
-
-          if (!target) {
-            unmatchedRestrictionIdentifiers.push(identifier);
-            continue;
-          }
-
-          // Skip if a different identifier already resolved to this same user,
-          // to avoid duplicate restriction rows, audit entries and response noise.
-          if (restrictedUserIds.includes(target.id)) {
-            continue;
-          }
-
-          await storage.addCaseAccessRestriction(newCase.id, target.id, null);
-          restrictedUserIds.push(target.id);
-
-          await storage.logAuditEvent({
-            tableName: 'case_access_restrictions',
-            recordId: String(newCase.id),
-            operation: 'INSERT',
-            fieldName: 'blockedUserId',
-            oldValue: null,
-            newValue: target.id,
-            userId: null,
-            userEmail: 'SOS API',
-            ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
-            userAgent: req.headers['user-agent'] || 'SOS API',
-            organisationId: organisation.id,
-            description: `Case access restriction applied via SOS API for ${target.email ?? target.id} on case "${newCase.caseName ?? newCase.id}"`,
-          });
-        }
+        const result = await applyExternalCaseRestrictions(newCase, organisation.id, hideFromRaw, req);
+        restrictedUserIds = result.restrictedUserIds;
+        alreadyRestrictedUserIds = result.alreadyRestrictedUserIds;
+        unmatchedRestrictionIdentifiers = result.unmatchedRestrictionIdentifiers;
       } catch (restrictionError) {
         console.error("Error applying SOS access restrictions for new case:", restrictionError);
       }
@@ -5891,6 +5926,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Case created successfully", 
         case: newCase,
         restrictedUserIds,
+        alreadyRestrictedUserIds,
         unmatchedRestrictionIdentifiers,
         timestamp: new Date().toISOString(),
         refreshRequired: true 
@@ -6320,6 +6356,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating case status via external API:", error);
       res.status(500).json({ message: "Failed to update case status" });
+    }
+  });
+
+  // Dedicated endpoint for SOS to push case-access restrictions (hide a case from
+  // specific users) shortly AFTER the case has been created. This is deliberately
+  // separate from the normal sync update so that routine re-syncs never touch
+  // restrictions and never overwrite an admin's temporary lift/restore actions.
+  // Body accepts hideFromUsers (array) or hide_from_users / hide_from_user /
+  // hideFromUser (single value or comma-separated string). Identifiers resolve to a
+  // portal user by external ref, then email, then user id.
+  app.post('/api/external/cases/:externalRef/restrictions', async (req: any, res) => {
+    try {
+      // TODO: Add API key authentication here
+      const { externalRef } = req.params;
+
+      const hideFromRaw =
+        req.body.hideFromUsers ??
+        req.body.hide_from_users ??
+        req.body.hide_from_user ??
+        req.body.hideFromUser;
+
+      if (hideFromRaw === undefined || hideFromRaw === null) {
+        return res.status(400).json({
+          message: "hideFromUsers (array) or hide_from_user (single value or comma-separated) is required",
+        });
+      }
+
+      // Find case by external reference
+      const case_ = await storage.getCaseByExternalRef(externalRef);
+      if (!case_) {
+        return res.status(404).json({ message: "Case not found" });
+      }
+
+      const { restrictedUserIds, alreadyRestrictedUserIds, unmatchedRestrictionIdentifiers } =
+        await applyExternalCaseRestrictions(case_, case_.organisationId, hideFromRaw, req);
+
+      res.json({
+        message: "Case access restrictions applied successfully",
+        caseId: case_.id,
+        restrictedUserIds,
+        alreadyRestrictedUserIds,
+        unmatchedRestrictionIdentifiers,
+        timestamp: new Date().toISOString(),
+        refreshRequired: true,
+      });
+    } catch (error) {
+      console.error("Error applying case access restrictions via external API:", error);
+      res.status(500).json({ message: "Failed to apply case access restrictions" });
     }
   });
 

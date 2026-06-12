@@ -24,7 +24,9 @@ There are no DB transactions around the per-item loops, so ordering guarantees t
 ## SOS API can push restrictions at case creation
 `POST /api/external/cases` accepts `hideFromUsers` (array) / `hide_from_user` / `hideFromUser` (single or comma-separated) to block specific users from a case. Identifiers resolve to a portal user in order: external ref → email → user id. Matched users get a `case_access_restrictions` row + an audit INSERT (`userId=null`, `userEmail='SOS API'`); unmatched identifiers are returned as `unmatchedRestrictionIdentifiers`. No schema change — reuses the existing table.
 
-**Why create-only:** restrictions are applied ONLY in the new-case branch, never on updates. SOS re-syncs hit the update branch repeatedly; reapplying there would silently undo an admin's temporary lift. So once a case exists, restriction changes belong to the portal (lift/restore UI), not SOS.
+**Why create-only:** restrictions are applied ONLY in the new-case branch, never on the case update/sync branch. SOS re-syncs hit the update branch repeatedly; reapplying there would silently undo an admin's temporary lift. So once a case exists, restriction changes belong to the portal (lift/restore UI), not the routine SOS sync.
+
+**Dedicated post-create endpoint:** SOS pushes the hide-from-user list shortly AFTER creation as a separate one-shot call to `POST /api/external/cases/:externalRef/restrictions` — deliberately NOT part of the periodic sync, so re-syncs never touch restrictions. Both this and the create branch share one helper `applyExternalCaseRestrictions()` in routes.ts. The helper de-dupes by resolved user id and is idempotent-aware: `storage.addCaseAccessRestriction` returns a boolean (true=new row), so repeated pushes only audit/`restrictedUserIds` real inserts and bucket no-ops into `alreadyRestrictedUserIds`. Unmatched identifiers come back in `unmatchedRestrictionIdentifiers`.
 
 **Note:** the "small/large" classification driving this lives entirely in SOS, not in the portal (not derivable from amount or any portal field) — that's why it must be pushed in rather than computed.
 

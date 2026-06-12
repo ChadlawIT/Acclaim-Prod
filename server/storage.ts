@@ -345,7 +345,7 @@ export interface IStorage {
   getMutedCasesForUser(userId: string): Promise<number[]>;
 
   // Case access restriction operations (admin feature)
-  addCaseAccessRestriction(caseId: number, blockedUserId: string, createdBy: string | null): Promise<void>;
+  addCaseAccessRestriction(caseId: number, blockedUserId: string, createdBy: string | null): Promise<boolean>; // Returns true if a new restriction row was inserted, false if it already existed
   removeCaseAccessRestriction(caseId: number, blockedUserId: string): Promise<void>;
   getCaseAccessRestrictions(caseId: number): Promise<string[]>; // Returns array of blocked user IDs
   getAllCaseRestrictionCounts(): Promise<Record<number, number>>; // Returns map of caseId -> restricted user count
@@ -3016,7 +3016,7 @@ export class DatabaseStorage implements IStorage {
 
   // Case access restriction operations - admin/owner blocks user from seeing a case
   // This is separate from muting - restrictions hide the case AND block notifications
-  async addCaseAccessRestriction(caseId: number, blockedUserId: string, createdBy: string | null): Promise<void> {
+  async addCaseAccessRestriction(caseId: number, blockedUserId: string, createdBy: string | null): Promise<boolean> {
     // Check if restriction already exists
     const existing = await db.select()
       .from(caseAccessRestrictions)
@@ -3032,7 +3032,9 @@ export class DatabaseStorage implements IStorage {
         blockedUserId,
         createdBy,
       });
+      return true;
     }
+    return false;
   }
 
   async removeCaseAccessRestriction(caseId: number, blockedUserId: string): Promise<void> {
