@@ -22,11 +22,13 @@ import {
   Trash2,
   RefreshCw,
   Search,
-  Bell
+  Bell,
+  Building2
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { useAuth } from "@/hooks/use-auth";
@@ -53,9 +55,53 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
   const [selectedMessageForView, setSelectedMessageForView] = useState<any | null>(null);
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
   const [dialogReplyMessage, setDialogReplyMessage] = useState("");
+  const [orgDialogOpen, setOrgDialogOpen] = useState(false);
+  const [selectedOrgId, setSelectedOrgId] = useState<string>("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const isSuperAdmin = !!(user as any)?.isSuperAdmin;
+
+  // Organisations list for the super-admin "change organisation" control
+  const { data: organisations } = useQuery<any[]>({
+    queryKey: ["/api/admin/organisations"],
+    enabled: isSuperAdmin,
+  });
+
+  const changeOrganisationMutation = useMutation({
+    mutationFn: async (organisationId: number) => {
+      return await apiRequest("PUT", `/api/admin/cases/${caseData.id}/organisation`, { organisationId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/cases"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/organisations"] });
+      setOrgDialogOpen(false);
+      toast({
+        title: "Organisation Updated",
+        description: "The case has been moved to the selected organisation.",
+      });
+    },
+    onError: (error: any) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorised",
+          description: "You are not authorised to perform this action.",
+          variant: "destructive",
+        });
+        return;
+      }
+      toast({
+        title: "Update Failed",
+        description: error?.message || "Failed to change the case organisation. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleOpenOrgDialog = () => {
+    setSelectedOrgId(caseData.organisationId ? String(caseData.organisationId) : "");
+    setOrgDialogOpen(true);
+  };
 
   // Calculate accurate outstanding amount
   const getTotalPayments = () => {
@@ -1191,16 +1237,88 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
             {muteStatusLoading ? "Loading..." : muteStatus?.muted ? "Off" : "On"}
           </span>
         </div>
-        <Button 
-          onClick={handlePrintCase}
-          variant="outline"
-          size="sm"
-          className="border-acclaim-teal text-acclaim-teal hover:bg-acclaim-teal hover:text-white w-full sm:w-auto"
-        >
-          <Printer className="h-4 w-4 mr-2" />
-          Print Case PDF
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          {isSuperAdmin && (
+            <Button
+              onClick={handleOpenOrgDialog}
+              variant="outline"
+              size="sm"
+              className="border-acclaim-teal text-acclaim-teal hover:bg-acclaim-teal hover:text-white w-full sm:w-auto"
+              data-testid="button-change-organisation"
+            >
+              <Building2 className="h-4 w-4 mr-2" />
+              Change Organisation
+            </Button>
+          )}
+          <Button 
+            onClick={handlePrintCase}
+            variant="outline"
+            size="sm"
+            className="border-acclaim-teal text-acclaim-teal hover:bg-acclaim-teal hover:text-white w-full sm:w-auto"
+          >
+            <Printer className="h-4 w-4 mr-2" />
+            Print Case PDF
+          </Button>
+        </div>
       </div>
+
+      {/* Super-admin: change the organisation this case is linked to */}
+      <Dialog open={orgDialogOpen} onOpenChange={setOrgDialogOpen}>
+        <DialogContent data-testid="dialog-change-organisation">
+          <DialogHeader>
+            <DialogTitle>Change Organisation</DialogTitle>
+            <DialogDescription>
+              Move this case to a different organisation. Its documents and payments
+              move with it, and it will no longer be visible to the previous
+              organisation's users.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <Label htmlFor="organisation-select">Organisation</Label>
+            <Select value={selectedOrgId} onValueChange={setSelectedOrgId}>
+              <SelectTrigger
+                id="organisation-select"
+                className="mt-2"
+                data-testid="select-organisation"
+              >
+                <SelectValue placeholder="Select an organisation" />
+              </SelectTrigger>
+              <SelectContent>
+                {(organisations || []).map((org: any) => (
+                  <SelectItem
+                    key={org.id}
+                    value={String(org.id)}
+                    data-testid={`option-organisation-${org.id}`}
+                  >
+                    {org.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setOrgDialogOpen(false)}
+              data-testid="button-cancel-organisation"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => changeOrganisationMutation.mutate(parseInt(selectedOrgId))}
+              disabled={
+                !selectedOrgId ||
+                selectedOrgId === String(caseData.organisationId) ||
+                changeOrganisationMutation.isPending
+              }
+              className="bg-acclaim-teal hover:bg-acclaim-teal/90 text-white"
+              data-testid="button-confirm-organisation"
+            >
+              {changeOrganisationMutation.isPending ? "Moving..." : "Move Case"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {/* Case Header */}
       <Card>
         <CardHeader>

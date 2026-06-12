@@ -106,6 +106,7 @@ export interface IStorage {
   getCaseById(id: number): Promise<Case | undefined>; // Admin only - get case by ID without org restriction
   createCase(caseData: InsertCase): Promise<Case>;
   updateCase(id: number, caseData: Partial<InsertCase>): Promise<Case>;
+  moveCaseToOrganisation(id: number, newOrganisationId: number): Promise<Case>;
   archiveCase(id: number, userId: string): Promise<Case>; // Admin only - archive case
   unarchiveCase(id: number, userId: string): Promise<Case>; // Admin only - unarchive case
   deleteCase(id: number): Promise<void>; // Admin only - permanently delete case and all related data
@@ -1021,6 +1022,31 @@ export class DatabaseStorage implements IStorage {
     return updatedCase;
   }
 
+  async moveCaseToOrganisation(id: number, newOrganisationId: number): Promise<Case> {
+    // Run as a single transaction so the case and its org-scoped child records
+    // (documents, payments) always move together — never a partial state.
+    return await db.transaction(async (tx) => {
+      const [updatedCase] = await tx
+        .update(cases)
+        .set({ organisationId: newOrganisationId, updatedAt: new Date() })
+        .where(eq(cases.id, id))
+        .returning();
+
+      // Keep org-scoped child records in sync so they follow the case to the new
+      // organisation and don't remain visible in the old organisation's listings.
+      await tx
+        .update(documents)
+        .set({ organisationId: newOrganisationId })
+        .where(eq(documents.caseId, id));
+      await tx
+        .update(payments)
+        .set({ organisationId: newOrganisationId })
+        .where(eq(payments.caseId, id));
+
+      return updatedCase;
+    });
+  }
+
   async archiveCase(id: number, userId: string): Promise<Case> {
     const [archivedCase] = await db
       .update(cases)
@@ -1265,24 +1291,25 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(cases, eq(messages.caseId, cases.id))
       .where(and(
         or(
-          // Messages sent by this user - but only if:
-          // 1. Not tied to a case (general message sent to admin), OR
-          // 2. Tied to a case in one of user's current organisations
+          // General messages NOT tied to a case: visible via sender/recipient rules.
           and(
-            eq(messages.senderId, userId),
+            isNull(messages.caseId),
             or(
-              isNull(messages.caseId), // General message not tied to a case
-              inArray(cases.organisationId, orgIdArray) // Case belongs to user's current organisations
+              eq(messages.senderId, userId), // Sent by this user
+              eq(messages.recipientId, userId), // Sent directly to this user
+              and(
+                eq(messages.recipientType, 'organization'),
+                inArray(messages.recipientId, orgIdArray.map(id => id.toString()))
+              ) // Sent to any of user's organisations
             )
           ),
-          eq(messages.recipientId, userId), // Messages sent directly to this user
+          // Case-linked messages: ALWAYS gated by the case's CURRENT organisation.
+          // This ensures that if a case is moved to another organisation, its
+          // historical messages are no longer visible to the old organisation's
+          // users (regardless of the recipient stored at send time).
           and(
-            eq(messages.recipientType, 'organization'),
-            inArray(messages.recipientId, orgIdArray.map(id => id.toString()))
-          ), // Messages sent to any of user's organisations
-          and(
-            isNotNull(messages.caseId), // Message is tied to a case
-            inArray(cases.organisationId, orgIdArray) // Case belongs to one of user's organisations
+            isNotNull(messages.caseId),
+            inArray(cases.organisationId, orgIdArray)
           )
         ),
         or(

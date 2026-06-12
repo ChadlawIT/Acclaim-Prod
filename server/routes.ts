@@ -6879,6 +6879,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Change the organisation a case is linked to (super admin only). Child records
+  // (documents, payments) are moved with the case; messages/activities follow via caseId.
+  app.put("/api/admin/cases/:id/organisation", isAuthenticated, isAdmin, isSuperAdmin, async (req: any, res) => {
+    try {
+      const caseId = parseInt(req.params.id);
+      const { organisationId } = req.body;
+      const adminUser = await storage.getUser(req.user.id);
+
+      const newOrgId = Number(organisationId);
+      if (!Number.isInteger(newOrgId) || newOrgId <= 0) {
+        return res.status(400).json({ message: "A valid organisationId is required" });
+      }
+
+      const existingCase = await storage.getCaseById(caseId);
+      if (!existingCase) {
+        return res.status(404).json({ message: "Case not found" });
+      }
+
+      const newOrg = await storage.getOrganisation(newOrgId);
+      if (!newOrg) {
+        return res.status(404).json({ message: "Organisation not found" });
+      }
+
+      if (existingCase.organisationId === newOrgId) {
+        return res.status(400).json({ message: "Case is already linked to this organisation" });
+      }
+
+      const oldOrg = existingCase.organisationId
+        ? await storage.getOrganisation(existingCase.organisationId)
+        : undefined;
+
+      const updatedCase = await storage.moveCaseToOrganisation(caseId, newOrgId);
+
+      if (adminUser) {
+        await logAdminAction({
+          adminUser,
+          tableName: 'cases',
+          recordId: String(caseId),
+          operation: 'UPDATE',
+          fieldName: 'organisationId',
+          description: `Moved case "${existingCase.caseName}" (${existingCase.accountNumber}) from organisation "${oldOrg?.name ?? existingCase.organisationId ?? 'none'}" to "${newOrg.name}"`,
+          oldValue: String(existingCase.organisationId ?? ''),
+          newValue: String(newOrgId),
+          organisationId: newOrgId,
+          ipAddress: req.ip,
+          userAgent: req.get('user-agent'),
+        });
+      }
+
+      res.json({ message: "Case organisation updated successfully", case: updatedCase });
+    } catch (error) {
+      console.error("Error changing case organisation:", error);
+      res.status(500).json({ message: "Failed to change case organisation" });
+    }
+  });
+
   app.delete("/api/admin/cases/:id", isAuthenticated, isAdmin, isSuperAdmin, async (req: any, res) => {
     try {
       const caseId = parseInt(req.params.id);
