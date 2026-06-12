@@ -346,7 +346,7 @@ export interface IStorage {
 
   // Case access restriction operations (admin feature)
   addCaseAccessRestriction(caseId: number, blockedUserId: string, createdBy: string | null): Promise<boolean>; // Returns true if a new restriction row was inserted, false if it already existed
-  removeCaseAccessRestriction(caseId: number, blockedUserId: string): Promise<void>;
+  removeCaseAccessRestriction(caseId: number, blockedUserId: string): Promise<boolean>; // Returns true if a restriction row was actually removed, false if none existed
   getCaseAccessRestrictions(caseId: number): Promise<string[]>; // Returns array of blocked user IDs
   getAllCaseRestrictionCounts(): Promise<Record<number, number>>; // Returns map of caseId -> restricted user count
   isUserBlockedFromCase(userId: string, caseId: number): Promise<boolean>;
@@ -3037,12 +3037,14 @@ export class DatabaseStorage implements IStorage {
     return false;
   }
 
-  async removeCaseAccessRestriction(caseId: number, blockedUserId: string): Promise<void> {
-    await db.delete(caseAccessRestrictions)
+  async removeCaseAccessRestriction(caseId: number, blockedUserId: string): Promise<boolean> {
+    const deleted = await db.delete(caseAccessRestrictions)
       .where(and(
         eq(caseAccessRestrictions.caseId, caseId),
         eq(caseAccessRestrictions.blockedUserId, blockedUserId)
-      ));
+      ))
+      .returning({ id: caseAccessRestrictions.id });
+    return deleted.length > 0;
   }
 
   async getCaseAccessRestrictions(caseId: number): Promise<string[]> {
