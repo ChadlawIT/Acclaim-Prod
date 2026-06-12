@@ -478,6 +478,13 @@ function CaseManagementTab({ isSuperAdmin = false }: { isSuperAdmin?: boolean })
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/cases', variables.caseId, 'access-restrictions'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/cases/restriction-counts'] });
+      // Refresh the per-user restrictions dialog (lift/restore) so it reflects this change
+      queryClient.invalidateQueries({
+        predicate: (query) =>
+          Array.isArray(query.queryKey) &&
+          query.queryKey[0] === '/api/admin/users' &&
+          query.queryKey[2] === 'restrictions',
+      });
       toast({
         title: "Access Updated",
         description: "Case visibility restrictions have been updated.",
@@ -2282,6 +2289,8 @@ export default function AdminEnhanced() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users', variables.userId, 'restrictions'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/cases/restriction-counts'] });
+      // Refresh the per-case access-restrictions view (Case Management) so it reflects the lift
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/cases'] });
       setSelectedLiftCaseIds([]);
       toast({
         title: "Restrictions Lifted",
@@ -2304,6 +2313,8 @@ export default function AdminEnhanced() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users', variables.userId, 'restrictions'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/cases/restriction-counts'] });
+      // Refresh the per-case access-restrictions view (Case Management) so it reflects the restore
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/cases'] });
       setSelectedRestoreCaseIds([]);
       toast({
         title: "Restrictions Restored",
