@@ -2213,7 +2213,7 @@ export default function AdminEnhanced() {
   // Search filter state
   const [userSearchFilter, setUserSearchFilter] = useState("");
   const [orgSearchFilter, setOrgSearchFilter] = useState("");
-  const [userTypeFilter, setUserTypeFilter] = useState<"all" | "admin" | "user" | "not_registered">("all");
+  const [userTypeFilter, setUserTypeFilter] = useState<"all" | "admin" | "user" | "registered" | "not_registered">("all");
 
   // Scheduled reports configuration dialog state
   const [showScheduledReportDialog, setShowScheduledReportDialog] = useState(false);
@@ -3106,6 +3106,7 @@ export default function AdminEnhanced() {
     if (userTypeFilter === "admin" && !user.isAdmin) return false;
     if (userTypeFilter === "user" && user.isAdmin) return false;
     if (userTypeFilter === "not_registered" && !(user as any).mustChangePassword) return false;
+    if (userTypeFilter === "registered" && (user as any).mustChangePassword) return false;
     
     // Filter by search term
     if (userSearchFilter.trim()) {
@@ -3593,7 +3594,7 @@ export default function AdminEnhanced() {
                 </div>
                 <Select 
                   value={userTypeFilter} 
-                  onValueChange={(value: "all" | "admin" | "user" | "not_registered") => {
+                  onValueChange={(value: "all" | "admin" | "user" | "registered" | "not_registered") => {
                     setUserTypeFilter(value);
                     setUsersPage(1);
                   }}
@@ -3605,6 +3606,7 @@ export default function AdminEnhanced() {
                     <SelectItem value="all">All Users</SelectItem>
                     <SelectItem value="admin">Admins Only</SelectItem>
                     <SelectItem value="user">Non-Admins Only</SelectItem>
+                    <SelectItem value="registered">Registered</SelectItem>
                     <SelectItem value="not_registered">Not Registered</SelectItem>
                   </SelectContent>
                 </Select>
