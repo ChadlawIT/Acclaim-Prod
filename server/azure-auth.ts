@@ -142,6 +142,13 @@ export function setupAzureAuth(app: Express): void {
 
       if (!user) {
         console.log(`[Azure Auth] No user found for email: ${email} - access denied`);
+        storage.logLoginAttempt({
+          email: (email as string).toLowerCase(),
+          success: false,
+          ipAddress: req.ip || req.socket?.remoteAddress || 'unknown',
+          userAgent: req.get('user-agent') || 'unknown',
+          failureReason: 'No portal account (SSO)',
+        }).catch(err => console.error('[Azure Auth] Failed to log login attempt:', err));
         return res.redirect("/auth?error=user_not_found");
       }
 
@@ -172,6 +179,14 @@ export function setupAzureAuth(app: Express): void {
           userAgent: req.get('user-agent') || 'unknown',
           details: `Successful SSO login via Microsoft`,
         }).catch(err => console.error('[Azure Auth] Failed to log login activity:', err));
+
+        // Record successful SSO login in login attempts (used for System Monitoring → Logins tab)
+        storage.logLoginAttempt({
+          email: user!.email,
+          success: true,
+          ipAddress: req.ip || req.socket?.remoteAddress || 'unknown',
+          userAgent: req.get('user-agent') || 'unknown',
+        }).catch(err => console.error('[Azure Auth] Failed to log login attempt:', err));
 
         res.redirect("/");
       });
