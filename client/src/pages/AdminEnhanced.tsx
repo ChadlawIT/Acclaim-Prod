@@ -4317,6 +4317,21 @@ export default function AdminEnhanced() {
                             >
                               <KeyRound className="h-3 w-3" />
                             </Button>
+                            {!user.isAdmin && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setManageRestrictionsUser(user);
+                                  setSelectedLiftCaseIds([]);
+                                  setSelectedRestoreCaseIds([]);
+                                }}
+                                title="Manage case access restrictions"
+                                data-testid={`button-manage-restrictions-compact-${user.id}`}
+                              >
+                                <EyeOff className="h-3 w-3" />
+                              </Button>
+                            )}
                             <Button
                               variant="outline"
                               size="sm"
