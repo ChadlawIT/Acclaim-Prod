@@ -21,5 +21,12 @@ There are no DB transactions around the per-item loops, so ordering guarantees t
 
 **Why:** if a lift deleted the row but failed to record the DELETE audit, that case would silently vanish from the "previously lifted" list and the admin would miss re-blocking it. Audit-before-delete prevents this.
 
+## SOS API can push restrictions at case creation
+`POST /api/external/cases` accepts `hideFromUsers` (array) / `hide_from_user` / `hideFromUser` (single or comma-separated) to block specific users from a case. Identifiers resolve to a portal user in order: external ref → email → user id. Matched users get a `case_access_restrictions` row + an audit INSERT (`userId=null`, `userEmail='SOS API'`); unmatched identifiers are returned as `unmatchedRestrictionIdentifiers`. No schema change — reuses the existing table.
+
+**Why create-only:** restrictions are applied ONLY in the new-case branch, never on updates. SOS re-syncs hit the update branch repeatedly; reapplying there would silently undo an admin's temporary lift. So once a case exists, restriction changes belong to the portal (lift/restore UI), not SOS.
+
+**Note:** the "small/large" classification driving this lives entirely in SOS, not in the portal (not derivable from amount or any portal field) — that's why it must be pushed in rather than computed.
+
 ## Gotcha
 `client/src/pages/AdminEnhanced.tsx` contains multiple components (`CaseManagementTab`, `AdminEnhanced` default export, etc.). Hooks/state for a feature must be declared inside the SAME component that renders its UI — placing a query in `CaseManagementTab` while the state lives in `AdminEnhanced` yields "Cannot find name" errors.

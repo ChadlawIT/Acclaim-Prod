@@ -5817,6 +5817,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Case activities are now only created via dedicated API endpoint
       // No automatic activity generation
       
+      // Apply access restrictions pushed from SOS (hide this case from specific users).
+      // Accepts hideFromUsers (array) or hide_from_user / hideFromUser (single value or
+      // comma-separated). Each identifier is matched to a portal user by external ref,
+      // then email, then user id. Applied only at creation so later admin lift/restore
+      // actions are never overwritten by subsequent SOS re-syncs.
+      const restrictedUserIds: string[] = [];
+      const unmatchedRestrictionIdentifiers: string[] = [];
+      try {
+        const hideFromRaw =
+          req.body.hideFromUsers ??
+          req.body.hide_from_users ??
+          req.body.hide_from_user ??
+          req.body.hideFromUser;
+
+        const hideIdentifiers: string[] = Array.isArray(hideFromRaw)
+          ? hideFromRaw.map((v: any) => String(v).trim()).filter(Boolean)
+          : typeof hideFromRaw === 'string'
+            ? hideFromRaw.split(',').map((s) => s.trim()).filter(Boolean)
+            : [];
+
+        for (const identifier of Array.from(new Set(hideIdentifiers))) {
+          let target = await storage.getUserByExternalRef(identifier);
+          if (!target) target = await storage.getUserByEmail(identifier);
+          if (!target) target = await storage.getUser(identifier);
+
+          if (!target) {
+            unmatchedRestrictionIdentifiers.push(identifier);
+            continue;
+          }
+
+          // Skip if a different identifier already resolved to this same user,
+          // to avoid duplicate restriction rows, audit entries and response noise.
+          if (restrictedUserIds.includes(target.id)) {
+            continue;
+          }
+
+          await storage.addCaseAccessRestriction(newCase.id, target.id, null);
+          restrictedUserIds.push(target.id);
+
+          await storage.logAuditEvent({
+            tableName: 'case_access_restrictions',
+            recordId: String(newCase.id),
+            operation: 'INSERT',
+            fieldName: 'blockedUserId',
+            oldValue: null,
+            newValue: target.id,
+            userId: null,
+            userEmail: 'SOS API',
+            ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+            userAgent: req.headers['user-agent'] || 'SOS API',
+            organisationId: organisation.id,
+            description: `Case access restriction applied via SOS API for ${target.email ?? target.id} on case "${newCase.caseName ?? newCase.id}"`,
+          });
+        }
+      } catch (restrictionError) {
+        console.error("Error applying SOS access restrictions for new case:", restrictionError);
+      }
+      
       // Auto-mute for users in this organisation who have auto-mute preference enabled
       try {
         const orgUsers = await storage.getUsersInOrganisation(organisation.id);
@@ -5832,6 +5890,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(201).json({ 
         message: "Case created successfully", 
         case: newCase,
+        restrictedUserIds,
+        unmatchedRestrictionIdentifiers,
         timestamp: new Date().toISOString(),
         refreshRequired: true 
       });
