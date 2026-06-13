@@ -100,6 +100,11 @@ export interface IStorage {
   getUsersInOrganisation(organisationId: number): Promise<User[]>;
   getUsersWithOrganisations(): Promise<(User & { organisations: (Organization & { role?: string })[] })[]>; // Returns all users with their organisations and roles
   getAllCases(): Promise<Case[]>; // Admin only - get all cases across all organizations
+  getRecoveryReportData(): Promise<{
+    cases: Array<{ id: number; accountNumber: string; caseName: string; organisationId: number; organisationName: string | null; debtorType: string; originalAmount: string; status: string; createdAt: Date | null }>;
+    payments: Array<{ caseId: number; amount: string; paymentDate: Date }>;
+    openActivities: Array<{ caseId: number; description: string; createdAt: Date | null }>;
+  }>; // Admin only - raw data for the recovery performance report
   getAllCasesIncludingArchived(): Promise<Case[]>; // Admin only - get all cases including archived ones
   getClosedCasesWithDateFilter(startDate?: Date, endDate?: Date): Promise<Case[]>; // Admin only - get closed cases with date filter
   getCase(id: number, organisationId: number): Promise<Case | undefined>;
@@ -864,6 +869,49 @@ export class DatabaseStorage implements IStorage {
     return casesWithCalculatedBalance.sort((a, b) => 
       new Date(b.lastActivityTime).getTime() - new Date(a.lastActivityTime).getTime()
     );
+  }
+
+  async getRecoveryReportData(): Promise<{
+    cases: Array<{ id: number; accountNumber: string; caseName: string; organisationId: number; organisationName: string | null; debtorType: string; originalAmount: string; status: string; createdAt: Date | null }>;
+    payments: Array<{ caseId: number; amount: string; paymentDate: Date }>;
+    openActivities: Array<{ caseId: number; description: string; createdAt: Date | null }>;
+  }> {
+    // Admin only - lean bulk fetch for the recovery performance report (non-archived cases)
+    const caseRows = await db
+      .select({
+        id: cases.id,
+        accountNumber: cases.accountNumber,
+        caseName: cases.caseName,
+        organisationId: cases.organisationId,
+        organisationName: organisations.name,
+        debtorType: cases.debtorType,
+        originalAmount: cases.originalAmount,
+        status: cases.status,
+        createdAt: cases.createdAt,
+      })
+      .from(cases)
+      .leftJoin(organisations, eq(cases.organisationId, organisations.id))
+      .where(eq(cases.isArchived, false));
+
+    const caseIds = caseRows.map((c) => c.id);
+    if (caseIds.length === 0) {
+      return { cases: caseRows, payments: [], openActivities: [] };
+    }
+
+    const paymentRows = await db
+      .select({ caseId: payments.caseId, amount: payments.amount, paymentDate: payments.paymentDate })
+      .from(payments)
+      .where(inArray(payments.caseId, caseIds));
+
+    // The "case opened" timeline entry is identified by the SOS code TL0001 within the
+    // description text (the wording can change, the code should not). Pre-filter cheaply
+    // with ILIKE; the caller applies a strict boundary check.
+    const activityRows = await db
+      .select({ caseId: caseActivities.caseId, description: caseActivities.description, createdAt: caseActivities.createdAt })
+      .from(caseActivities)
+      .where(and(inArray(caseActivities.caseId, caseIds), sql`${caseActivities.description} ILIKE '%TL0001%'`));
+
+    return { cases: caseRows, payments: paymentRows, openActivities: activityRows };
   }
 
   async getAllCasesIncludingArchived(): Promise<Case[]> {

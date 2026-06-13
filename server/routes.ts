@@ -57,6 +57,7 @@ import { sendGridEmailService } from "./email-service-sendgrid";
 import { setupAzureAuth, inviteUserToAzure, isAzureAuthEnabled } from "./azure-auth";
 import ExcelJS from "exceljs";
 import { loginRateLimiter } from "./rate-limiter";
+import { computeRecoveryPerformance } from "./recovery-report";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -3577,7 +3578,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin: Get all users with their scheduled report settings
+  // Recovery Performance report (admin only) - amount-weighted average time to recovery
+  app.get('/api/admin/reports/recovery-performance', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const organisationIdRaw = req.query.organisationId as string | undefined;
+      const debtorTypeRaw = req.query.debtorType as string | undefined;
+      const openedFromRaw = req.query.openedFrom as string | undefined;
+      const openedToRaw = req.query.openedTo as string | undefined;
+
+      const organisationId = organisationIdRaw && organisationIdRaw !== 'all'
+        ? parseInt(organisationIdRaw, 10)
+        : null;
+      const debtorType = debtorTypeRaw && debtorTypeRaw !== 'all' ? debtorTypeRaw : null;
+      const openedFrom = openedFromRaw ? new Date(openedFromRaw) : null;
+      // Include the whole of the "to" day
+      const openedTo = openedToRaw ? new Date(`${openedToRaw}T23:59:59.999`) : null;
+
+      const result = await computeRecoveryPerformance({
+        organisationId: organisationId !== null && !isNaN(organisationId) ? organisationId : null,
+        debtorType,
+        openedFrom: openedFrom && !isNaN(openedFrom.getTime()) ? openedFrom : null,
+        openedTo: openedTo && !isNaN(openedTo.getTime()) ? openedTo : null,
+      });
+      res.json(result);
+    } catch (error) {
+      console.error('Error computing recovery performance report:', error);
+      res.status(500).json({ message: 'Failed to compute recovery performance report' });
+    }
+  });
+
   app.get('/api/admin/scheduled-reports', isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const allReports = await storage.getAllScheduledReports();

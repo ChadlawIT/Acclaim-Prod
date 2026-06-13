@@ -4,3 +4,4 @@
 - [Case restriction lift/restore](case-restriction-lift.md) — temporary lift deletes rows; "previously blocked" rebuilt from audit_log (newValue=userId, recordId=caseId); audit-before-delete / add-before-audit ordering guarantees no missed case.
 - [Case org-scoping & moving cases](case-org-scoping.md) — moving a case must cascade org to documents+payments (tx); case-linked message visibility is gated by the case current org, not stale recipientId.
 - [Payment report date semantics](payment-report-dates.md) — all payment reports must date from payments.paymentDate (real payment date), never createdAt (portal-ingest date).
+- [SOS timeline codes](sos-timeline-codes.md) — case_activities encode action codes (TL0001=opened) in description text; match by code with alphanumeric boundaries both sides; createdAt = real SOS action date.
