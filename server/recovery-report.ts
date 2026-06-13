@@ -20,6 +20,7 @@ export interface RecoveryCaseRow {
   organisationName: string | null;
   openDate: string;
   usedFallbackStart: boolean;
+  unreliableStart: boolean;
   timeToFirstPaymentDays: number | null;
   weightedRecoveryDays: number | null;
   settled: boolean;
@@ -33,6 +34,7 @@ export interface RecoveryReportResult {
     casesNoPayments: number;
     settledCases: number;
     fallbackStartUsed: number;
+    unreliableStartCases: number;
     timeToFirstPayment: RecoveryMetric;
     weightedRecovery: RecoveryMetric;
     timeToFullRecovery: RecoveryMetric;
@@ -101,6 +103,7 @@ export async function computeRecoveryPerformance(
   let casesNoPayments = 0;
   let settledCases = 0;
   let fallbackStartUsed = 0;
+  let unreliableStartCases = 0;
 
   const caseRows: RecoveryCaseRow[] = [];
 
@@ -136,6 +139,7 @@ export async function computeRecoveryPerformance(
         organisationName: c.organisationName,
         openDate: openDate.toISOString(),
         usedFallbackStart: usedFallback,
+        unreliableStart: false,
         timeToFirstPaymentDays: null,
         weightedRecoveryDays: null,
         settled: false,
@@ -145,24 +149,9 @@ export async function computeRecoveryPerformance(
     }
     casesWithPayments++;
 
-    // Time to first payment (clamp data slips to 0)
-    const ttf = Math.max(0, dayDiff(casePayments[0].date, openDate));
-    ttfDays.push(ttf);
-
-    // Amount-weighted recovery time: each £ weighted by how long it took to arrive
-    let weightedSum = 0;
-    let amountSum = 0;
-    for (const p of casePayments) {
-      const days = Math.max(0, dayDiff(p.date, openDate));
-      weightedSum += p.amount * days;
-      amountSum += p.amount;
-    }
-    const weighted = amountSum > 0 ? weightedSum / amountSum : null;
-    if (weighted !== null) weightedDays.push(weighted);
-
     // Full recovery is judged on ORIGINAL debt vs payments only (costs/interest/fees
     // are ignored, as they can be negotiated). Settled when cumulative payments first
-    // cover the original amount.
+    // cover the original amount. This status is independent of the start date.
     const original = parseFloat(c.originalAmount || "0");
     let settled = false;
     let settleDate: Date | null = null;
@@ -177,10 +166,49 @@ export async function computeRecoveryPerformance(
         }
       }
     }
+    if (settled) settledCases++;
+
+    // A start date that lands AFTER the first payment is impossible in reality and means
+    // the recorded "opened" date is unreliable (common with migrated data, where the
+    // import date post-dates historical payments). Excluding these from the timing
+    // averages is far more honest than flooring the negative durations to 0, which would
+    // drag every average down towards zero.
+    const firstPaymentGap = dayDiff(casePayments[0].date, openDate);
+    if (firstPaymentGap < 0) {
+      unreliableStartCases++;
+      caseRows.push({
+        caseId: c.id,
+        accountNumber: c.accountNumber,
+        caseName: c.caseName,
+        organisationName: c.organisationName,
+        openDate: openDate.toISOString(),
+        usedFallbackStart: usedFallback,
+        unreliableStart: true,
+        timeToFirstPaymentDays: null,
+        weightedRecoveryDays: null,
+        settled,
+        timeToFullRecoveryDays: null,
+      });
+      continue;
+    }
+
+    // Time to first payment
+    const ttf = firstPaymentGap;
+    ttfDays.push(ttf);
+
+    // Amount-weighted recovery time: each £ weighted by how long it took to arrive
+    let weightedSum = 0;
+    let amountSum = 0;
+    for (const p of casePayments) {
+      const days = Math.max(0, dayDiff(p.date, openDate));
+      weightedSum += p.amount * days;
+      amountSum += p.amount;
+    }
+    const weighted = amountSum > 0 ? weightedSum / amountSum : null;
+    if (weighted !== null) weightedDays.push(weighted);
 
     let ttr: number | null = null;
     if (settled && settleDate) {
-      settledCases++;
       ttr = Math.max(0, dayDiff(settleDate, openDate));
       ttrDays.push(ttr);
     }
@@ -192,6 +220,7 @@ export async function computeRecoveryPerformance(
       organisationName: c.organisationName,
       openDate: openDate.toISOString(),
       usedFallbackStart: usedFallback,
+      unreliableStart: false,
       timeToFirstPaymentDays: ttf,
       weightedRecoveryDays: weighted,
       settled,
@@ -206,6 +235,7 @@ export async function computeRecoveryPerformance(
       casesNoPayments,
       settledCases,
       fallbackStartUsed,
+      unreliableStartCases,
       timeToFirstPayment: { mean: mean(ttfDays), median: median(ttfDays), count: ttfDays.length },
       weightedRecovery: { mean: mean(weightedDays), median: median(weightedDays), count: weightedDays.length },
       timeToFullRecovery: { mean: mean(ttrDays), median: median(ttrDays), count: ttrDays.length },

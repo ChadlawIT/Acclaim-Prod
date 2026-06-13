@@ -3531,7 +3531,7 @@ export default function AdminEnhanced() {
                           {formatRecoveryDays(recoveryData.summary.weightedRecovery.mean)}
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Median {formatRecoveryDays(recoveryData.summary.weightedRecovery.median)} · {recoveryData.summary.weightedRecovery.count} case{recoveryData.summary.weightedRecovery.count !== 1 ? 's' : ''} with payments
+                          Median {formatRecoveryDays(recoveryData.summary.weightedRecovery.median)} · {recoveryData.summary.weightedRecovery.count} case{recoveryData.summary.weightedRecovery.count !== 1 ? 's' : ''} measured
                         </p>
                       </CardContent>
                     </Card>
@@ -3557,14 +3557,14 @@ export default function AdminEnhanced() {
                           {formatRecoveryDays(recoveryData.summary.timeToFullRecovery.mean)}
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Median {formatRecoveryDays(recoveryData.summary.timeToFullRecovery.median)} · {recoveryData.summary.settledCases} fully recovered
+                          Median {formatRecoveryDays(recoveryData.summary.timeToFullRecovery.median)} · {recoveryData.summary.timeToFullRecovery.count} fully recovered &amp; measured
                         </p>
                       </CardContent>
                     </Card>
                   </div>
 
                   {/* Coverage summary */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-sm">
                     <div className="rounded-lg border p-3">
                       <div className="text-2xl font-semibold" data-testid="stat-total-cases">{recoveryData.summary.totalCases}</div>
                       <div className="text-xs text-muted-foreground">Cases in scope</div>
@@ -3581,12 +3581,23 @@ export default function AdminEnhanced() {
                       <div className="text-2xl font-semibold" data-testid="stat-fallback-start">{recoveryData.summary.fallbackStartUsed}</div>
                       <div className="text-xs text-muted-foreground">Estimated start date</div>
                     </div>
+                    <div className="rounded-lg border p-3">
+                      <div className="text-2xl font-semibold text-amber-600 dark:text-amber-400" data-testid="stat-unreliable-start">{recoveryData.summary.unreliableStartCases}</div>
+                      <div className="text-xs text-muted-foreground">Excluded (no usable start date)</div>
+                    </div>
                   </div>
 
                   {recoveryData.summary.fallbackStartUsed > 0 && (
                     <p className="text-xs text-muted-foreground flex items-start gap-2">
                       <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
                       {recoveryData.summary.fallbackStartUsed} case{recoveryData.summary.fallbackStartUsed !== 1 ? 's' : ''} had no recorded opening entry, so the date the case was added to the portal was used as the start date instead. These are marked “Est.” in the table.
+                    </p>
+                  )}
+
+                  {recoveryData.summary.unreliableStartCases > 0 && (
+                    <p className="text-xs text-muted-foreground flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                      {recoveryData.summary.unreliableStartCases} case{recoveryData.summary.unreliableStartCases !== 1 ? 's' : ''} had a recorded opening date that falls after the first payment — usually older cases brought across from the previous system. These have been left out of the averages above, as recovery time can't be measured without a reliable start date, and are marked “No start date” in the table.
                     </p>
                   )}
 
@@ -3613,9 +3624,11 @@ export default function AdminEnhanced() {
                             <td className="p-3 text-muted-foreground">{row.organisationName || '—'}</td>
                             <td className="p-3 text-muted-foreground whitespace-nowrap">
                               {new Date(row.openDate).toLocaleDateString('en-GB')}
-                              {row.usedFallbackStart && (
+                              {row.unreliableStart ? (
+                                <Badge variant="outline" className="ml-2 text-[10px] border-amber-400 text-amber-600 dark:text-amber-400">No start date</Badge>
+                              ) : row.usedFallbackStart ? (
                                 <Badge variant="outline" className="ml-2 text-[10px]">Est.</Badge>
-                              )}
+                              ) : null}
                             </td>
                             <td className="p-3 text-right whitespace-nowrap">{formatRecoveryDays(row.timeToFirstPaymentDays)}</td>
                             <td className="p-3 text-right whitespace-nowrap">{formatRecoveryDays(row.weightedRecoveryDays)}</td>
