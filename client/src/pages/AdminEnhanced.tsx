@@ -2235,6 +2235,7 @@ export default function AdminEnhanced() {
   
   // State for closed case management
   const [showClosedCaseManagement, setShowClosedCaseManagement] = useState(false);
+  const [showRecoveryPerformance, setShowRecoveryPerformance] = useState(false);
 
   // State for user management
   const [showCreateUser, setShowCreateUser] = useState(false);
@@ -3375,6 +3376,16 @@ export default function AdminEnhanced() {
               <span className="sm:hidden">Recovery</span>
             </Button>
           </Link>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowRecoveryPerformance(true)}
+            data-testid="button-recovery-performance"
+          >
+            <Clock className="h-4 w-4 mr-2" />
+            <span className="hidden sm:inline">Recovery Performance</span>
+            <span className="sm:hidden">Performance</span>
+          </Button>
           <Link href="/messages-report">
             <Button variant="outline" size="sm">
               <Mail className="h-4 w-4 mr-2" />
@@ -3406,6 +3417,223 @@ export default function AdminEnhanced() {
       {/* Closed Case Management View */}
       {showClosedCaseManagement ? (
         <ClosedCaseManagement onBack={() => setShowClosedCaseManagement(false)} isSuperAdmin={isSuperAdmin} />
+      ) : showRecoveryPerformance ? (
+        <div className="space-y-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowRecoveryPerformance(false)}
+            data-testid="button-back-recovery"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Admin Panel
+          </Button>
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+                    <Clock className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div>
+                    <CardTitle>Recovery Performance</CardTitle>
+                    <CardDescription>
+                      Amount-weighted average time to recover debts, measured from when each case was opened.
+                    </CardDescription>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => refetchRecovery()}
+                  disabled={recoveryFetching}
+                  data-testid="button-refresh-recovery"
+                >
+                  <RefreshCw className={`h-4 w-4 mr-1 ${recoveryFetching ? 'animate-spin' : ''}`} />
+                  {recoveryFetching ? 'Loading...' : 'Refresh'}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Filters */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Organisation</label>
+                  <Select value={recoveryOrg} onValueChange={setRecoveryOrg}>
+                    <SelectTrigger data-testid="select-recovery-org">
+                      <SelectValue placeholder="All organisations" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All organisations</SelectItem>
+                      {(organisations as any[]).map((org: any) => (
+                        <SelectItem key={org.id} value={String(org.id)}>
+                          {org.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Debtor type</label>
+                  <Select value={recoveryDebtorType} onValueChange={setRecoveryDebtorType}>
+                    <SelectTrigger data-testid="select-recovery-debtor-type">
+                      <SelectValue placeholder="All types" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All types</SelectItem>
+                      <SelectItem value="individual">Individual</SelectItem>
+                      <SelectItem value="company">Company</SelectItem>
+                      <SelectItem value="sole_trader">Sole trader</SelectItem>
+                      <SelectItem value="company_and_individual">Company &amp; individual</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Opened from</label>
+                  <Input
+                    type="date"
+                    value={recoveryOpenedFrom}
+                    onChange={(e) => setRecoveryOpenedFrom(e.target.value)}
+                    data-testid="input-recovery-opened-from"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Opened to</label>
+                  <Input
+                    type="date"
+                    value={recoveryOpenedTo}
+                    onChange={(e) => setRecoveryOpenedTo(e.target.value)}
+                    data-testid="input-recovery-opened-to"
+                  />
+                </div>
+              </div>
+
+              {recoveryFetching && !recoveryData ? (
+                <div className="text-center py-12 text-muted-foreground">Loading recovery data…</div>
+              ) : !recoveryData || recoveryData.summary?.totalCases === 0 ? (
+                <div className="text-center py-12">
+                  <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                  <h3 className="font-medium text-lg mb-1">No cases match these filters</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Try widening the date range or clearing the organisation and debtor type filters.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Headline metric cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card className="border-emerald-200 dark:border-emerald-900/50">
+                      <CardHeader className="pb-2">
+                        <CardDescription>Amount-weighted average time to recovery</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400" data-testid="metric-weighted-mean">
+                          {formatRecoveryDays(recoveryData.summary.weightedRecovery.mean)}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Median {formatRecoveryDays(recoveryData.summary.weightedRecovery.median)} · {recoveryData.summary.weightedRecovery.count} case{recoveryData.summary.weightedRecovery.count !== 1 ? 's' : ''} with payments
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardDescription>Average time to first payment</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-3xl font-bold" data-testid="metric-first-payment-mean">
+                          {formatRecoveryDays(recoveryData.summary.timeToFirstPayment.mean)}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Median {formatRecoveryDays(recoveryData.summary.timeToFirstPayment.median)} · {recoveryData.summary.timeToFirstPayment.count} case{recoveryData.summary.timeToFirstPayment.count !== 1 ? 's' : ''}
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardDescription>Average time to full recovery</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-3xl font-bold" data-testid="metric-full-recovery-mean">
+                          {formatRecoveryDays(recoveryData.summary.timeToFullRecovery.mean)}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Median {formatRecoveryDays(recoveryData.summary.timeToFullRecovery.median)} · {recoveryData.summary.settledCases} fully recovered
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Coverage summary */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                    <div className="rounded-lg border p-3">
+                      <div className="text-2xl font-semibold" data-testid="stat-total-cases">{recoveryData.summary.totalCases}</div>
+                      <div className="text-xs text-muted-foreground">Cases in scope</div>
+                    </div>
+                    <div className="rounded-lg border p-3">
+                      <div className="text-2xl font-semibold" data-testid="stat-cases-with-payments">{recoveryData.summary.casesWithPayments}</div>
+                      <div className="text-xs text-muted-foreground">With payments</div>
+                    </div>
+                    <div className="rounded-lg border p-3">
+                      <div className="text-2xl font-semibold" data-testid="stat-cases-no-payments">{recoveryData.summary.casesNoPayments}</div>
+                      <div className="text-xs text-muted-foreground">No payments yet</div>
+                    </div>
+                    <div className="rounded-lg border p-3">
+                      <div className="text-2xl font-semibold" data-testid="stat-fallback-start">{recoveryData.summary.fallbackStartUsed}</div>
+                      <div className="text-xs text-muted-foreground">Estimated start date</div>
+                    </div>
+                  </div>
+
+                  {recoveryData.summary.fallbackStartUsed > 0 && (
+                    <p className="text-xs text-muted-foreground flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                      {recoveryData.summary.fallbackStartUsed} case{recoveryData.summary.fallbackStartUsed !== 1 ? 's' : ''} had no recorded opening entry, so the date the case was added to the portal was used as the start date instead. These are marked “Est.” in the table.
+                    </p>
+                  )}
+
+                  {/* Per-case breakdown */}
+                  <div className="rounded-lg border overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b bg-muted/50 text-left">
+                          <th className="p-3 font-medium">Case</th>
+                          <th className="p-3 font-medium">Organisation</th>
+                          <th className="p-3 font-medium">Opened</th>
+                          <th className="p-3 font-medium text-right">To first payment</th>
+                          <th className="p-3 font-medium text-right">Weighted recovery</th>
+                          <th className="p-3 font-medium text-right">To full recovery</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(recoveryData.cases as any[]).map((row: any) => (
+                          <tr key={row.caseId} className="border-b last:border-0 hover:bg-muted/30" data-testid={`row-recovery-case-${row.caseId}`}>
+                            <td className="p-3">
+                              <div className="font-medium">{row.caseName}</div>
+                              <div className="text-xs text-muted-foreground">{row.accountNumber}</div>
+                            </td>
+                            <td className="p-3 text-muted-foreground">{row.organisationName || '—'}</td>
+                            <td className="p-3 text-muted-foreground whitespace-nowrap">
+                              {new Date(row.openDate).toLocaleDateString('en-GB')}
+                              {row.usedFallbackStart && (
+                                <Badge variant="outline" className="ml-2 text-[10px]">Est.</Badge>
+                              )}
+                            </td>
+                            <td className="p-3 text-right whitespace-nowrap">{formatRecoveryDays(row.timeToFirstPaymentDays)}</td>
+                            <td className="p-3 text-right whitespace-nowrap">{formatRecoveryDays(row.weightedRecoveryDays)}</td>
+                            <td className="p-3 text-right whitespace-nowrap">
+                              {row.settled
+                                ? formatRecoveryDays(row.timeToFullRecoveryDays)
+                                : <span className="text-muted-foreground">Not yet</span>}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       ) : (
       <>
       {/* Overview Cards */}
@@ -3495,10 +3723,6 @@ export default function AdminEnhanced() {
             <TabsTrigger value="reports" className="flex-1 text-xs sm:text-sm">
               <span className="hidden sm:inline">Scheduled Reports</span>
               <span className="sm:hidden">Reports</span>
-            </TabsTrigger>
-            <TabsTrigger value="recovery" className="flex-1 text-xs sm:text-sm" data-testid="tab-recovery">
-              <span className="hidden sm:inline">Recovery Performance</span>
-              <span className="sm:hidden">Recovery</span>
             </TabsTrigger>
           </TabsList>
         </div>
@@ -5249,215 +5473,6 @@ export default function AdminEnhanced() {
                   </div>
                   <Pagination currentPage={reportsPage} totalPages={reportsTotalPages} onPageChange={setReportsPage} />
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Recovery Performance Tab */}
-        <TabsContent value="recovery" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
-                    <Clock className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                  </div>
-                  <div>
-                    <CardTitle>Recovery Performance</CardTitle>
-                    <CardDescription>
-                      Amount-weighted average time to recover debts, measured from when each case was opened.
-                    </CardDescription>
-                  </div>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => refetchRecovery()}
-                  disabled={recoveryFetching}
-                  data-testid="button-refresh-recovery"
-                >
-                  <RefreshCw className={`h-4 w-4 mr-1 ${recoveryFetching ? 'animate-spin' : ''}`} />
-                  {recoveryFetching ? 'Loading...' : 'Refresh'}
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Filters */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">Organisation</label>
-                  <Select value={recoveryOrg} onValueChange={setRecoveryOrg}>
-                    <SelectTrigger data-testid="select-recovery-org">
-                      <SelectValue placeholder="All organisations" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All organisations</SelectItem>
-                      {(organisations as any[]).map((org: any) => (
-                        <SelectItem key={org.id} value={String(org.id)}>
-                          {org.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">Debtor type</label>
-                  <Select value={recoveryDebtorType} onValueChange={setRecoveryDebtorType}>
-                    <SelectTrigger data-testid="select-recovery-debtor-type">
-                      <SelectValue placeholder="All types" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All types</SelectItem>
-                      <SelectItem value="individual">Individual</SelectItem>
-                      <SelectItem value="company">Company</SelectItem>
-                      <SelectItem value="sole_trader">Sole trader</SelectItem>
-                      <SelectItem value="company_and_individual">Company &amp; individual</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">Opened from</label>
-                  <Input
-                    type="date"
-                    value={recoveryOpenedFrom}
-                    onChange={(e) => setRecoveryOpenedFrom(e.target.value)}
-                    data-testid="input-recovery-opened-from"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">Opened to</label>
-                  <Input
-                    type="date"
-                    value={recoveryOpenedTo}
-                    onChange={(e) => setRecoveryOpenedTo(e.target.value)}
-                    data-testid="input-recovery-opened-to"
-                  />
-                </div>
-              </div>
-
-              {recoveryFetching && !recoveryData ? (
-                <div className="text-center py-12 text-muted-foreground">Loading recovery data…</div>
-              ) : !recoveryData || recoveryData.summary?.totalCases === 0 ? (
-                <div className="text-center py-12">
-                  <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                  <h3 className="font-medium text-lg mb-1">No cases match these filters</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Try widening the date range or clearing the organisation and debtor type filters.
-                  </p>
-                </div>
-              ) : (
-                <>
-                  {/* Headline metric cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Card className="border-emerald-200 dark:border-emerald-900/50">
-                      <CardHeader className="pb-2">
-                        <CardDescription>Amount-weighted average time to recovery</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400" data-testid="metric-weighted-mean">
-                          {formatRecoveryDays(recoveryData.summary.weightedRecovery.mean)}
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Median {formatRecoveryDays(recoveryData.summary.weightedRecovery.median)} · {recoveryData.summary.weightedRecovery.count} case{recoveryData.summary.weightedRecovery.count !== 1 ? 's' : ''} with payments
-                        </p>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardDescription>Average time to first payment</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-3xl font-bold" data-testid="metric-first-payment-mean">
-                          {formatRecoveryDays(recoveryData.summary.timeToFirstPayment.mean)}
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Median {formatRecoveryDays(recoveryData.summary.timeToFirstPayment.median)} · {recoveryData.summary.timeToFirstPayment.count} case{recoveryData.summary.timeToFirstPayment.count !== 1 ? 's' : ''}
-                        </p>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardDescription>Average time to full recovery</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-3xl font-bold" data-testid="metric-full-recovery-mean">
-                          {formatRecoveryDays(recoveryData.summary.timeToFullRecovery.mean)}
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Median {formatRecoveryDays(recoveryData.summary.timeToFullRecovery.median)} · {recoveryData.summary.settledCases} fully recovered
-                        </p>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  {/* Coverage summary */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-                    <div className="rounded-lg border p-3">
-                      <div className="text-2xl font-semibold" data-testid="stat-total-cases">{recoveryData.summary.totalCases}</div>
-                      <div className="text-xs text-muted-foreground">Cases in scope</div>
-                    </div>
-                    <div className="rounded-lg border p-3">
-                      <div className="text-2xl font-semibold" data-testid="stat-cases-with-payments">{recoveryData.summary.casesWithPayments}</div>
-                      <div className="text-xs text-muted-foreground">With payments</div>
-                    </div>
-                    <div className="rounded-lg border p-3">
-                      <div className="text-2xl font-semibold" data-testid="stat-cases-no-payments">{recoveryData.summary.casesNoPayments}</div>
-                      <div className="text-xs text-muted-foreground">No payments yet</div>
-                    </div>
-                    <div className="rounded-lg border p-3">
-                      <div className="text-2xl font-semibold" data-testid="stat-fallback-start">{recoveryData.summary.fallbackStartUsed}</div>
-                      <div className="text-xs text-muted-foreground">Estimated start date</div>
-                    </div>
-                  </div>
-
-                  {recoveryData.summary.fallbackStartUsed > 0 && (
-                    <p className="text-xs text-muted-foreground flex items-start gap-2">
-                      <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-                      {recoveryData.summary.fallbackStartUsed} case{recoveryData.summary.fallbackStartUsed !== 1 ? 's' : ''} had no recorded opening entry, so the date the case was added to the portal was used as the start date instead. These are marked “Est.” in the table.
-                    </p>
-                  )}
-
-                  {/* Per-case breakdown */}
-                  <div className="rounded-lg border overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b bg-muted/50 text-left">
-                          <th className="p-3 font-medium">Case</th>
-                          <th className="p-3 font-medium">Organisation</th>
-                          <th className="p-3 font-medium">Opened</th>
-                          <th className="p-3 font-medium text-right">To first payment</th>
-                          <th className="p-3 font-medium text-right">Weighted recovery</th>
-                          <th className="p-3 font-medium text-right">To full recovery</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(recoveryData.cases as any[]).map((row: any) => (
-                          <tr key={row.caseId} className="border-b last:border-0 hover:bg-muted/30" data-testid={`row-recovery-case-${row.caseId}`}>
-                            <td className="p-3">
-                              <div className="font-medium">{row.caseName}</div>
-                              <div className="text-xs text-muted-foreground">{row.accountNumber}</div>
-                            </td>
-                            <td className="p-3 text-muted-foreground">{row.organisationName || '—'}</td>
-                            <td className="p-3 text-muted-foreground whitespace-nowrap">
-                              {new Date(row.openDate).toLocaleDateString('en-GB')}
-                              {row.usedFallbackStart && (
-                                <Badge variant="outline" className="ml-2 text-[10px]">Est.</Badge>
-                              )}
-                            </td>
-                            <td className="p-3 text-right whitespace-nowrap">{formatRecoveryDays(row.timeToFirstPaymentDays)}</td>
-                            <td className="p-3 text-right whitespace-nowrap">{formatRecoveryDays(row.weightedRecoveryDays)}</td>
-                            <td className="p-3 text-right whitespace-nowrap">
-                              {row.settled
-                                ? formatRecoveryDays(row.timeToFullRecoveryDays)
-                                : <span className="text-muted-foreground">Not yet</span>}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </>
               )}
             </CardContent>
           </Card>
