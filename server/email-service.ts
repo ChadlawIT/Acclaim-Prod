@@ -65,6 +65,7 @@ interface WelcomeEmailData {
   organisationName: string;
   adminName: string;
   isAdmin?: boolean;
+  portalUrl?: string;
 }
 
 interface ExternalMessageNotificationData {
@@ -734,6 +735,17 @@ To manage your notification preferences, visit your Profile settings in the port
 
     try {
       const subject = `Welcome to the Acclaim Credit Management & Recovery Portal!`;
+      const portalUrl = data.portalUrl || 'https://acclaim-api-prod-uks-001.azurewebsites.net/auth';
+      let signupUrl: string;
+      try {
+        const u = new URL(portalUrl);
+        u.pathname = '/auth/azure/signup';
+        u.search = '';
+        u.hash = '';
+        signupUrl = u.toString();
+      } catch {
+        signupUrl = 'https://acclaim-api-prod-uks-001.azurewebsites.net/auth/azure/signup';
+      }
 
       const htmlContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc;">
@@ -760,20 +772,26 @@ To manage your notification preferences, visit your Profile settings in the port
                 <li>Click <strong>"Sign in with Microsoft"</strong> and sign in with your usual Microsoft password (and MFA if required).</li>
               </ol>
               ` : `
-              <h3 style="color: #0f766e; margin-top: 0; margin-bottom: 10px;">How to sign in for the first time</h3>
+              <h3 style="color: #0f766e; margin-top: 0; margin-bottom: 10px;">Getting started — it only takes a minute</h3>
               <ol style="color: #0f766e; line-height: 1.8; padding-left: 20px; margin: 0; font-size: 14px;">
-                <li>Click <strong>Access the Portal</strong> below.</li>
-                <li>Click <strong>"Sign in with Microsoft"</strong> on the login page.</li>
-                <li>On the Microsoft page, click <strong>"No account? Create one!"</strong> and register using this email address.</li>
+                <li>Click <strong>Register your account</strong> below — this takes you straight to Microsoft's sign-up screen.</li>
+                <li>Register using this email address and follow the on-screen steps.</li>
                 <li>Once registered, return to the portal and sign in with your Microsoft account.</li>
               </ol>
               `}
             </div>
 
             <div style="text-align: center; margin: 30px 0;">
-              <a href="https://acclaim-api-prod-uks-001.azurewebsites.net/auth" style="background: #14b8a6; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block; font-weight: bold;">
+              ${data.isAdmin ? `
+              <a href="${portalUrl}" style="background: #14b8a6; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block; font-weight: bold;">
                 Access the Portal
               </a>
+              ` : `
+              <a href="${signupUrl}" style="background: #14b8a6; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block; font-weight: bold;">
+                Register your account
+              </a>
+              <p style="margin: 12px 0 0 0; color: #94a3b8; font-size: 13px;">Already registered? <a href="${portalUrl}" style="color: #0f766e;">Sign in here</a></p>
+              `}
             </div>
 
             <div style="background: #f8fafc; padding: 15px; border-radius: 8px; text-align: center;">
@@ -797,12 +815,12 @@ Hello ${data.firstName},
 Your account has been created and you can now access the system to view and manage your cases.
 
 ${data.isAdmin ? `How to sign in:
-1. Visit https://acclaim-api-prod-uks-001.azurewebsites.net/auth
-2. Click "Sign in with Microsoft" and sign in with your usual Microsoft password (and MFA if required).` : `How to sign in for the first time:
-1. Visit https://acclaim-api-prod-uks-001.azurewebsites.net/auth
-2. Click "Sign in with Microsoft" on the login page.
-3. On the Microsoft page, click "No account? Create one!" and register using this email address.
-4. Once registered, return to the portal and sign in with your Microsoft account.`}
+1. Visit ${portalUrl}
+2. Click "Sign in with Microsoft" and sign in with your usual Microsoft password (and MFA if required).` : `Getting started — it only takes a minute:
+1. Register your account here: ${signupUrl}
+   (This takes you straight to Microsoft's sign-up screen.)
+2. Register using this email address and follow the on-screen steps.
+3. Once registered, sign in to the portal here: ${portalUrl}`}
 
 If you have any questions, please contact our support team.
       `;

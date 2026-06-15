@@ -97,12 +97,44 @@ export function setupAzureAuth(app: Express): void {
     }
   });
 
+  // Direct self-sign-up: sends the user straight to the Microsoft "Create account"
+  // screen instead of the sign-in screen. Used in invite emails so first-time
+  // clients don't have to find the "No account? Create one!" link themselves.
+  app.get("/auth/azure/signup", async (req, res) => {
+    try {
+      const client = getMsalClient();
+      const redirectUri = getFullRedirectUri(req);
+
+      console.log("[Azure Auth] Starting self-sign-up flow");
+
+      const authCodeUrlParameters: msal.AuthorizationUrlRequest = {
+        scopes: ["openid", "profile", "email", "offline_access"],
+        redirectUri,
+        prompt: "create",
+      };
+
+      const authUrl = await client.getAuthCodeUrl(authCodeUrlParameters);
+      res.redirect(authUrl);
+    } catch (error: any) {
+      console.error("[Azure Auth] Sign-up error:", error);
+      // Fall back to the normal sign-in screen if sign-up deep-link is unsupported
+      res.redirect("/auth/azure/login");
+    }
+  });
+
   app.get("/auth/azure/callback", async (req, res) => {
     try {
       const { code, error, error_description } = req.query;
 
       if (error) {
         console.error("[Azure Auth] Callback error:", error, error_description);
+        // If the self-sign-up deep link (prompt=create) isn't supported by the
+        // tenant, Azure returns invalid_request. Fall back to the standard
+        // sign-in screen (which still offers "No account? Create one!").
+        const desc = String(error_description || "");
+        if (error === "invalid_request" && /prompt|create/i.test(desc)) {
+          return res.redirect("/auth/azure/login");
+        }
         return res.redirect(`/auth?error=${encodeURIComponent(error as string)}`);
       }
 
