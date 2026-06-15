@@ -196,8 +196,11 @@ export default function AuthPage() {
                   >
                     Create your account
                   </Button>
-                  <p className="mt-2 text-center text-xs text-muted-foreground">
+                  <p className="mt-2 text-center text-xs font-medium text-teal-700 dark:text-teal-400">
                     You'll need to register before your first sign in. Use the same email address we invited.
+                  </p>
+                  <p className="mt-1 text-center text-xs text-muted-foreground">
+                    Not been invited yet? Please contact us.
                   </p>
                 </>
               ) : (
