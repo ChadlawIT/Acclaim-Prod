@@ -308,28 +308,24 @@ export default function AuthPage() {
                 {!showAltLogin ? (
                   <>
                     <p className="font-medium text-gray-800 dark:text-gray-100 mb-3">
-                      If you haven't used this portal before, you'll need to create an account first. Here's how:
+                      If you haven't used this portal before, you'll need to register first. Here's how:
                     </p>
                     <ol className="space-y-3">
                       <li className="flex gap-3">
                         <span className="flex-shrink-0 w-6 h-6 rounded-full bg-teal-600 text-white text-xs flex items-center justify-center font-semibold">1</span>
-                        <span><strong>Click "Sign in with Microsoft" above</strong> — this will take you to the Microsoft sign-in page.</span>
+                        <span><strong>Click "Create your account" above</strong> — this takes you straight to the Microsoft registration screen.</span>
                       </li>
                       <li className="flex gap-3">
                         <span className="flex-shrink-0 w-6 h-6 rounded-full bg-teal-600 text-white text-xs flex items-center justify-center font-semibold">2</span>
-                        <span><strong>Click "No account? Create one!"</strong> — on the Microsoft sign-in screen, look for this link and click it to begin registering.</span>
+                        <span><strong>Register with your invited email address</strong> — use the same email address we sent your invitation to, then follow the on-screen steps.</span>
                       </li>
                       <li className="flex gap-3">
                         <span className="flex-shrink-0 w-6 h-6 rounded-full bg-teal-600 text-white text-xs flex items-center justify-center font-semibold">3</span>
-                        <span><strong>Complete the sign-up steps</strong> — enter your email address and follow the on-screen instructions. You can use an existing email address such as Gmail.</span>
-                      </li>
-                      <li className="flex gap-3">
-                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-teal-600 text-white text-xs flex items-center justify-center font-semibold">4</span>
-                        <span><strong>Return here and sign in</strong> — once registered, come back to this page and click <em>Sign in with Microsoft</em> using the same email address you signed up with.</span>
+                        <span><strong>Return here and sign in</strong> — once registered, come back to this page and click <em>Sign in with Microsoft</em> using that same email address.</span>
                       </li>
                     </ol>
                     <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">
-                      If you've completed sign-up but still can't access the portal, please contact us at <strong>email@acclaim.law</strong> or call <strong>0113 225 8811</strong>.
+                      Haven't been invited yet, or completed registration but still can't access the portal? Please contact us at <strong>email@acclaim.law</strong> or call <strong>0113 225 8811</strong>.
                     </p>
                     <div className="mt-3 pt-3 border-t border-teal-200 dark:border-teal-700">
                       <button
