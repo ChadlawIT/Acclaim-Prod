@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FileText, MessageSquare, TrendingUp, Shield, ChevronDown, ChevronUp, Info, ArrowLeft, Loader2 } from "lucide-react";
+import { FileText, MessageSquare, TrendingUp, Shield, ChevronDown, ChevronUp, Info, ArrowLeft, Loader2, AlertTriangle } from "lucide-react";
 import acclaimLogo from "@assets/acclaim_rose_transparent_1768474381340.png";
 
 const MicrosoftIcon = () => (
@@ -173,6 +173,19 @@ export default function AuthPage() {
                     <MicrosoftIcon />
                     <span className="ml-2">Sign in with Microsoft</span>
                   </Button>
+
+                  <div
+                    className="mt-4 px-4 py-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 text-sm text-amber-900 dark:text-amber-100"
+                    data-testid="notice-first-time-register"
+                  >
+                    <p className="flex items-start gap-2 font-semibold">
+                      <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                      Signing in for the first time? You must register before you can sign in.
+                    </p>
+                    <p className="mt-2 text-amber-800 dark:text-amber-200">
+                      After clicking <strong>Sign in with Microsoft</strong> above, look for <strong>"No account? Create one!"</strong> on the Microsoft screen and click it to register — use the same email address we invited. Once that's done, come back and sign in.
+                    </p>
+                  </div>
                 </>
               ) : (
                 <form onSubmit={handleAltLogin} className="space-y-4">
