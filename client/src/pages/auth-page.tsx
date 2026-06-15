@@ -248,7 +248,7 @@ export default function AuthPage() {
                 </form>
               )}
 
-              <div className="mt-6 text-center text-xs text-muted-foreground">Need assistance? Please contact us at email@acclaim.law | 0113 225 8811</div>
+              <div className="mt-6 text-center text-xs text-[color:var(--muted-foreground)]">Contact us at email@acclaim.law | 0113 225 8811</div>
               <div className="mt-3 text-center text-xs text-muted-foreground">
                 <Link href="/terms" className="hover:text-primary hover:underline">
                   Terms of Use
