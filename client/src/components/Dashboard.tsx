@@ -7,8 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { FolderOpen, CheckCircle, PoundSterling, TrendingUp, User, Building, Clock, FileText, Check, AlertTriangle, Store, UserCheck, Plus, Info, Send } from "lucide-react";
+import { FolderOpen, CheckCircle, PoundSterling, TrendingUp, User, Building, Clock, FileText, Check, AlertTriangle, Store, UserCheck, Plus, Info, Send, Paperclip } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { validateFile, ACCEPTED_FILE_TYPES_STRING, MAX_FILE_SIZE_MB, ACCEPTED_FILE_TYPES_DISPLAY } from "@/lib/fileValidation";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -31,6 +33,9 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
   const [selectedMessage, setSelectedMessage] = useState<any>(null);
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
   const [dialogReplyMessage, setDialogReplyMessage] = useState("");
+  const [replyFile, setReplyFile] = useState<File | null>(null);
+  const [replyCustomFileName, setReplyCustomFileName] = useState<string>("");
+  const [replyFileValidationError, setReplyFileValidationError] = useState<string | null>(null);
   const [showAccessibleOnly, setShowAccessibleOnly] = useState(false);
 
   // Check if user has any case restrictions
@@ -135,7 +140,26 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
   // Mutation to send message reply
   const sendReplyMutation = useMutation({
     mutationFn: async (data: { caseId: number; subject: string; content: string }) => {
-      return await apiRequest("POST", "/api/messages", data);
+      const formData = new FormData();
+      formData.append("recipientType", "admin");
+      formData.append("recipientId", "");
+      formData.append("subject", data.subject);
+      formData.append("content", data.content);
+      formData.append("caseId", String(data.caseId));
+      if (replyFile) {
+        formData.append("attachment", replyFile);
+        if (replyCustomFileName.trim()) {
+          formData.append("customFileName", replyCustomFileName.trim());
+        }
+      }
+      const response = await fetch("/api/messages", {
+        method: "POST",
+        body: formData,
+      });
+      if (!response.ok) {
+        throw new Error(`${response.status}: ${response.statusText}`);
+      }
+      return await response.json();
     },
     onSuccess: () => {
       toast({
@@ -143,7 +167,12 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
         description: "Your reply has been sent successfully.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cases"] });
       setDialogReplyMessage("");
+      setReplyFile(null);
+      setReplyCustomFileName("");
+      setReplyFileValidationError(null);
       setMessageDialogOpen(false);
     },
     onError: (error) => {
@@ -597,7 +626,15 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
       </Dialog>
 
       {/* Message Detail Dialog */}
-      <Dialog open={messageDialogOpen} onOpenChange={setMessageDialogOpen}>
+      <Dialog open={messageDialogOpen} onOpenChange={(open) => {
+        setMessageDialogOpen(open);
+        if (!open) {
+          setDialogReplyMessage("");
+          setReplyFile(null);
+          setReplyCustomFileName("");
+          setReplyFileValidationError(null);
+        }
+      }}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Message Details</DialogTitle>
@@ -670,10 +707,73 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
                     className="mt-2"
                     rows={3}
                   />
+
+                  <div className="mt-3">
+                    <Label htmlFor="reply-attachment" className="text-sm font-medium">Attachment (optional)</Label>
+                    <p className="text-xs text-gray-500 mt-1 mb-2">
+                      Max {MAX_FILE_SIZE_MB}MB. Formats: {ACCEPTED_FILE_TYPES_DISPLAY}
+                    </p>
+                    <input
+                      id="reply-attachment"
+                      type="file"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        setReplyCustomFileName("");
+                        if (file) {
+                          const validation = validateFile(file);
+                          if (!validation.isValid) {
+                            setReplyFileValidationError(validation.error);
+                            setReplyFile(null);
+                            e.target.value = '';
+                            return;
+                          }
+                        }
+                        setReplyFileValidationError(null);
+                        setReplyFile(file);
+                      }}
+                      accept={ACCEPTED_FILE_TYPES_STRING}
+                      className="block w-full text-sm text-gray-500 mt-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-teal-600 file:text-white hover:file:bg-teal-700 file:cursor-pointer cursor-pointer"
+                      data-testid="input-reply-attachment"
+                    />
+                    {replyFileValidationError && (
+                      <p className="text-sm text-red-600 mt-2 bg-red-50 dark:bg-red-900/20 p-2 rounded">
+                        {replyFileValidationError}
+                      </p>
+                    )}
+                    {replyFile && (
+                      <div className="mt-2 space-y-2">
+                        <p className="text-sm text-gray-600 flex items-center gap-1">
+                          <Paperclip className="h-3.5 w-3.5" />
+                          Selected: {replyFile.name} ({(replyFile.size / 1024 / 1024).toFixed(2)} MB)
+                        </p>
+                        <div>
+                          <Label htmlFor="reply-customFileName" className="text-sm font-bold text-acclaim-teal">
+                            Rename file (optional)
+                          </Label>
+                          <div className="flex items-center gap-1 mt-1">
+                            <Input
+                              id="reply-customFileName"
+                              type="text"
+                              placeholder="Enter new filename"
+                              value={replyCustomFileName}
+                              onChange={(e) => setReplyCustomFileName(e.target.value)}
+                              className="flex-1"
+                              data-testid="input-reply-custom-filename"
+                            />
+                            <span className="text-sm text-gray-500">
+                              .{replyFile.name.split('.').pop()}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   <Button
                     onClick={handleDialogReply}
                     disabled={!dialogReplyMessage.trim() || sendReplyMutation.isPending}
                     className="mt-3 bg-acclaim-teal hover:bg-acclaim-teal/90 w-full"
+                    data-testid="button-send-reply"
                   >
                     <Send className="h-4 w-4 mr-2" />
                     {sendReplyMutation.isPending ? "Sending..." : "Send Reply"}
