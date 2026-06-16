@@ -15,8 +15,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useToast } from "@/hooks/use-toast";
 import ExcelJS from "exceljs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useAuth } from "@/hooks/use-auth";
-import { Users, Building, Plus, Edit, Trash2, Shield, UserPlus, AlertTriangle, ShieldCheck, ShieldAlert, ArrowLeft, Activity, FileText, CreditCard, Archive, ArchiveRestore, Download, Check, Eye, EyeOff, Mail, Bell, BellOff, FilePlus, FileX, BarChart3, Search, Crown, Calendar, CalendarOff, Pencil, LogOut, RefreshCw, ChevronDown, ChevronUp, Clock, Send, History, KeyRound, Copy } from "lucide-react";
+import { Users, Building, Plus, Edit, Trash2, Shield, UserPlus, AlertTriangle, ShieldCheck, ShieldAlert, ArrowLeft, Activity, FileText, CreditCard, Archive, ArchiveRestore, Download, Check, Eye, EyeOff, Mail, Bell, BellOff, FilePlus, FileX, BarChart3, Search, Crown, Calendar, CalendarOff, Pencil, LogOut, RefreshCw, ChevronDown, ChevronUp, Clock, Send, History, KeyRound, Copy, HelpCircle } from "lucide-react";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { createUserSchema, updateUserSchema, createOrganisationSchema, updateOrganisationSchema } from "@shared/schema";
@@ -3868,7 +3869,7 @@ export default function AdminEnhanced() {
                   )}
 
                   <p className="text-xs text-muted-foreground">
-                    “Time to last payment / conclusion” is measured for closed cases only, from the case opening date to the last payment received — so a case settled for less than the full debt counts the same as one paid in full. Closed cases with no payments have no recovery time to show.
+                    “Time to last payment / conclusion” only counts cases that are now closed. It measures from the day the case opened to the day the last payment came in, so a debt settled for less than the full amount counts the same as one paid in full. A closed case that never received a payment shows “No recovery”. See the FAQ below for more detail.
                   </p>
 
                   {/* Per-case breakdown */}
@@ -3913,6 +3914,107 @@ export default function AdminEnhanced() {
                         ))}
                       </tbody>
                     </table>
+                  </div>
+
+                  {/* FAQ */}
+                  <div className="rounded-lg border p-4 space-y-3" data-testid="recovery-faq">
+                    <div className="flex items-center gap-2">
+                      <HelpCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                      <h3 className="text-sm font-semibold">Frequently asked questions</h3>
+                    </div>
+                    <Accordion type="single" collapsible className="w-full">
+                      <AccordionItem value="faq-first-vs-conclusion" data-testid="faq-first-vs-conclusion">
+                        <AccordionTrigger className="text-sm text-left">
+                          Why is the average time to first payment sometimes higher than the average time to conclusion?
+                        </AccordionTrigger>
+                        <AccordionContent className="text-sm text-muted-foreground space-y-2">
+                          <p>
+                            It looks odd, because for any single case the last payment can never come before the first one. The reason is that the two averages are worked out over <strong>different groups of cases</strong>:
+                          </p>
+                          <ul className="list-disc pl-5 space-y-1">
+                            <li><strong>Time to first payment</strong> is averaged across every case that has received a payment — including cases that are still open.</li>
+                            <li><strong>Time to last payment / conclusion</strong> is averaged across only the cases that are now closed.</li>
+                          </ul>
+                          <p>
+                            Cases that close quickly tend to be the straightforward ones, so they pull the conclusion average down. Meanwhile a case that takes a long time to make its first payment but is still open pushes the first-payment average up and is not counted in conclusion at all. So the two figures can move in opposite directions even though nothing is wrong.
+                          </p>
+                          <p>
+                            Tip: in the table above, the cases showing <strong>“Open”</strong> in the last column are the ones included in first-payment but excluded from conclusion.
+                          </p>
+                        </AccordionContent>
+                      </AccordionItem>
+
+                      <AccordionItem value="faq-first-payment" data-testid="faq-first-payment">
+                        <AccordionTrigger className="text-sm text-left">
+                          What does “time to first payment” mean?
+                        </AccordionTrigger>
+                        <AccordionContent className="text-sm text-muted-foreground space-y-2">
+                          <p>
+                            The number of days from when the case was opened to the day the <strong>first</strong> payment was received. It is averaged across every case that has received at least one payment, whether or not the case is closed.
+                          </p>
+                        </AccordionContent>
+                      </AccordionItem>
+
+                      <AccordionItem value="faq-weighted" data-testid="faq-weighted">
+                        <AccordionTrigger className="text-sm text-left">
+                          What does “amount-weighted recovery” mean?
+                        </AccordionTrigger>
+                        <AccordionContent className="text-sm text-muted-foreground space-y-2">
+                          <p>
+                            It measures how quickly the <strong>money</strong> comes in, not just the first payment. Each pound recovered is weighted by how long it took to arrive, so a case where most of the debt is paid early scores better than one where most is paid much later. It is the fairest single measure of recovery speed when payments arrive in instalments.
+                          </p>
+                        </AccordionContent>
+                      </AccordionItem>
+
+                      <AccordionItem value="faq-conclusion" data-testid="faq-conclusion">
+                        <AccordionTrigger className="text-sm text-left">
+                          What does “time to last payment / conclusion” mean?
+                        </AccordionTrigger>
+                        <AccordionContent className="text-sm text-muted-foreground space-y-2">
+                          <p>
+                            For cases that are now <strong>closed</strong>, it is the number of days from when the case was opened to the <strong>last</strong> payment received. A debt settled for less than the full amount counts the same as one paid in full — what matters is when the money finished coming in.
+                          </p>
+                          <p>
+                            Only closed cases that received at least one payment are counted, so this figure is usually based on fewer cases than the others (the count is shown next to the headline figure). Closed cases with no payment show “No recovery” and are not part of the average.
+                          </p>
+                        </AccordionContent>
+                      </AccordionItem>
+
+                      <AccordionItem value="faq-open-norecovery" data-testid="faq-open-norecovery">
+                        <AccordionTrigger className="text-sm text-left">
+                          What do “Open” and “No recovery” mean in the conclusion column?
+                        </AccordionTrigger>
+                        <AccordionContent className="text-sm text-muted-foreground space-y-2">
+                          <ul className="list-disc pl-5 space-y-1">
+                            <li><strong>Open</strong> — the case has not been closed yet, so there is no conclusion time to measure. These cases are left out of the conclusion average.</li>
+                            <li><strong>No recovery</strong> — the case is closed but never received any payment, so there is no recovery time to show.</li>
+                          </ul>
+                        </AccordionContent>
+                      </AccordionItem>
+
+                      <AccordionItem value="faq-est-nostart" data-testid="faq-est-nostart">
+                        <AccordionTrigger className="text-sm text-left">
+                          What do the “Est.” and “No start date” labels mean?
+                        </AccordionTrigger>
+                        <AccordionContent className="text-sm text-muted-foreground space-y-2">
+                          <ul className="list-disc pl-5 space-y-1">
+                            <li><strong>Est.</strong> — the case had no recorded opening entry, so the date it was added to the portal was used as the start date instead. The timing is an estimate but is still included in the averages.</li>
+                            <li><strong>No start date</strong> — the recorded opening date falls after the first payment (usually older cases brought across from the previous system). Recovery time can’t be measured reliably, so these cases are left out of the averages.</li>
+                          </ul>
+                        </AccordionContent>
+                      </AccordionItem>
+
+                      <AccordionItem value="faq-concluded" data-testid="faq-concluded">
+                        <AccordionTrigger className="text-sm text-left">
+                          When does a case count as concluded?
+                        </AccordionTrigger>
+                        <AccordionContent className="text-sm text-muted-foreground space-y-2">
+                          <p>
+                            As soon as the case is marked <strong>closed</strong> in the system — whether it was paid in full, settled for less, or aborted. If a matter has finished but is still showing as live, it won’t appear in the conclusion figures until its status is set to closed.
+                          </p>
+                        </AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
                   </div>
                 </>
               )}
