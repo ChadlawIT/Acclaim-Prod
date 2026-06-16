@@ -3606,14 +3606,14 @@ export default function AdminEnhanced() {
                     </Card>
                     <Card>
                       <CardHeader className="pb-2">
-                        <CardDescription>Average time to full recovery</CardDescription>
+                        <CardDescription>Average time to conclusion</CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <div className="text-3xl font-bold" data-testid="metric-full-recovery-mean">
-                          {formatRecoveryDays(recoveryData.summary.timeToFullRecovery.mean)}
+                        <div className="text-3xl font-bold" data-testid="metric-conclusion-mean">
+                          {formatRecoveryDays(recoveryData.summary.timeToConclusion.mean)}
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Median {formatRecoveryDays(recoveryData.summary.timeToFullRecovery.median)} · {recoveryData.summary.timeToFullRecovery.count} fully recovered &amp; measured
+                          Median {formatRecoveryDays(recoveryData.summary.timeToConclusion.median)} · {recoveryData.summary.timeToConclusion.count} closed case{recoveryData.summary.timeToConclusion.count !== 1 ? 's' : ''} measured
                         </p>
                       </CardContent>
                     </Card>
@@ -3657,6 +3657,10 @@ export default function AdminEnhanced() {
                     </p>
                   )}
 
+                  <p className="text-xs text-muted-foreground">
+                    “Time to conclusion” is measured for closed cases only, from the case opening date to the last payment received — so a case settled for less than the full debt counts the same as one paid in full. Closed cases with no payments have no recovery time to show.
+                  </p>
+
                   {/* Per-case breakdown */}
                   <div className="rounded-lg border overflow-x-auto">
                     <table className="w-full text-sm">
@@ -3667,7 +3671,7 @@ export default function AdminEnhanced() {
                           <th className="p-3 font-medium">Opened</th>
                           <th className="p-3 font-medium text-right">To first payment</th>
                           <th className="p-3 font-medium text-right">Weighted recovery</th>
-                          <th className="p-3 font-medium text-right">To full recovery</th>
+                          <th className="p-3 font-medium text-right">To conclusion</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -3689,9 +3693,11 @@ export default function AdminEnhanced() {
                             <td className="p-3 text-right whitespace-nowrap">{formatRecoveryDays(row.timeToFirstPaymentDays)}</td>
                             <td className="p-3 text-right whitespace-nowrap">{formatRecoveryDays(row.weightedRecoveryDays)}</td>
                             <td className="p-3 text-right whitespace-nowrap">
-                              {row.settled
-                                ? formatRecoveryDays(row.timeToFullRecoveryDays)
-                                : <span className="text-muted-foreground">Not yet</span>}
+                              {row.concluded
+                                ? (row.timeToConclusionDays != null
+                                    ? formatRecoveryDays(row.timeToConclusionDays)
+                                    : <span className="text-muted-foreground">No recovery</span>)
+                                : <span className="text-muted-foreground">Open</span>}
                             </td>
                           </tr>
                         ))}

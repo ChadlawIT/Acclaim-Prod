@@ -23,8 +23,8 @@ export interface RecoveryCaseRow {
   unreliableStart: boolean;
   timeToFirstPaymentDays: number | null;
   weightedRecoveryDays: number | null;
-  settled: boolean;
-  timeToFullRecoveryDays: number | null;
+  concluded: boolean;
+  timeToConclusionDays: number | null;
 }
 
 export interface RecoveryReportResult {
@@ -32,12 +32,12 @@ export interface RecoveryReportResult {
     totalCases: number;
     casesWithPayments: number;
     casesNoPayments: number;
-    settledCases: number;
+    concludedCases: number;
     fallbackStartUsed: number;
     unreliableStartCases: number;
     timeToFirstPayment: RecoveryMetric;
     weightedRecovery: RecoveryMetric;
-    timeToFullRecovery: RecoveryMetric;
+    timeToConclusion: RecoveryMetric;
   };
   cases: RecoveryCaseRow[];
 }
@@ -107,12 +107,12 @@ export async function computeRecoveryPerformance(
 
   const ttfDays: number[] = [];
   const weightedDays: number[] = [];
-  const ttrDays: number[] = [];
+  const ttcDays: number[] = [];
 
   let totalCases = 0;
   let casesWithPayments = 0;
   let casesNoPayments = 0;
-  let settledCases = 0;
+  let concludedCases = 0;
   let fallbackStartUsed = 0;
   let unreliableStartCases = 0;
 
@@ -140,6 +140,13 @@ export async function computeRecoveryPerformance(
     totalCases++;
     if (usedFallback) fallbackStartUsed++;
 
+    // A case is "concluded" once it has been closed (paid in full, settled for less, or
+    // aborted). We do not need a recorded close date: recovery timing is taken from the
+    // payments themselves (see below), and a case with no payments simply has no recovery
+    // time to measure.
+    const isClosed = (c.status || "").trim().toLowerCase() === "closed";
+    if (isClosed) concludedCases++;
+
     const casePayments = (paymentsByCase.get(c.id) || [])
       .slice()
       .sort((a, b) => a.date.getTime() - b.date.getTime());
@@ -156,31 +163,12 @@ export async function computeRecoveryPerformance(
         unreliableStart: false,
         timeToFirstPaymentDays: null,
         weightedRecoveryDays: null,
-        settled: false,
-        timeToFullRecoveryDays: null,
+        concluded: isClosed,
+        timeToConclusionDays: null,
       });
       continue;
     }
     casesWithPayments++;
-
-    // Full recovery is judged on ORIGINAL debt vs payments only (costs/interest/fees
-    // are ignored, as they can be negotiated). Settled when cumulative payments first
-    // cover the original amount. This status is independent of the start date.
-    const original = parseFloat(c.originalAmount || "0");
-    let settled = false;
-    let settleDate: Date | null = null;
-    if (original > 0) {
-      let cumulative = 0;
-      for (const p of casePayments) {
-        cumulative += p.amount;
-        if (cumulative >= original) {
-          settled = true;
-          settleDate = p.date;
-          break;
-        }
-      }
-    }
-    if (settled) settledCases++;
 
     // A start date that lands AFTER the first payment is impossible in reality and means
     // the recorded "opened" date is unreliable (common with migrated data, where the
@@ -200,8 +188,8 @@ export async function computeRecoveryPerformance(
         unreliableStart: true,
         timeToFirstPaymentDays: null,
         weightedRecoveryDays: null,
-        settled,
-        timeToFullRecoveryDays: null,
+        concluded: isClosed,
+        timeToConclusionDays: null,
       });
       continue;
     }
@@ -221,10 +209,13 @@ export async function computeRecoveryPerformance(
     const weighted = amountSum > 0 ? weightedSum / amountSum : null;
     if (weighted !== null) weightedDays.push(weighted);
 
-    let ttr: number | null = null;
-    if (settled && settleDate) {
-      ttr = Math.max(0, dayDiff(settleDate, openDate));
-      ttrDays.push(ttr);
+    // Time to conclusion: for closed cases, recovery concludes at the LAST payment. This
+    // treats paid-in-full and settled-for-less identically, and needs no close date.
+    let ttc: number | null = null;
+    if (isClosed) {
+      const lastPayment = casePayments[casePayments.length - 1].date;
+      ttc = Math.max(0, dayDiff(lastPayment, openDate));
+      ttcDays.push(ttc);
     }
 
     caseRows.push({
@@ -237,8 +228,8 @@ export async function computeRecoveryPerformance(
       unreliableStart: false,
       timeToFirstPaymentDays: ttf,
       weightedRecoveryDays: weighted,
-      settled,
-      timeToFullRecoveryDays: ttr,
+      concluded: isClosed,
+      timeToConclusionDays: ttc,
     });
   }
 
@@ -247,12 +238,12 @@ export async function computeRecoveryPerformance(
       totalCases,
       casesWithPayments,
       casesNoPayments,
-      settledCases,
+      concludedCases,
       fallbackStartUsed,
       unreliableStartCases,
       timeToFirstPayment: { mean: mean(ttfDays), median: median(ttfDays), count: ttfDays.length },
       weightedRecovery: { mean: mean(weightedDays), median: median(weightedDays), count: weightedDays.length },
-      timeToFullRecovery: { mean: mean(ttrDays), median: median(ttrDays), count: ttrDays.length },
+      timeToConclusion: { mean: mean(ttcDays), median: median(ttcDays), count: ttcDays.length },
     },
     cases: caseRows,
   };
