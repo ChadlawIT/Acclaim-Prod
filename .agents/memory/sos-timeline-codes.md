@@ -21,8 +21,13 @@ around the code can change; the code itself is the stable identifier.
 ## Activity dates
 The external API stores the SOS-provided activity date **into `case_activities.createdAt`**, so
 `createdAt` is the real action date, not an ingest timestamp. Use it directly for timelines.
-When a TL0001 entry is absent, fall back to `cases.createdAt` (and count fallbacks so the report
-can disclose how many start dates were estimated).
+When a TL0001 entry is absent, the recovery/payment-performance report's case-opened date is
+resolved in reliability order: (1) earliest TL0001 entry, (2) **earliest timeline activity of any
+code** (e.g. an older "Case created" entry), (3) `cases.createdAt` (only this last one is flagged
+`usedFallback`/estimated). The earliest-activity step exists because the timeline contains **only**
+SOS-pushed `case_activities` (portal actions never create activities), so its earliest entry is a far
+better start date than the portal ingest date — and TL0001 is NOT present on every case's opener.
+The TL0001 code can sit in `description` OR `activity_type`, so match/regex-test **both** fields.
 
 **Ingest must set createdAt explicitly.** Both external activity endpoints (single
 `POST /api/external/cases/:externalRef/activities` and bulk `POST /api/external/activities/bulk`)

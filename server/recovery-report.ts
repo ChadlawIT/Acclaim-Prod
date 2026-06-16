@@ -71,7 +71,7 @@ function median(values: number[]): number | null {
 export async function computeRecoveryPerformance(
   filters: RecoveryFilters = {},
 ): Promise<RecoveryReportResult> {
-  const { cases, payments, openActivities } = await storage.getRecoveryReportData();
+  const { cases, payments, openActivities, earliestActivities } = await storage.getRecoveryReportData();
 
   // Index payments by case (valid amount + date only)
   const paymentsByCase = new Map<number, { amount: number; date: Date }[]>();
@@ -84,14 +84,25 @@ export async function computeRecoveryPerformance(
     paymentsByCase.set(p.caseId, list);
   }
 
-  // Earliest TL0001 timeline entry per case = the "case opened" date
+  // Earliest TL0001 timeline entry per case = the "case opened" date. The code may sit in
+  // the description or the activity_type, so check both.
   const openDateByCase = new Map<number, Date>();
   for (const a of openActivities) {
-    if (!a.createdAt || !a.description) continue;
-    if (!TL0001_REGEX.test(a.description)) continue;
+    if (!a.createdAt) continue;
+    const hasCode = TL0001_REGEX.test(a.description || "") || TL0001_REGEX.test(a.activityType || "");
+    if (!hasCode) continue;
     const date = new Date(a.createdAt);
     const existing = openDateByCase.get(a.caseId);
     if (!existing || date < existing) openDateByCase.set(a.caseId, date);
+  }
+
+  // Earliest timeline activity per case (any SOS entry). Used as the case-opened date when
+  // no explicit TL0001 entry exists, since the timeline only ever contains SOS-pushed
+  // events — its earliest entry is a far better start date than the portal ingest date.
+  const earliestActivityByCase = new Map<number, Date>();
+  for (const a of earliestActivities) {
+    if (!a.createdAt) continue;
+    earliestActivityByCase.set(a.caseId, new Date(a.createdAt));
   }
 
   const ttfDays: number[] = [];
@@ -111,8 +122,11 @@ export async function computeRecoveryPerformance(
     if (filters.organisationId && c.organisationId !== filters.organisationId) continue;
     if (filters.debtorType && c.debtorType !== filters.debtorType) continue;
 
-    // Determine the case-opened date: TL0001 entry, else fall back to portal createdAt
-    let openDate = openDateByCase.get(c.id) || null;
+    // Determine the case-opened date, in order of reliability:
+    //   1. The explicit TL0001 "case opened" timeline entry.
+    //   2. The earliest timeline activity (any SOS entry, e.g. an older "Case created").
+    //   3. Fall back to the portal createdAt date (flagged as an estimate).
+    let openDate = openDateByCase.get(c.id) || earliestActivityByCase.get(c.id) || null;
     let usedFallback = false;
     if (!openDate) {
       if (!c.createdAt) continue; // no usable start date at all

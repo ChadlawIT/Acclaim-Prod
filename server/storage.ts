@@ -103,7 +103,8 @@ export interface IStorage {
   getRecoveryReportData(): Promise<{
     cases: Array<{ id: number; accountNumber: string; caseName: string; organisationId: number; organisationName: string | null; debtorType: string; originalAmount: string; status: string; createdAt: Date | null }>;
     payments: Array<{ caseId: number; amount: string; paymentDate: Date }>;
-    openActivities: Array<{ caseId: number; description: string; createdAt: Date | null }>;
+    openActivities: Array<{ caseId: number; description: string; activityType: string; createdAt: Date | null }>;
+    earliestActivities: Array<{ caseId: number; createdAt: Date | null }>;
   }>; // Admin only - raw data for the recovery performance report
   getAllCasesIncludingArchived(): Promise<Case[]>; // Admin only - get all cases including archived ones
   getClosedCasesWithDateFilter(startDate?: Date, endDate?: Date): Promise<Case[]>; // Admin only - get closed cases with date filter
@@ -874,7 +875,8 @@ export class DatabaseStorage implements IStorage {
   async getRecoveryReportData(): Promise<{
     cases: Array<{ id: number; accountNumber: string; caseName: string; organisationId: number; organisationName: string | null; debtorType: string; originalAmount: string; status: string; createdAt: Date | null }>;
     payments: Array<{ caseId: number; amount: string; paymentDate: Date }>;
-    openActivities: Array<{ caseId: number; description: string; createdAt: Date | null }>;
+    openActivities: Array<{ caseId: number; description: string; activityType: string; createdAt: Date | null }>;
+    earliestActivities: Array<{ caseId: number; createdAt: Date | null }>;
   }> {
     // Admin only - lean bulk fetch for the recovery performance report (non-archived cases)
     const caseRows = await db
@@ -895,7 +897,7 @@ export class DatabaseStorage implements IStorage {
 
     const caseIds = caseRows.map((c) => c.id);
     if (caseIds.length === 0) {
-      return { cases: caseRows, payments: [], openActivities: [] };
+      return { cases: caseRows, payments: [], openActivities: [], earliestActivities: [] };
     }
 
     const paymentRows = await db
@@ -903,15 +905,27 @@ export class DatabaseStorage implements IStorage {
       .from(payments)
       .where(inArray(payments.caseId, caseIds));
 
-    // The "case opened" timeline entry is identified by the SOS code TL0001 within the
-    // description text (the wording can change, the code should not). Pre-filter cheaply
+    // The "case opened" timeline entry is identified by the SOS code TL0001. The code can
+    // live in either the description or the activity_type, so pre-filter cheaply on both
     // with ILIKE; the caller applies a strict boundary check.
     const activityRows = await db
-      .select({ caseId: caseActivities.caseId, description: caseActivities.description, createdAt: caseActivities.createdAt })
+      .select({ caseId: caseActivities.caseId, description: caseActivities.description, activityType: caseActivities.activityType, createdAt: caseActivities.createdAt })
       .from(caseActivities)
-      .where(and(inArray(caseActivities.caseId, caseIds), sql`${caseActivities.description} ILIKE '%TL0001%'`));
+      .where(and(
+        inArray(caseActivities.caseId, caseIds),
+        sql`(${caseActivities.description} ILIKE '%TL0001%' OR ${caseActivities.activityType} ILIKE '%TL0001%')`,
+      ));
 
-    return { cases: caseRows, payments: paymentRows, openActivities: activityRows };
+    // Earliest timeline activity per case. Timeline entries are pushed only by SOS (never
+    // by portal actions), so the earliest one is a reliable proxy for the case-opened date
+    // when no explicit TL0001 entry is present (e.g. older "Case created" entries).
+    const earliestRows = await db
+      .select({ caseId: caseActivities.caseId, createdAt: sql<Date | null>`min(${caseActivities.createdAt})` })
+      .from(caseActivities)
+      .where(inArray(caseActivities.caseId, caseIds))
+      .groupBy(caseActivities.caseId);
+
+    return { cases: caseRows, payments: paymentRows, openActivities: activityRows, earliestActivities: earliestRows };
   }
 
   async getAllCasesIncludingArchived(): Promise<Case[]> {
