@@ -5845,13 +5845,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             continue;
           }
           
-          // Create case activity
+          // Create case activity - use provided date or default to now
           await storage.addCaseActivity({
             caseId: case_.id,
             activityType,
             description,
             performedBy,
-            // activityDate: activityDate ? new Date(activityDate) : new Date(), // Remove non-existent field
+            createdAt: activityDate ? new Date(activityDate) : new Date(),
           });
           
           results.created++;

@@ -23,3 +23,14 @@ The external API stores the SOS-provided activity date **into `case_activities.c
 `createdAt` is the real action date, not an ingest timestamp. Use it directly for timelines.
 When a TL0001 entry is absent, fall back to `cases.createdAt` (and count fallbacks so the report
 can disclose how many start dates were estimated).
+
+**Ingest must set createdAt explicitly.** Both external activity endpoints (single
+`POST /api/external/cases/:externalRef/activities` and bulk `POST /api/external/activities/bulk`)
+must pass `createdAt: activityDate ? new Date(activityDate) : new Date()`. The column defaults to
+`now()`, so if an endpoint omits it the row silently gets the **ingest timestamp** (≈ portal-creation
+date), not the SOS action date. The bulk endpoint had this bug for a long time (the assignment was
+commented out, the author having wrongly tried a non-existent `activityDate` key instead of
+`createdAt`). Symptom in the recovery/payment-performance report: a case shows its portal date as
+"Date Opened" and is flagged "No start date" (unreliableStart, open date after first payment) even
+though the timeline shows a TL0001 entry — because that TL0001 row carries the ingest date.
+**Why:** rows already ingested keep the wrong date; only re-pushed activities get corrected.
