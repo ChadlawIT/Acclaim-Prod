@@ -2727,6 +2727,34 @@ export default function AdminEnhanced() {
     return org?.name || `Organisation ${orgId}`;
   };
 
+  // Compact, clickable badge summarising a user's organisation assignments.
+  // Clicking it opens the "Manage Organisation Assignments" dialog where
+  // owners can be set, organisations removed, or new ones assigned.
+  const renderOrgBadge = (user: User) => {
+    const orgs = (user as any).organisations || [];
+    const legacyCount = user.organisationName ? 1 : 0;
+    const count = orgs.length + legacyCount;
+    const hasOwner = orgs.some((o: any) => o.role === 'owner');
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          setSelectedUser(user);
+          setSelectedOrgId("none");
+          setOrgAssignPopoverOpen(false);
+          setShowAssignUser(true);
+        }}
+        className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors hover:bg-acclaim-teal/10 hover:border-acclaim-teal ${count === 0 ? 'border-amber-300 text-amber-700 bg-amber-50 dark:bg-amber-900/20' : 'border-gray-200 text-gray-700 dark:border-gray-600 dark:text-gray-200'}`}
+        title="Manage organisations"
+        data-testid={`button-manage-orgs-${user.id}`}
+      >
+        <Building className="h-3 w-3" />
+        {count === 0 ? 'Unassigned' : `${count} ${count === 1 ? 'organisation' : 'organisations'}`}
+        {hasOwner && <Crown className="h-3 w-3 text-amber-500" />}
+      </button>
+    );
+  };
+
   // Assign user to organisation mutation
   const assignUserMutation = useMutation({
     mutationFn: async ({ userId, organisationId }: { userId: string; organisationId: number }) => {
@@ -2912,13 +2940,21 @@ export default function AdminEnhanced() {
       const response = await apiRequest("PUT", `/api/admin/users/${userId}/organisations/${organisationId}/role`, { role });
       return await response.json();
     },
-    onSuccess: (_, variables) => {
+    onSuccess: async (_, variables) => {
       const roleLabel = variables.role === 'owner' ? 'Organisation Owner' : 'Member';
       toast({
         title: "Role Updated",
         description: `User is now a ${roleLabel}`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users-with-orgs"] });
+      await queryClient.refetchQueries({ queryKey: ["/api/admin/users-with-orgs"] });
+      if (selectedUser) {
+        const freshUsers = queryClient.getQueryData<User[]>(["/api/admin/users-with-orgs"]);
+        const updatedUser = freshUsers?.find(u => u.id === selectedUser.id);
+        if (updatedUser) {
+          setSelectedUser(updatedUser);
+        }
+      }
     },
     onError: (error) => {
       toast({
@@ -4101,77 +4137,9 @@ export default function AdminEnhanced() {
                         <span>{user.phone || "-"}</span>
                       </div>
                       
-                      <div className="space-y-1">
+                      <div className="flex items-center justify-between">
                         <span className="text-gray-600">Organisations:</span>
-                        <div className="space-y-1">
-                          {/* Legacy organisation (from organisationId field) */}
-                          {user.organisationName && (
-                            <div className="flex items-center gap-1">
-                              <Badge variant="outline" className="text-xs">
-                                {user.organisationName}
-                              </Badge>
-                              <span className="text-xs text-gray-500">(legacy)</span>
-                            </div>
-                          )}
-                          {/* Additional organisations (from junction table) */}
-                          {(user as any).organisations?.map((org: Organisation & { role?: string }) => (
-                            <div key={org.id} className="flex items-center gap-1 flex-wrap">
-                              <Badge variant="outline" className="text-xs">
-                                {org.name}
-                              </Badge>
-                              {org.role === 'owner' && (
-                                <Badge variant="default" className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
-                                  <Crown className="h-2.5 w-2.5 mr-0.5" />
-                                  Owner
-                                </Badge>
-                              )}
-                              {!user.isAdmin && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className={`h-5 px-1 text-xs ${org.role === 'owner' ? 'text-amber-600 hover:text-amber-800' : 'text-gray-500 hover:text-gray-700'}`}
-                                  onClick={() => {
-                                    const newRole = org.role === 'owner' ? 'member' : 'owner';
-                                    const action = newRole === 'owner' ? 'make an Owner of' : 'remove as Owner from';
-                                    const confirmation = confirm(`${action} ${org.name} for ${user.firstName} ${user.lastName}?`);
-                                    if (confirmation) {
-                                      setUserOrgRoleMutation.mutate({
-                                        userId: user.id,
-                                        organisationId: org.id,
-                                        role: newRole
-                                      });
-                                    }
-                                  }}
-                                  disabled={setUserOrgRoleMutation.isPending}
-                                  title={org.role === 'owner' ? 'Remove Owner role' : 'Make Owner'}
-                                >
-                                  <Crown className="h-3 w-3" />
-                                </Button>
-                              )}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-3 w-3 p-0 text-red-500 hover:text-red-700"
-                                onClick={() => {
-                                  const confirmation = confirm(`Remove ${user.firstName} ${user.lastName} from ${org.name}?`);
-                                  if (confirmation) {
-                                    removeUserFromOrgMutation.mutate({
-                                      userId: user.id,
-                                      organisationId: org.id
-                                    });
-                                  }
-                                }}
-                                disabled={removeUserFromOrgMutation.isPending}
-                                title={`Remove from ${org.name}`}
-                              >
-                                ×
-                              </Button>
-                            </div>
-                          ))}
-                          {!user.organisationName && !(user as any).organisations?.length && (
-                            <Badge variant="secondary" className="text-xs">Unassigned</Badge>
-                          )}
-                        </div>
+                        {renderOrgBadge(user)}
                       </div>
                     </div>
                     
@@ -4469,72 +4437,7 @@ export default function AdminEnhanced() {
                         </TableCell>
                         <TableCell>{user.phone || "-"}</TableCell>
                         <TableCell>
-                          <div className="space-y-1">
-                            {/* Legacy organisation (from organisationId field) */}
-                            {user.organisationName && (
-                              <Badge variant="outline" className="mr-1 mb-1">
-                                {user.organisationName}
-                              </Badge>
-                            )}
-                            {/* Additional organisations (from junction table) */}
-                            {(user as any).organisations?.map((org: Organisation & { role?: string }) => (
-                              <div key={org.id} className="flex items-center gap-1 mb-1 flex-wrap">
-                                <Badge variant="outline" className="mr-1">
-                                  {org.name}
-                                </Badge>
-                                {org.role === 'owner' && (
-                                  <Badge variant="default" className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 mr-1">
-                                    <Crown className="h-2.5 w-2.5 mr-0.5" />
-                                    Owner
-                                  </Badge>
-                                )}
-                                {!user.isAdmin && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className={`h-5 w-5 p-0 ${org.role === 'owner' ? 'text-amber-600 hover:text-amber-800' : 'text-gray-400 hover:text-gray-600'}`}
-                                    onClick={() => {
-                                      const newRole = org.role === 'owner' ? 'member' : 'owner';
-                                      const action = newRole === 'owner' ? 'make an Owner of' : 'remove as Owner from';
-                                      const confirmation = confirm(`${action} ${org.name} for ${user.firstName} ${user.lastName}?`);
-                                      if (confirmation) {
-                                        setUserOrgRoleMutation.mutate({
-                                          userId: user.id,
-                                          organisationId: org.id,
-                                          role: newRole
-                                        });
-                                      }
-                                    }}
-                                    disabled={setUserOrgRoleMutation.isPending}
-                                    title={org.role === 'owner' ? 'Remove Owner role' : 'Make Owner'}
-                                  >
-                                    <Crown className="h-3 w-3" />
-                                  </Button>
-                                )}
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-4 w-4 p-0 text-red-500 hover:text-red-700"
-                                  onClick={() => {
-                                    const confirmation = confirm(`Remove ${user.firstName} ${user.lastName} from ${org.name}?`);
-                                    if (confirmation) {
-                                      removeUserFromOrgMutation.mutate({
-                                        userId: user.id,
-                                        organisationId: org.id
-                                      });
-                                    }
-                                  }}
-                                  disabled={removeUserFromOrgMutation.isPending}
-                                  title={`Remove from ${org.name}`}
-                                >
-                                  ×
-                                </Button>
-                              </div>
-                            ))}
-                            {!user.organisationName && !(user as any).organisations?.length && (
-                              <Badge variant="secondary">Unassigned</Badge>
-                            )}
-                          </div>
+                          {renderOrgBadge(user)}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center space-x-2">
@@ -6134,32 +6037,66 @@ export default function AdminEnhanced() {
                   </div>
                 )}
                 {/* Additional organisations (from junction table) */}
-                {(selectedUser as any)?.organisations?.map((org: Organisation) => (
-                  <div key={org.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                    <div className="flex items-center gap-2">
+                {(selectedUser as any)?.organisations?.map((org: Organisation & { role?: string }) => (
+                  <div key={org.id} className="flex items-center justify-between gap-2 p-2 bg-gray-50 rounded flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <Badge variant="outline">{org.name}</Badge>
+                      {org.role === 'owner' && (
+                        <Badge variant="default" className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                          <Crown className="h-2.5 w-2.5 mr-0.5" />
+                          Owner
+                        </Badge>
+                      )}
                       {org.externalRef && (
                         <span className="text-xs text-gray-500">Ref: {org.externalRef}</span>
                       )}
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-red-500 hover:text-red-700"
-                      onClick={() => {
-                        const confirmation = confirm(`Remove ${selectedUser?.firstName} ${selectedUser?.lastName} from ${org.name}?`);
-                        if (confirmation) {
-                          removeUserFromOrgMutation.mutate({
-                            userId: selectedUser!.id,
-                            organisationId: org.id
-                          });
-                        }
-                      }}
-                      disabled={removeUserFromOrgMutation.isPending}
-                      title={`Remove from ${org.name}`}
-                    >
-                      Remove
-                    </Button>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      {!selectedUser?.isAdmin && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className={`h-8 text-xs ${org.role === 'owner' ? 'text-amber-600 border-amber-300 hover:text-amber-800' : 'text-gray-600 hover:text-gray-800'}`}
+                          onClick={() => {
+                            const newRole = org.role === 'owner' ? 'member' : 'owner';
+                            const action = newRole === 'owner' ? 'make an Owner of' : 'remove as Owner from';
+                            const confirmation = confirm(`${action} ${org.name} for ${selectedUser?.firstName} ${selectedUser?.lastName}?`);
+                            if (confirmation) {
+                              setUserOrgRoleMutation.mutate({
+                                userId: selectedUser!.id,
+                                organisationId: org.id,
+                                role: newRole
+                              });
+                            }
+                          }}
+                          disabled={setUserOrgRoleMutation.isPending}
+                          title={org.role === 'owner' ? 'Remove Owner role' : 'Make Owner'}
+                          data-testid={`button-toggle-owner-${org.id}`}
+                        >
+                          <Crown className="h-3 w-3 mr-1" />
+                          {org.role === 'owner' ? 'Remove Owner' : 'Make Owner'}
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 text-xs text-red-500 hover:text-red-700"
+                        onClick={() => {
+                          const confirmation = confirm(`Remove ${selectedUser?.firstName} ${selectedUser?.lastName} from ${org.name}?`);
+                          if (confirmation) {
+                            removeUserFromOrgMutation.mutate({
+                              userId: selectedUser!.id,
+                              organisationId: org.id
+                            });
+                          }
+                        }}
+                        disabled={removeUserFromOrgMutation.isPending}
+                        title={`Remove from ${org.name}`}
+                        data-testid={`button-remove-org-${org.id}`}
+                      >
+                        Remove
+                      </Button>
+                    </div>
                   </div>
                 ))}
                 {!selectedUser?.organisationName && !(selectedUser as any)?.organisations?.length && (
