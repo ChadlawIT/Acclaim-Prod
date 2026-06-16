@@ -321,6 +321,7 @@ function CaseManagementTab({ isSuperAdmin = false }: { isSuperAdmin?: boolean })
   const [archiveConfirmCase, setArchiveConfirmCase] = useState<Case | null>(null);
   const [showNewCaseDialog, setShowNewCaseDialog] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const casesTableTopRef = useRef<HTMLDivElement>(null);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [caseSearchFilter, setCaseSearchFilter] = useState("");
   const [restrictAccessCase, setRestrictAccessCase] = useState<Case | null>(null);
@@ -777,6 +778,8 @@ function CaseManagementTab({ isSuperAdmin = false }: { isSuperAdmin?: boolean })
         </div>
       </div>
       
+      {/* Scroll anchor for pagination */}
+      <div ref={casesTableTopRef} className="scroll-mt-4" />
       {/* Mobile Card Layout */}
       <div className="block sm:hidden space-y-4">
         {paginatedCases.map((case_: Case) => (
@@ -989,7 +992,12 @@ function CaseManagementTab({ isSuperAdmin = false }: { isSuperAdmin?: boolean })
       <Pagination 
         currentPage={currentPage} 
         totalPages={totalPages} 
-        onPageChange={setCurrentPage} 
+        onPageChange={(page) => {
+          setCurrentPage(page);
+          requestAnimationFrame(() => {
+            casesTableTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          });
+        }} 
       />
 
       {/* Delete Confirmation Dialog */}
@@ -1338,6 +1346,7 @@ function CaseSubmissionsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
   const [selectedSubmissions, setSelectedSubmissions] = useState<Set<number>>(new Set());
   const [selectAll, setSelectAll] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const submissionsTableTopRef = useRef<HTMLDivElement>(null);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   // Fetch case submissions
@@ -1631,6 +1640,8 @@ function CaseSubmissionsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
         </Button>
       </div>
 
+      {/* Scroll anchor for pagination */}
+      <div ref={submissionsTableTopRef} className="scroll-mt-4" />
       {/* Submissions Table */}
       <div className="border rounded-lg">
         <Table>
@@ -1858,7 +1869,12 @@ function CaseSubmissionsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
       <Pagination 
         currentPage={currentPage} 
         totalPages={totalPages} 
-        onPageChange={setCurrentPage} 
+        onPageChange={(page) => {
+          setCurrentPage(page);
+          requestAnimationFrame(() => {
+            submissionsTableTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          });
+        }} 
       />
 
       {/* Comprehensive Details Dialog */}
@@ -2264,8 +2280,10 @@ export default function AdminEnhanced() {
   const usersTableTopRef = useRef<HTMLDivElement>(null);
   const [orgsPage, setOrgsPage] = useState(1);
   const [orgsPageSize, setOrgsPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const orgsTableTopRef = useRef<HTMLDivElement>(null);
   const [reportsPage, setReportsPage] = useState(1);
   const [reportsPageSize, setReportsPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const reportsTableTopRef = useRef<HTMLDivElement>(null);
   
   // Search filter state
   const [userSearchFilter, setUserSearchFilter] = useState("");
@@ -4851,6 +4869,8 @@ export default function AdminEnhanced() {
                   {orgSearchFilter && ` (filtered from ${organisations?.length || 0})`}
                 </div>
               </div>
+              {/* Scroll anchor for pagination */}
+              <div ref={orgsTableTopRef} className="scroll-mt-4" />
               {/* Mobile Card Layout */}
               <div className="block sm:hidden space-y-4">
                 {paginatedOrgs?.map((org: Organisation) => {
@@ -5081,7 +5101,12 @@ export default function AdminEnhanced() {
               <Pagination 
                 currentPage={orgsPage} 
                 totalPages={orgsTotalPages} 
-                onPageChange={setOrgsPage} 
+                onPageChange={(page) => {
+                  setOrgsPage(page);
+                  requestAnimationFrame(() => {
+                    orgsTableTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  });
+                }} 
               />
             </CardContent>
           </Card>
@@ -5181,6 +5206,7 @@ export default function AdminEnhanced() {
                 </div>
               ) : (
                 <div className="space-y-3">
+                  <div ref={reportsTableTopRef} className="scroll-mt-4" />
                   {paginatedReports.map((report: any) => {
                     const org = organisations?.find((o: any) => o.id === report.organisationId);
                     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -5435,7 +5461,12 @@ export default function AdminEnhanced() {
                       <p><strong>Organisation reports:</strong> Configure via the Calendar icon in the Organisations tab (sends to external recipients).</p>
                     </div>
                   </div>
-                  <Pagination currentPage={reportsPage} totalPages={reportsTotalPages} onPageChange={setReportsPage} />
+                  <Pagination currentPage={reportsPage} totalPages={reportsTotalPages} onPageChange={(page) => {
+                    setReportsPage(page);
+                    requestAnimationFrame(() => {
+                      reportsTableTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    });
+                  }} />
                 </div>
               )}
             </CardContent>
