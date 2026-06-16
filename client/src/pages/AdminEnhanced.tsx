@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useToast } from "@/hooks/use-toast";
+import ExcelJS from "exceljs";
 import { useAuth } from "@/hooks/use-auth";
 import { Users, Building, Plus, Edit, Trash2, Shield, UserPlus, AlertTriangle, ShieldCheck, ShieldAlert, ArrowLeft, Activity, FileText, CreditCard, Archive, ArchiveRestore, Download, Check, Eye, EyeOff, Mail, Bell, BellOff, FilePlus, FileX, BarChart3, Search, Crown, Calendar, CalendarOff, Pencil, LogOut, RefreshCw, ChevronDown, ChevronUp, Clock, Send, History, KeyRound, Copy } from "lucide-react";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -2427,6 +2428,192 @@ export default function AdminEnhanced() {
     retry: false,
   });
 
+  const recoveryOrgLabel = () => {
+    if (!recoveryOrg || recoveryOrg === "all") return "All organisations";
+    return (organisations as any[]).find((o: any) => String(o.id) === recoveryOrg)?.name || "Unknown";
+  };
+
+  const handleExportRecoveryExcel = async () => {
+    if (!recoveryData || recoveryData.summary?.totalCases === 0) {
+      toast({ title: "No data", description: "No cases available to export.", variant: "destructive" });
+      return;
+    }
+    try {
+      const { summary, cases } = recoveryData;
+      const workbook = new ExcelJS.Workbook();
+      const styleHeader = (sheet: ExcelJS.Worksheet) => {
+        sheet.getRow(1).eachCell((cell) => {
+          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF0F766E" } };
+          cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+          cell.alignment = { horizontal: "center" };
+        });
+      };
+      const fmt = (m: any) => `${formatRecoveryDays(m?.mean)} (median ${formatRecoveryDays(m?.median)}, ${m?.count ?? 0} measured)`;
+      const safeCell = (v: any) => {
+        const s = String(v ?? "");
+        return /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
+      };
+
+      const summarySheet = workbook.addWorksheet("Summary");
+      summarySheet.columns = [
+        { header: "Metric", key: "metric", width: 40 },
+        { header: "Value", key: "value", width: 40 },
+      ];
+      styleHeader(summarySheet);
+      [
+        { metric: "Generated on", value: new Date().toLocaleDateString("en-GB") },
+        { metric: "Organisation", value: safeCell(recoveryOrgLabel()) },
+        { metric: "Cases in scope", value: summary.totalCases },
+        { metric: "With payments", value: summary.casesWithPayments },
+        { metric: "No payments yet", value: summary.casesNoPayments },
+        { metric: "Concluded (closed) cases", value: summary.concludedCases },
+        { metric: "Estimated start date", value: summary.fallbackStartUsed },
+        { metric: "Excluded (no usable start date)", value: summary.unreliableStartCases },
+        { metric: "Amount-weighted time to recovery", value: fmt(summary.weightedRecovery) },
+        { metric: "Time to first payment", value: fmt(summary.timeToFirstPayment) },
+        { metric: "Time to last payment / conclusion", value: fmt(summary.timeToConclusion) },
+      ].forEach((r) => summarySheet.addRow(r));
+
+      const sheet = workbook.addWorksheet("Case Details");
+      sheet.columns = [
+        { header: "Account Number", key: "accountNumber", width: 16 },
+        { header: "Case Name", key: "caseName", width: 28 },
+        { header: "Organisation", key: "organisationName", width: 24 },
+        { header: "Opened", key: "openDate", width: 14 },
+        { header: "Start date note", key: "startNote", width: 16 },
+        { header: "To first payment", key: "ttf", width: 22 },
+        { header: "Weighted recovery", key: "weighted", width: 22 },
+        { header: "To last payment / conclusion", key: "ttc", width: 30 },
+      ];
+      styleHeader(sheet);
+      (cases as any[]).forEach((row: any) => {
+        const startNote = row.unreliableStart ? "No start date" : row.usedFallbackStart ? "Est." : "";
+        const ttc = row.concluded
+          ? (row.timeToConclusionDays != null ? formatRecoveryDays(row.timeToConclusionDays) : "No recovery")
+          : "Open";
+        sheet.addRow({
+          accountNumber: safeCell(row.accountNumber),
+          caseName: safeCell(row.caseName),
+          organisationName: safeCell(row.organisationName || "—"),
+          openDate: new Date(row.openDate).toLocaleDateString("en-GB"),
+          startNote,
+          ttf: formatRecoveryDays(row.timeToFirstPaymentDays),
+          weighted: formatRecoveryDays(row.weightedRecoveryDays),
+          ttc,
+        });
+      });
+      sheet.autoFilter = { from: "A1", to: "H1" };
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `recovery-performance-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "Excel exported", description: "The recovery performance report has been downloaded." });
+    } catch (error) {
+      console.error("Error exporting recovery Excel:", error);
+      toast({ title: "Export failed", description: "Could not generate the Excel file.", variant: "destructive" });
+    }
+  };
+
+  const handleExportRecoveryHtml = () => {
+    if (!recoveryData || recoveryData.summary?.totalCases === 0) {
+      toast({ title: "No data", description: "No cases available to export.", variant: "destructive" });
+      return;
+    }
+    try {
+      const { summary, cases } = recoveryData;
+      const win = window.open("", "_blank");
+      if (!win) throw new Error("Could not open window");
+      const esc = (s: any) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
+      const generatedOn = new Date().toLocaleDateString("en-GB");
+      const metricCard = (label: string, m: any) => `
+        <div class="metric-card">
+          <div class="metric-label">${label}</div>
+          <div class="metric-value">${formatRecoveryDays(m?.mean)}</div>
+          <div class="metric-sub">Median ${formatRecoveryDays(m?.median)} · ${m?.count ?? 0} measured</div>
+        </div>`;
+      const rowsHtml = (cases as any[]).map((row: any) => {
+        const note = row.unreliableStart
+          ? '<span class="badge badge-amber">No start date</span>'
+          : row.usedFallbackStart ? '<span class="badge">Est.</span>' : "";
+        const ttc = row.concluded
+          ? (row.timeToConclusionDays != null ? formatRecoveryDays(row.timeToConclusionDays) : "No recovery")
+          : "Open";
+        return `<tr>
+          <td>${esc(row.caseName)}<div class="muted">${esc(row.accountNumber)}</div></td>
+          <td>${esc(row.organisationName || "—")}</td>
+          <td>${new Date(row.openDate).toLocaleDateString("en-GB")} ${note}</td>
+          <td class="right">${formatRecoveryDays(row.timeToFirstPaymentDays)}</td>
+          <td class="right">${formatRecoveryDays(row.weightedRecoveryDays)}</td>
+          <td class="right">${ttc}</td>
+        </tr>`;
+      }).join("");
+      const html = `<!DOCTYPE html><html><head><meta charset="utf-8" />
+        <title>Recovery Performance Report</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 24px; color: #1f2937; }
+          .header { text-align: center; margin-bottom: 24px; }
+          .header h1 { margin: 0; font-size: 24px; color: #0f766e; }
+          .header p { margin: 4px 0; color: #6b7280; font-size: 13px; }
+          .metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+          .metric-card { padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; }
+          .metric-label { font-size: 13px; color: #6b7280; margin-bottom: 6px; }
+          .metric-value { font-size: 22px; font-weight: bold; color: #0f766e; }
+          .metric-sub { font-size: 11px; color: #6b7280; margin-top: 4px; }
+          .stats { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+          .stat { border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px 14px; min-width: 120px; }
+          .stat .n { font-size: 18px; font-weight: 600; }
+          .stat .l { font-size: 11px; color: #6b7280; }
+          .note { font-size: 12px; color: #6b7280; margin: 6px 0; }
+          table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+          th, td { padding: 8px; border: 1px solid #e5e7eb; font-size: 12px; text-align: left; vertical-align: top; }
+          th { background: #f0fdfa; color: #0f766e; }
+          td.right, th.right { text-align: right; white-space: nowrap; }
+          .muted { font-size: 10px; color: #9ca3af; }
+          .badge { display: inline-block; font-size: 10px; border: 1px solid #cbd5e1; border-radius: 4px; padding: 0 4px; margin-left: 4px; }
+          .badge-amber { border-color: #f59e0b; color: #b45309; }
+          @media print { body { margin: 0; } .no-print { display: none; } }
+        </style></head><body>
+        <div class="header">
+          <h1>Recovery Performance Report</h1>
+          <p>Generated on ${generatedOn} · ${esc(recoveryOrgLabel())}</p>
+        </div>
+        <div class="metrics-grid">
+          ${metricCard("Amount-weighted time to recovery", summary.weightedRecovery)}
+          ${metricCard("Time to first payment", summary.timeToFirstPayment)}
+          ${metricCard("Time to last payment / conclusion", summary.timeToConclusion)}
+        </div>
+        <div class="stats">
+          <div class="stat"><div class="n">${summary.totalCases}</div><div class="l">Cases in scope</div></div>
+          <div class="stat"><div class="n">${summary.casesWithPayments}</div><div class="l">With payments</div></div>
+          <div class="stat"><div class="n">${summary.casesNoPayments}</div><div class="l">No payments yet</div></div>
+          <div class="stat"><div class="n">${summary.concludedCases}</div><div class="l">Concluded (closed)</div></div>
+          <div class="stat"><div class="n">${summary.fallbackStartUsed}</div><div class="l">Estimated start date</div></div>
+          <div class="stat"><div class="n">${summary.unreliableStartCases}</div><div class="l">Excluded (no start date)</div></div>
+        </div>
+        <p class="note">“Time to last payment / conclusion” is measured for closed cases only, from the case opening date to the last payment received — so a case settled for less than the full debt counts the same as one paid in full. Closed cases with no payments have no recovery time to show.</p>
+        <table>
+          <thead><tr>
+            <th>Case</th><th>Organisation</th><th>Opened</th>
+            <th class="right">To first payment</th><th class="right">Weighted recovery</th><th class="right">To last payment / conclusion</th>
+          </tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+        </body></html>`;
+      win.document.write(html);
+      win.document.close();
+      win.onload = () => win.focus();
+      toast({ title: "Report opened", description: "The report opened in a new tab. You can print or save it from there." });
+    } catch (error) {
+      console.error("Error exporting recovery HTML:", error);
+      toast({ title: "Export failed", description: "Could not open the report.", variant: "destructive" });
+    }
+  };
+
   // Create a map of userId -> array of scheduled report settings for quick lookup
   const scheduledReportsMap = scheduledReports.reduce((acc: Record<string, any[]>, report: any) => {
     if (!acc[report.userId]) {
@@ -3498,16 +3685,39 @@ export default function AdminEnhanced() {
                     </CardDescription>
                   </div>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => refetchRecovery()}
-                  disabled={recoveryFetching}
-                  data-testid="button-refresh-recovery"
-                >
-                  <RefreshCw className={`h-4 w-4 mr-1 ${recoveryFetching ? 'animate-spin' : ''}`} />
-                  {recoveryFetching ? 'Loading...' : 'Refresh'}
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportRecoveryHtml}
+                    disabled={!recoveryData || recoveryData.summary?.totalCases === 0}
+                    data-testid="button-export-recovery-html"
+                  >
+                    <FileText className="h-4 w-4 mr-1" />
+                    HTML
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportRecoveryExcel}
+                    disabled={!recoveryData || recoveryData.summary?.totalCases === 0}
+                    className="bg-emerald-50 hover:bg-emerald-100 border-emerald-300 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300"
+                    data-testid="button-export-recovery-excel"
+                  >
+                    <Download className="h-4 w-4 mr-1" />
+                    Excel
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => refetchRecovery()}
+                    disabled={recoveryFetching}
+                    data-testid="button-refresh-recovery"
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-1 ${recoveryFetching ? 'animate-spin' : ''}`} />
+                    {recoveryFetching ? 'Loading...' : 'Refresh'}
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -3606,7 +3816,7 @@ export default function AdminEnhanced() {
                     </Card>
                     <Card>
                       <CardHeader className="pb-2">
-                        <CardDescription>Average time to conclusion</CardDescription>
+                        <CardDescription>Average time to last payment / conclusion</CardDescription>
                       </CardHeader>
                       <CardContent>
                         <div className="text-3xl font-bold" data-testid="metric-conclusion-mean">
@@ -3658,7 +3868,7 @@ export default function AdminEnhanced() {
                   )}
 
                   <p className="text-xs text-muted-foreground">
-                    “Time to conclusion” is measured for closed cases only, from the case opening date to the last payment received — so a case settled for less than the full debt counts the same as one paid in full. Closed cases with no payments have no recovery time to show.
+                    “Time to last payment / conclusion” is measured for closed cases only, from the case opening date to the last payment received — so a case settled for less than the full debt counts the same as one paid in full. Closed cases with no payments have no recovery time to show.
                   </p>
 
                   {/* Per-case breakdown */}
@@ -3671,7 +3881,7 @@ export default function AdminEnhanced() {
                           <th className="p-3 font-medium">Opened</th>
                           <th className="p-3 font-medium text-right">To first payment</th>
                           <th className="p-3 font-medium text-right">Weighted recovery</th>
-                          <th className="p-3 font-medium text-right">To conclusion</th>
+                          <th className="p-3 font-medium text-right">To last payment / conclusion</th>
                         </tr>
                       </thead>
                       <tbody>
