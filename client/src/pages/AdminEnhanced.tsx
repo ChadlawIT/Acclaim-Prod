@@ -4701,7 +4701,10 @@ export default function AdminEnhanced() {
               <Pagination 
                 currentPage={usersPage} 
                 totalPages={usersTotalPages} 
-                onPageChange={setUsersPage} 
+                onPageChange={(page) => {
+                  setUsersPage(page);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }} 
               />
             </CardContent>
           </Card>
