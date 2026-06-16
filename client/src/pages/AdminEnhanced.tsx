@@ -2246,7 +2246,7 @@ export default function AdminEnhanced() {
     lastName: "",
     email: "",
     phone: "",
-    organisationId: undefined,
+    organisationIds: [],
     isAdmin: false,
   });
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
@@ -2368,7 +2368,7 @@ export default function AdminEnhanced() {
   });
 
   // Fetch organisations
-  const { data: organisations = [], isLoading: orgsLoading, error: orgsError } = useQuery({
+  const { data: organisations = [], isLoading: orgsLoading, error: orgsError } = useQuery<Organisation[]>({
     queryKey: ["/api/admin/organisations"],
     retry: false,
   });
@@ -2818,9 +2818,10 @@ export default function AdminEnhanced() {
         lastName: "",
         email: "",
         phone: "",
-        organisationId: undefined,
+        organisationIds: [],
         isAdmin: false,
       });
+      setOrgSearchTerm("");
       setShowCreateUser(false);
       // Handle nested user structure from API: data.user.user.id or data.user.id
       const userId = data.user?.user?.id || data.user?.id || null;
@@ -3840,49 +3841,86 @@ export default function AdminEnhanced() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="organisation">Organisation</Label>
-                        <Select 
-                          value={userFormData.organisationId?.toString() || "none"}
-                          onValueChange={(value) => setUserFormData({ 
-                            ...userFormData, 
-                            organisationId: value === "none" ? undefined : parseInt(value) 
-                          })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select organisation (optional)" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <div className="px-2 pb-2">
-                              <Input
-                                placeholder="Search organisations..."
-                                value={orgSearchTerm}
-                                onChange={(e) => setOrgSearchTerm(e.target.value)}
-                                className="h-8"
-                                onClick={(e) => e.stopPropagation()}
-                                onKeyDown={(e) => e.stopPropagation()}
-                              />
-                            </div>
-                            <SelectItem value="none">No organisation</SelectItem>
-                            {organisations
-                              ?.filter((org: Organisation) => {
-                                if (!orgSearchTerm.trim()) return true;
-                                const search = orgSearchTerm.toLowerCase();
-                                return org.name.toLowerCase().includes(search) || 
-                                       (org.externalRef?.toLowerCase().includes(search) ?? false);
-                              })
-                              .sort((a: Organisation, b: Organisation) => a.name.localeCompare(b.name))
-                              .map((org: Organisation) => (
-                              <SelectItem key={org.id} value={org.id.toString()}>
-                                <div className="flex flex-col">
-                                  <span className="font-medium">{org.name}</span>
-                                  {org.externalRef && (
-                                    <span className="text-xs text-gray-500">Ref: {org.externalRef}</span>
-                                  )}
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Label htmlFor="organisation">Organisations</Label>
+                        <p className="text-xs text-gray-500">Select one or more organisations to assign this user to (optional).</p>
+                        {(userFormData.organisationIds?.length ?? 0) > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {userFormData.organisationIds?.map((orgId) => {
+                              const org = organisations?.find((o: Organisation) => o.id === orgId);
+                              return (
+                                <Badge key={orgId} variant="secondary" className="flex items-center gap-1" data-testid={`badge-selected-org-${orgId}`}>
+                                  {org?.name || `Org ${orgId}`}
+                                  <button
+                                    type="button"
+                                    className="ml-0.5 text-gray-500 hover:text-red-600"
+                                    onClick={() => setUserFormData({
+                                      ...userFormData,
+                                      organisationIds: userFormData.organisationIds?.filter((id) => id !== orgId) ?? [],
+                                    })}
+                                    aria-label={`Remove ${org?.name || 'organisation'}`}
+                                    data-testid={`button-remove-selected-org-${orgId}`}
+                                  >
+                                    ×
+                                  </button>
+                                </Badge>
+                              );
+                            })}
+                          </div>
+                        )}
+                        <Input
+                          placeholder="Search organisations..."
+                          value={orgSearchTerm}
+                          onChange={(e) => setOrgSearchTerm(e.target.value)}
+                          className="h-8"
+                          data-testid="input-search-create-user-orgs"
+                        />
+                        <div className="border rounded-md max-h-48 overflow-y-auto p-1 space-y-0.5">
+                          {organisations
+                            ?.filter((org: Organisation) => {
+                              if (!orgSearchTerm.trim()) return true;
+                              const search = orgSearchTerm.toLowerCase();
+                              return org.name.toLowerCase().includes(search) || 
+                                     (org.externalRef?.toLowerCase().includes(search) ?? false);
+                            })
+                            .sort((a: Organisation, b: Organisation) => a.name.localeCompare(b.name))
+                            .map((org: Organisation) => {
+                              const checked = userFormData.organisationIds?.includes(org.id) ?? false;
+                              return (
+                                <label
+                                  key={org.id}
+                                  className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
+                                  data-testid={`option-create-user-org-${org.id}`}
+                                >
+                                  <Checkbox
+                                    checked={checked}
+                                    onCheckedChange={(value) => {
+                                      const current = userFormData.organisationIds ?? [];
+                                      setUserFormData({
+                                        ...userFormData,
+                                        organisationIds: value
+                                          ? [...current, org.id]
+                                          : current.filter((id) => id !== org.id),
+                                      });
+                                    }}
+                                  />
+                                  <div className="flex flex-col">
+                                    <span className="text-sm font-medium">{org.name}</span>
+                                    {org.externalRef && (
+                                      <span className="text-xs text-gray-500">Ref: {org.externalRef}</span>
+                                    )}
+                                  </div>
+                                </label>
+                              );
+                            })}
+                          {organisations?.filter((org: Organisation) => {
+                            if (!orgSearchTerm.trim()) return true;
+                            const search = orgSearchTerm.toLowerCase();
+                            return org.name.toLowerCase().includes(search) || 
+                                   (org.externalRef?.toLowerCase().includes(search) ?? false);
+                          }).length === 0 && (
+                            <p className="text-sm text-gray-500 px-2 py-2">No organisations found</p>
+                          )}
+                        </div>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Checkbox
@@ -3943,11 +3981,13 @@ export default function AdminEnhanced() {
                             <span className="text-sm font-medium">{userFormData.phone}</span>
                           </div>
                         )}
-                        <div className="flex justify-between">
-                          <span className="text-sm text-gray-600">Organisation:</span>
-                          <span className="text-sm font-medium">
-                            {userFormData.organisationId 
-                              ? organisations?.find((o: Organisation) => o.id === userFormData.organisationId)?.name || "Unknown"
+                        <div className="flex justify-between gap-2">
+                          <span className="text-sm text-gray-600">Organisations:</span>
+                          <span className="text-sm font-medium text-right">
+                            {(userFormData.organisationIds?.length ?? 0) > 0
+                              ? userFormData.organisationIds
+                                  ?.map((orgId) => organisations?.find((o: Organisation) => o.id === orgId)?.name || "Unknown")
+                                  .join(", ")
                               : "No organisation"}
                           </span>
                         </div>

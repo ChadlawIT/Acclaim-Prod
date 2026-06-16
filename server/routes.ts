@@ -2818,7 +2818,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const result = await storage.createUser(userData);
+      // Dedupe the selected organisations. The first one becomes the legacy
+      // "primary" organisation (kept on users.organisationId for backward
+      // compatibility with org-scoped endpoints), and the remainder are added
+      // to the junction table so the user is assigned to all of them.
+      const selectedOrgIds = Array.from(new Set(userData.organisationIds ?? []));
+      const primaryOrgId = userData.organisationId ?? selectedOrgIds[0];
+      const junctionOrgIds = selectedOrgIds.filter((id) => id !== primaryOrgId);
+
+      const result = await storage.createUser({ ...userData, organisationId: primaryOrgId });
+      const newUserId = result.user.id;
+
+      // Assign the user to the remaining organisations via the junction table
+      if (junctionOrgIds.length > 0) {
+        const adminUser = await storage.getUser(req.user.id);
+        const userName = [userData.firstName, userData.lastName].filter(Boolean).join(' ') || userData.email;
+        for (const organisationId of junctionOrgIds) {
+          try {
+            await storage.addUserToOrganisation(newUserId, organisationId);
+            const organisation = await storage.getOrganisation(organisationId);
+            if (adminUser && organisation) {
+              await logAdminAction({
+                adminUser,
+                tableName: 'user_organisations',
+                recordId: `${newUserId}-${organisationId}`,
+                operation: 'INSERT',
+                description: `Assigned user "${userName}" to organisation "${organisation.name}"`,
+                newValue: JSON.stringify({ userId: newUserId, organisationId, organisationName: organisation.name }),
+                organisationId,
+                ipAddress: req.ip,
+                userAgent: req.get('user-agent'),
+              });
+            }
+          } catch (assignError) {
+            console.error(`Failed to assign new user ${newUserId} to organisation ${organisationId}:`, assignError);
+          }
+        }
+      }
 
       // Send Azure SSO invitation in the background (non-blocking)
       if (isAzureAuthEnabled()) {

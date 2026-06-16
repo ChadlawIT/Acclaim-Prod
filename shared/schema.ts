@@ -539,6 +539,7 @@ export const createUserSchema = z.object({
   email: z.string().email("Invalid email address"),
   phone: z.string().optional(),
   organisationId: z.number().optional(),
+  organisationIds: z.number().array().optional(),
   isAdmin: z.boolean().default(false),
 });
 
