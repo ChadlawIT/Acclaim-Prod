@@ -2434,6 +2434,51 @@ export default function AdminEnhanced() {
     return (organisations as any[]).find((o: any) => String(o.id) === recoveryOrg)?.name || "Unknown";
   };
 
+  const recoveryFaq: { q: string; a: string[] }[] = [
+    {
+      q: "Why is the average time to first payment sometimes higher than the average time to conclusion?",
+      a: [
+        "For any single case the last payment can never come before the first one. The reason the averages can differ is that they are worked out over different groups of cases:",
+        "• Time to first payment is averaged across every case that has received a payment, including cases that are still open.",
+        "• Time to last payment / conclusion is averaged across only the cases that are now closed.",
+        "Cases that close quickly tend to be the straightforward ones, so they pull the conclusion average down. A case that takes a long time to make its first payment but is still open pushes the first-payment average up and is not counted in conclusion at all. So the two figures can move in opposite directions even though nothing is wrong.",
+      ],
+    },
+    {
+      q: "What does “time to first payment” mean?",
+      a: ["The number of days from when the case was opened to the day the first payment was received. It is averaged across every case that has received at least one payment, whether or not the case is closed."],
+    },
+    {
+      q: "What does “amount-weighted recovery” mean?",
+      a: ["It measures how quickly the money comes in, not just the first payment. Each pound recovered is weighted by how long it took to arrive, so a case where most of the debt is paid early scores better than one where most is paid much later. It is the fairest single measure of recovery speed when payments arrive in instalments."],
+    },
+    {
+      q: "What does “time to last payment / conclusion” mean?",
+      a: [
+        "For cases that are now closed, it is the number of days from when the case was opened to the last payment received. A debt settled for less than the full amount counts the same as one paid in full — what matters is when the money finished coming in.",
+        "Only closed cases that received at least one payment are counted, so this figure is usually based on fewer cases than the others. Closed cases with no payment show “No recovery” and are not part of the average.",
+      ],
+    },
+    {
+      q: "What do “Open” and “No recovery” mean in the conclusion column?",
+      a: [
+        "• Open — the case has not been closed yet, so there is no conclusion time to measure. These cases are left out of the conclusion average.",
+        "• No recovery — the case is closed but never received any payment, so there is no recovery time to show.",
+      ],
+    },
+    {
+      q: "What do the “Est.” and “No start date” labels mean?",
+      a: [
+        "• Est. — the case had no recorded opening entry, so the date it was added to the portal was used as the start date instead. The timing is an estimate but is still included in the averages.",
+        "• No start date — the recorded opening date falls after the first payment (usually older cases brought across from the previous system). Recovery time can’t be measured reliably, so these cases are left out of the averages.",
+      ],
+    },
+    {
+      q: "When does a case count as concluded?",
+      a: ["As soon as the case is marked closed in the system, whether it was paid in full, settled for less, or aborted. If a matter has finished but is still showing as live, it won’t appear in the conclusion figures until its status is set to closed."],
+    },
+  ];
+
   const handleExportRecoveryExcel = async () => {
     if (!recoveryData || recoveryData.summary?.totalCases === 0) {
       toast({ title: "No data", description: "No cases available to export.", variant: "destructive" });
@@ -2504,6 +2549,21 @@ export default function AdminEnhanced() {
         });
       });
       sheet.autoFilter = { from: "A1", to: "H1" };
+
+      // Guidance / FAQ sheet
+      const faqSheet = workbook.addWorksheet("Guidance (FAQ)");
+      faqSheet.columns = [{ header: "Frequently asked questions", key: "text", width: 120 }];
+      styleHeader(faqSheet);
+      recoveryFaq.forEach((item) => {
+        const qRow = faqSheet.addRow({ text: safeCell(item.q) });
+        qRow.font = { bold: true };
+        qRow.alignment = { wrapText: true, vertical: "top" };
+        item.a.forEach((line) => {
+          const aRow = faqSheet.addRow({ text: safeCell(line) });
+          aRow.alignment = { wrapText: true, vertical: "top" };
+        });
+        faqSheet.addRow({ text: "" });
+      });
 
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
@@ -2577,6 +2637,10 @@ export default function AdminEnhanced() {
           .muted { font-size: 10px; color: #9ca3af; }
           .badge { display: inline-block; font-size: 10px; border: 1px solid #cbd5e1; border-radius: 4px; padding: 0 4px; margin-left: 4px; }
           .badge-amber { border-color: #f59e0b; color: #b45309; }
+          .faq-h { font-size: 16px; color: #0f766e; margin: 28px 0 12px; }
+          .faq-item { margin-bottom: 14px; }
+          .faq-q { font-size: 13px; font-weight: bold; color: #1f2937; margin-bottom: 4px; }
+          .faq-a { font-size: 12px; color: #4b5563; margin: 2px 0; }
           @media print { body { margin: 0; } .no-print { display: none; } }
         </style></head><body>
         <div class="header">
@@ -2604,6 +2668,12 @@ export default function AdminEnhanced() {
           </tr></thead>
           <tbody>${rowsHtml}</tbody>
         </table>
+        <h2 class="faq-h">Guidance — frequently asked questions</h2>
+        ${recoveryFaq.map((item) => `
+          <div class="faq-item">
+            <div class="faq-q">${esc(item.q)}</div>
+            ${item.a.map((line) => `<div class="faq-a">${esc(line)}</div>`).join("")}
+          </div>`).join("")}
         </body></html>`;
       win.document.write(html);
       win.document.close();
