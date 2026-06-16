@@ -1,4 +1,4 @@
-import { useState, useEffect, Fragment } from "react";
+import { useState, useEffect, useRef, Fragment } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -2261,6 +2261,7 @@ export default function AdminEnhanced() {
   // Pagination state
   const [usersPage, setUsersPage] = useState(1);
   const [usersPageSize, setUsersPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const usersTableTopRef = useRef<HTMLDivElement>(null);
   const [orgsPage, setOrgsPage] = useState(1);
   const [orgsPageSize, setOrgsPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [reportsPage, setReportsPage] = useState(1);
@@ -4122,6 +4123,8 @@ export default function AdminEnhanced() {
                   {(userSearchFilter || userTypeFilter !== "all") && ` (filtered from ${users?.length || 0})`}
                 </div>
               </div>
+              {/* Scroll anchor for pagination */}
+              <div ref={usersTableTopRef} className="scroll-mt-4" />
               {/* Mobile Card Layout */}
               <div className="block sm:hidden space-y-4">
                 {paginatedUsers?.map((user: User) => (
@@ -4743,7 +4746,9 @@ export default function AdminEnhanced() {
                 totalPages={usersTotalPages} 
                 onPageChange={(page) => {
                   setUsersPage(page);
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  requestAnimationFrame(() => {
+                    usersTableTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  });
                 }} 
               />
             </CardContent>
