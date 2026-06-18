@@ -5799,6 +5799,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: new Date(),
       });
       
+      // Notify organisation users about the new document, mirroring the
+      // in-portal admin upload flow. Notifications are on by default for SOS
+      // pushes; SOS can opt out by sending sendNotifications=false.
+      const sendNotifications = req.body.sendNotifications !== 'false' && req.body.sendNotifications !== false;
+      if (sendNotifications) {
+        try {
+          const org = await storage.getOrganisation(case_.organisationId);
+          const organisationName = org?.name || 'Unknown Organisation';
+          const orgUsers = await storage.getUsersByOrganisationId(case_.organisationId);
+          for (const orgUser of orgUsers) {
+            // Respect per-case mute and per-case access blocks
+            const isCaseMuted = case_.id ? await storage.isCaseMuted(orgUser.id, case_.id) : false;
+            const isBlockedFromCase = case_.id ? await storage.isUserBlockedFromCase(orgUser.id, case_.id) : false;
+            if (isCaseMuted) {
+              console.log(`[External Documents] Skipping notification for user ${orgUser.id} - case ${case_.id} is muted`);
+              continue;
+            }
+            if (isBlockedFromCase) {
+              console.log(`[External Documents] Skipping notification for user ${orgUser.id} - user is blocked from case ${case_.id}`);
+              continue;
+            }
+            if (!orgUser.isAdmin && orgUser.email && orgUser.documentNotifications !== false && orgUser.azureId) {
+              await sendGridEmailService.sendDocumentUploadNotificationToUser({
+                uploaderName: 'Acclaim Credit Management',
+                uploaderEmail: 'email@acclaim.law',
+                organisationName,
+                fileName: finalFileName,
+                fileSize: req.file.size,
+                fileType: req.file.mimetype,
+                filePath: req.file.path,
+                caseReference: case_.accountNumber,
+                caseName: case_.caseName,
+                uploadedAt: new Date(),
+              }, orgUser.email);
+              console.log(`[External Documents] Sent document upload notification to user: ${orgUser.email}`);
+            }
+          }
+        } catch (emailError) {
+          console.error('[External Documents] Failed to send user notifications:', emailError);
+        }
+      }
+
       res.status(201).json({
         message: "Document uploaded successfully",
         documentData: document,
