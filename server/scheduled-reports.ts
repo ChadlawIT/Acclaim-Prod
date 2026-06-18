@@ -830,10 +830,6 @@ export async function processScheduledReports(): Promise<void> {
     try {
       const user = await storage.getUser(settings.userId);
       if (!user || !user.email) continue;
-      if (!user.azureId) {
-        console.log(`  Skipping - user ${settings.userId} has never logged in via SSO`);
-        continue;
-      }
       
       const frequencyLabel = settings.frequency === "daily" ? "Daily" : settings.frequency === "weekly" ? "Weekly" : "Monthly";
 
