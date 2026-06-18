@@ -1,20 +1,19 @@
 ---
-name: Document vs message notification gating
-description: Conditions for a user to receive document-upload vs message notification emails (they differ on SSO)
+name: Notification email gating (documents & messages)
+description: Conditions for a user to receive document-upload and message notification emails; SSO gate history
 ---
 
-**Document-upload notifications** (all paths — in-portal Documents, OrgDocuments, Case Documents, and the external/SOS push endpoint) send to a user when ALL hold:
+**Document-upload notifications** (in-portal Documents, OrgDocuments, Case Documents, external/SOS push) send to a user when ALL hold:
+- `!isAdmin`, `email` set, `documentNotifications !== false`, case not muted (`isCaseMuted`), user not blocked (`isUserBlockedFromCase`).
 
-- `!orgUser.isAdmin`
-- `orgUser.email` is set
-- `orgUser.documentNotifications !== false` (the user-facing toggle)
-- the case is NOT muted for that user (`isCaseMuted`)
-- the user is NOT blocked from the case (`isUserBlockedFromCase`)
+**Message notifications** (admin→user, admin→organisation) send when:
+- admin→user: `email` set, `!isAdmin`, `emailNotifications !== false`, not muted, not blocked.
+- admin→org: `!isAdmin`, `email` set, `emailNotifications !== false`.
 
-There is intentionally **no `azureId` (SSO) requirement** on document notifications: local username/password users must also be told about new documents.
+There is intentionally **no `azureId` (Microsoft SSO) requirement** on either document or message notifications. Local username/password users must receive both.
 
-**Why:** the four document flows originally also required `orgUser.azureId`, which silently skipped any user who had never signed in via Microsoft SSO — so local-auth users never heard about new documents even with the toggle on. The SSO gate was removed from document notifications on 16 June 2026 at the user's request.
+**Why:** all these flows originally also required `azureId`, which silently skipped users who had never signed in via Microsoft SSO — so local-auth users never heard about new documents or messages even with their toggle on. The SSO gate was removed from **document** notifications on 16 June 2026 and from **message** notifications immediately after, both at the user's request.
 
-**Message notifications still DO require `azureId`** (`emailNotifications !== false && …azureId`, two gates in routes.ts). These were deliberately left unchanged — only document notifications were in scope. If asked to do the same for messages, lift the `azureId` condition from those message gates too.
+**Still SSO-gated:** `server/scheduled-reports.ts` skips users with no `azureId` (`if (!user.azureId)`) — scheduled email reports still only go to SSO users. Left unchanged because only document/message notifications were in scope; lift it there too if asked.
 
-**How to apply:** when adding/auditing a document notification flow, do NOT reintroduce an `azureId` gate. When debugging a missing *message* (not document) notification, check `azureId` first.
+**How to apply:** do NOT reintroduce an `azureId` gate on document or message notification flows. Recipient eligibility is now toggle + non-admin + email + mute/block only.

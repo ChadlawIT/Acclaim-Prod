@@ -1755,7 +1755,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const isCaseMuted = messageData.caseId ? await storage.isCaseMuted(recipientId, messageData.caseId) : false;
             const isBlockedFromCase = messageData.caseId ? await storage.isUserBlockedFromCase(recipientId, messageData.caseId) : false;
             console.log(`[MSG Email] Recipient check: email=${recipientUser?.email}, isAdmin=${recipientUser?.isAdmin}, emailNotifications=${recipientUser?.emailNotifications}, muted=${isCaseMuted}, blocked=${isBlockedFromCase}`);
-            if (recipientUser && recipientUser.email && !recipientUser.isAdmin && recipientUser.emailNotifications !== false && !isCaseMuted && !isBlockedFromCase && recipientUser.azureId) {
+            if (recipientUser && recipientUser.email && !recipientUser.isAdmin && recipientUser.emailNotifications !== false && !isCaseMuted && !isBlockedFromCase) {
               // Get organisation name
               let organisationName = "Unknown Organisation";
               if (recipientUser.organisationId) {
@@ -1816,7 +1816,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const orgUsers = await storage.getUsersByOrganisationId(parseInt(recipientId));
             // Filter to non-admin users with email and notifications enabled
             const organisationUsers = orgUsers.filter(u => 
-              !u.isAdmin && u.email && u.emailNotifications !== false && u.azureId
+              !u.isAdmin && u.email && u.emailNotifications !== false
             );
             console.log(`[MSG Email] Org lookup: orgId=${recipientId}, totalUsers=${orgUsers.length}, eligibleUsers=${organisationUsers.length}`);
             if (orgUsers.length > 0 && organisationUsers.length === 0) {
