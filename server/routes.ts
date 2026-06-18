@@ -5598,37 +5598,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create case message (for external system to send messages to specific cases)
-  // Attachments are optional. SOS may send zero, one, or up to 10 files under the "attachments"
-  // field (multipart/form-data). The cap and per-file 25MB limit are enforced by Multer at ingress.
-  app.post('/api/external/cases/:externalRef/messages', (req: any, res, next) => {
-    upload.array('attachments', 10)(req, res, (err: any) => {
-      if (err) {
-        // Remove anything Multer already wrote before erroring, then return a clear 4xx
-        const partial = Array.isArray(req.files) ? req.files : [];
-        for (const f of partial) { if (f?.path) fs.unlink(f.path, () => {}); }
-        const tooLarge = err?.code === 'LIMIT_FILE_SIZE';
-        const tooMany = err?.code === 'LIMIT_FILE_COUNT' || err?.code === 'LIMIT_UNEXPECTED_FILE';
-        return res.status(tooLarge ? 413 : 400).json({
-          message: tooLarge
-            ? 'Attachment too large — maximum 25MB per file'
-            : tooMany
-              ? 'Too many attachments — send up to 10 files under the "attachments" field'
-              : 'File upload error',
-        });
-      }
-      next();
-    });
-  }, async (req: any, res) => {
-    // Uploaded files arrive as an array on req.files (capped at 10 by Multer above).
-    // The cleanup helper ensures temp files are never orphaned on an early return or error.
-    const uploadedFiles: any[] = Array.isArray(req.files) ? req.files : [];
-    const cleanupTempFiles = () => {
-      for (const file of uploadedFiles) {
-        if (file?.path) {
-          fs.unlink(file.path, () => { /* best-effort cleanup; ignore errors */ });
-        }
-      }
-    };
+  app.post('/api/external/cases/:externalRef/messages', async (req: any, res) => {
     try {
       // Debug logging
       console.log('Message API Request:', {
@@ -5654,7 +5624,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       if (!message || !senderName) {
-        cleanupTempFiles();
         return res.status(400).json({ 
           message: "message and senderName are required" 
         });
@@ -5663,7 +5632,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Find case by external reference
       const case_ = await storage.getCaseByExternalRef(externalRef);
       if (!case_) {
-        cleanupTempFiles();
         return res.status(404).json({ message: "Case not found" });
       }
       
@@ -5676,7 +5644,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         systemUser = await storage.getUser('acclaim-system-user');
       }
       if (!systemUser) {
-        cleanupTempFiles();
         return res.status(500).json({ message: 'System user not found. Ensure email@acclaim.law account exists.' });
       }
       const systemUserId = systemUser.id;
@@ -5686,13 +5653,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Use custom subject if provided, otherwise generate automatically
       const messageSubject = subject || `${messageType}: ${case_.caseName}`;
-
-      // First file (if any) is shown inline on the message thread
-      const firstFile = uploadedFiles[0];
-
-      // Create message linked to the case.
-      // The message table holds a single attachment, so the first file is shown on the
-      // message thread; every file (including the first) is also saved to Documents below.
+      
+      // Create message linked to the case
       const newMessage = await storage.createMessage({
         senderId: systemUserId,
         senderName: senderName, // Use the sender name from the API request
@@ -5702,34 +5664,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         subject: messageSubject,
         content: contentWithSender,
         isRead: false,
-        attachmentFileName: firstFile?.originalname,
-        attachmentFilePath: firstFile?.path,
-        attachmentFileSize: firstFile?.size,
-        attachmentFileType: firstFile?.mimetype,
         createdAt: new Date(),
       });
-
-      // Save every uploaded file as a case document (linked to the case + organisation),
-      // mirroring the standalone document upload endpoint and the portal's own UI behaviour.
-      const savedDocuments: any[] = [];
-      for (const file of uploadedFiles) {
-        try {
-          const document = await storage.createDocument({
-            caseId: case_.id,
-            fileName: file.originalname,
-            fileSize: file.size,
-            fileType: file.mimetype,
-            filePath: file.path,
-            uploadedBy: systemUserId,
-            organisationId: case_.organisationId,
-            createdAt: new Date(),
-          });
-          savedDocuments.push(document);
-        } catch (docError) {
-          // Don't fail the whole message if a single document fails to save
-          console.error("Error saving external message attachment as document:", docError);
-        }
-      }
 
       // Handle email notifications if requested
       let notificationsSent = 0;
@@ -5804,16 +5740,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           requested: !!sendNotifications,
           sent: notificationsSent
         },
-        attachmentInfo: {
-          received: uploadedFiles.length,
-          saved: savedDocuments.length,
-          documents: savedDocuments.map((d: any) => ({ id: d.id, fileName: d.fileName, fileSize: d.fileSize })),
-        },
         timestamp: new Date().toISOString(),
         refreshRequired: true 
       });
     } catch (error) {
-      cleanupTempFiles();
       const errMsg = error instanceof Error ? error.message : String(error);
       console.error("Error creating case message via external API:", errMsg, error);
       res.status(500).json({ message: "Failed to create case message", detail: errMsg });

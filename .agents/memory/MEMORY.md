@@ -8,4 +8,3 @@
 - [SOS timeline codes](sos-timeline-codes.md) — case_activities encode action codes (TL0001=opened) in description text; match by code with alphanumeric boundaries both sides; createdAt = real SOS action date.
 - [Recovery "time to conclusion" metric](recovery-conclusion-metric.md) — concluded = status closed; timing = open→last payment (no close date; status changes aren't logged anywhere).
 - [Legacy primary org required](legacy-primary-org.md) — users need a legacy users.organisationId set (primary); org-scoped endpoints (cases, payments) hard-fail on null; junction-only assignment is unsafe.
-- [External SOS message attachments](external-sos-api.md) — message endpoint takes optional/multiple files; msg table has 1 attachment slot so extras go to Documents; bounded multer + temp cleanup; external routes unauthenticated.
