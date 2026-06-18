@@ -2099,7 +2099,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               console.log(`[Documents] Skipping notification for user ${orgUser.id} - user is blocked from case ${case_.id}`);
               continue;
             }
-            if (!orgUser.isAdmin && orgUser.email && orgUser.documentNotifications !== false && orgUser.azureId) {
+            if (!orgUser.isAdmin && orgUser.email && orgUser.documentNotifications !== false) {
               await sendGridEmailService.sendDocumentUploadNotificationToUser({
                 uploaderName: 'Acclaim Credit Management',
                 uploaderEmail: 'email@acclaim.law',
@@ -2264,7 +2264,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           const orgUsers = await storage.getUsersByOrganisationId(targetOrgId);
           for (const orgUser of orgUsers) {
-            if (!orgUser.isAdmin && orgUser.email && orgUser.documentNotifications !== false && orgUser.azureId) {
+            if (!orgUser.isAdmin && orgUser.email && orgUser.documentNotifications !== false) {
               await sendGridEmailService.sendDocumentUploadNotificationToUser({
                 uploaderName: 'Acclaim Credit Management',
                 uploaderEmail: 'email@acclaim.law',
@@ -2531,7 +2531,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               console.log(`[Case Documents] Skipping notification for user ${orgUser.id} - user is blocked from case ${case_.id}`);
               continue;
             }
-            if (!orgUser.isAdmin && orgUser.email && orgUser.documentNotifications !== false && orgUser.azureId) {
+            if (!orgUser.isAdmin && orgUser.email && orgUser.documentNotifications !== false) {
               await sendGridEmailService.sendDocumentUploadNotificationToUser({
                 uploaderName: 'Acclaim Credit Management',
                 uploaderEmail: 'email@acclaim.law',
@@ -5820,7 +5820,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               console.log(`[External Documents] Skipping notification for user ${orgUser.id} - user is blocked from case ${case_.id}`);
               continue;
             }
-            if (!orgUser.isAdmin && orgUser.email && orgUser.documentNotifications !== false && orgUser.azureId) {
+            if (!orgUser.isAdmin && orgUser.email && orgUser.documentNotifications !== false) {
               await sendGridEmailService.sendDocumentUploadNotificationToUser({
                 uploaderName: 'Acclaim Credit Management',
                 uploaderEmail: 'email@acclaim.law',
