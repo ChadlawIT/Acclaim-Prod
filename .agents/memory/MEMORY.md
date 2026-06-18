@@ -1,5 +1,6 @@
 - [Organisation filter combobox](organisation-filter-combobox.md) — shared searchable+alphabetical org dropdown for report filters; values are String(org.id), sentinel "all".
 - [Acclaim message direction](acclaim-message-direction.md) — external/SOS Acclaim messages stored under shared system user with handler name embedded in content; direction can't rely solely on senderIsAdmin.
+- [External system-user attribution](external-system-user-attribution.md) — /api/external/* writes must resolve the Acclaim system user by email (not a hardcoded id) or the user-FK insert 500s in prod.
 - [Dialog mobile scroll & pinned close](dialog-mobile-scroll.md) — base DialogContent = non-scrolling flex-col outer + scrolling inner div, X absolute on outer; padding lives on inner (command.tsx needs [&>div]:p-0).
 - [Case restriction lift/restore](case-restriction-lift.md) — temporary lift deletes rows; "previously blocked" rebuilt from audit_log (newValue=userId, recordId=caseId); audit-before-delete / add-before-audit ordering guarantees no missed case.
 - [Case org-scoping & moving cases](case-org-scoping.md) — moving a case must cascade org to documents+payments (tx); case-linked message visibility is gated by the case current org, not stale recipientId.

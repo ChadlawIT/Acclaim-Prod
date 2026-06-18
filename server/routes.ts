@@ -5771,8 +5771,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Case not found" });
       }
       
-      // Get the system user for file attribution
-      const systemUserId = 'jZJVUVcC3I';
+      // Resolve the shared Acclaim system user for file attribution.
+      // Looked up dynamically (matching the external messages endpoint) so it
+      // works across environments rather than relying on a hardcoded user ID.
+      const ACCLAIM_SYSTEM_EMAIL = 'email@acclaim.law';
+      let systemUser = await storage.getUserByEmail(ACCLAIM_SYSTEM_EMAIL);
+      if (!systemUser) {
+        systemUser = await storage.getUser('acclaim-system-user');
+      }
+      if (!systemUser) {
+        return res.status(500).json({ message: 'System user not found. Ensure email@acclaim.law account exists.' });
+      }
+      const systemUserId = systemUser.id;
       
       // Use provided fileName or fall back to original filename
       const finalFileName = fileName || req.file.originalname;
