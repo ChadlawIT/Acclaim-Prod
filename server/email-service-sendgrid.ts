@@ -318,6 +318,7 @@ class SendGridEmailService {
   // Send email via Azure APIM to SendGrid HTTP API
   private async sendViaAPIM(payload: {
     to: string;
+    cc?: string[];
     bcc?: string[];
     subject: string;
     textContent?: string;
@@ -351,6 +352,11 @@ class SendGridEmailService {
         to: [{ email: payload.to }]
       };
       
+      // Add CC recipients if provided
+      if (payload.cc && payload.cc.length > 0) {
+        personalization.cc = payload.cc.map(email => ({ email }));
+      }
+
       // Add BCC recipients if provided
       if (payload.bcc && payload.bcc.length > 0) {
         personalization.bcc = payload.bcc.map(email => ({ email }));
@@ -834,15 +840,17 @@ Please log in to the Acclaim Portal to view and respond to this message.
         }
       }
 
-      // Always BCC email@acclaim.law so the shared inbox receives every user message
-      // even when the primary recipient is a specific case handler
+      // Always CC email@acclaim.law so the whole team's shared inbox is visibly
+      // copied on every user message, even when the primary recipient is a
+      // specific case handler. This guards against a case handler being off or a
+      // colleague having quietly taken over without the assignment being updated.
       const DEFAULT_INBOX = 'email@acclaim.law';
-      const bccList = adminEmail.toLowerCase() !== DEFAULT_INBOX ? [DEFAULT_INBOX] : [];
-      console.log(`[sendMessageNotification] TO=${adminEmail} BCC=${bccList.join(',') || '(none — primary IS default)'}`);
+      const ccList = adminEmail.toLowerCase() !== DEFAULT_INBOX ? [DEFAULT_INBOX] : [];
+      console.log(`[sendMessageNotification] TO=${adminEmail} CC=${ccList.join(',') || '(none — primary IS default)'}`);
 
       return await this.sendViaAPIM({
         to: adminEmail,
-        bcc: bccList.length > 0 ? bccList : undefined,
+        cc: ccList.length > 0 ? ccList : undefined,
         subject: subject,
         textContent: textContent,
         htmlContent: htmlContent,
