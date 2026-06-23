@@ -3485,6 +3485,39 @@ export default function AdminEnhanced() {
     },
   });
 
+  // Resend Microsoft (Azure SSO) invitation mutation — runs synchronously and
+  // surfaces the actual Graph error so we can see why an invite didn't arrive.
+  const resendInviteMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const response = await apiRequest("POST", `/api/admin/users/${userId}/resend-invite`);
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Invitation Sent",
+        description: data.message,
+      });
+    },
+    onError: (error: any) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Invitation Failed",
+        description: error.message || "Could not send the Microsoft invitation.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Reset password mutation — generates a new temp password for the user
   const resetPasswordMutation = useMutation({
     mutationFn: async (userId: string) => {
@@ -4675,6 +4708,22 @@ export default function AdminEnhanced() {
                         variant="outline"
                         size="sm"
                         onClick={() => {
+                          const confirmation = confirm(`Send a Microsoft sign-in invitation to ${user.firstName} ${user.lastName} (${user.email})?\n\nThey will receive an email from Microsoft to accept the invitation, after which they can use "Sign in with SSO".`);
+                          if (confirmation) {
+                            resendInviteMutation.mutate(user.id);
+                          }
+                        }}
+                        disabled={resendInviteMutation.isPending}
+                        title="Send Microsoft (SSO) invitation"
+                        data-testid={`button-resend-invite-${user.id}`}
+                      >
+                        <Send className="h-3 w-3 mr-1" />
+                        Invite
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
                           const confirmation = confirm(`Reset password for ${user.firstName} ${user.lastName}?\n\nThis will generate a new temporary password. The user will need to change it on next sign in.`);
                           if (confirmation) {
                             setResetPasswordUser(user);
@@ -4980,6 +5029,21 @@ export default function AdminEnhanced() {
                               title="Send welcome email with login details"
                             >
                               <Mail className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const confirmation = confirm(`Send a Microsoft sign-in invitation to ${user.firstName} ${user.lastName} (${user.email})?\n\nThey will receive an email from Microsoft to accept the invitation, after which they can use "Sign in with SSO".`);
+                                if (confirmation) {
+                                  resendInviteMutation.mutate(user.id);
+                                }
+                              }}
+                              disabled={resendInviteMutation.isPending}
+                              title="Send Microsoft (SSO) invitation"
+                              data-testid={`button-resend-invite-mobile-${user.id}`}
+                            >
+                              <Send className="h-3 w-3" />
                             </Button>
                             <Button
                               variant="outline"

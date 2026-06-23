@@ -11,4 +11,6 @@ The portal **already** sends a Microsoft B2B guest invitation automatically when
 
 **Why:** AADSTS90072 ("account needs to be added as an external user in the tenant first") is the textbook B2B-guest error in a standard Entra workforce tenant — which is why the build targets the `/invitations` (B2B guest) model first. If logs show a CIAM / Entra External ID tenant rejecting `/invitations`, the fallback is the CIAM local-account model instead.
 
-**How to apply:** before rebuilding any Azure-invite feature, check this function already exists. If invites don't arrive, first check Graph `User.Invite.All` consent and the `[Azure Invite]` deployment logs — don't assume the code is missing. The invite only fires at user-creation time; there is currently no "resend invite" action for already-existing users.
+**How to apply:** before rebuilding any Azure-invite feature, check this function already exists. If invites don't arrive, first check Graph `User.Invite.All` consent and the `[Azure Invite]` deployment logs — don't assume the code is missing.
+
+There is now a **"Resend invite"** (Send icon, label "Invite") button per user in the admin Users tab. It hits `POST /api/admin/users/:userId/resend-invite`, runs the invite **synchronously**, and returns the real Graph/token error text to the admin toast — use this to diagnose silent failures without Azure log access. `inviteUserToAzure` now returns full status+body on failure.

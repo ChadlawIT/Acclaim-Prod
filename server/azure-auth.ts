@@ -321,7 +321,7 @@ export async function inviteUserToAzure(
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();
       console.error("[Azure Invite] Failed to get access token:", errorText);
-      return { success: false, error: "Failed to get access token" };
+      return { success: false, error: `Failed to get access token (${tokenResponse.status}): ${errorText}` };
     }
 
     const { access_token } = await tokenResponse.json();
@@ -346,7 +346,7 @@ export async function inviteUserToAzure(
     if (!inviteResponse.ok) {
       const errorText = await inviteResponse.text();
       console.error("[Azure Invite] Failed to send invitation:", errorText);
-      return { success: false, error: `Graph API error: ${inviteResponse.status}` };
+      return { success: false, error: `Graph API error (${inviteResponse.status}): ${errorText}` };
     }
 
     const inviteData = await inviteResponse.json();

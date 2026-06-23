@@ -3290,6 +3290,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Resend the Azure SSO (Microsoft) invitation for an existing user. Runs the
+  // invite synchronously and returns the actual result/error so the admin can
+  // see exactly why it failed (e.g. missing Graph permission) without digging
+  // through server logs.
+  app.post('/api/admin/users/:userId/resend-invite', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+
+      if (!isAzureAuthEnabled()) {
+        return res.status(400).json({
+          success: false,
+          message: "Microsoft sign-in (Azure) is not configured on this environment, so invitations cannot be sent.",
+        });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+      if (!user.email) {
+        return res.status(400).json({ success: false, message: "This user has no email address, so an invitation cannot be sent." });
+      }
+
+      const appBaseUrl = `${req.headers["x-forwarded-proto"] || req.protocol}://${req.headers["x-forwarded-host"] || req.headers.host}`;
+      const displayName = `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email;
+
+      const inviteResult = await inviteUserToAzure(user.email, displayName, appBaseUrl);
+
+      if (inviteResult.success) {
+        return res.json({
+          success: true,
+          message: `Microsoft invitation sent to ${user.email}. They should receive an email from Microsoft to accept it.`,
+        });
+      }
+
+      return res.status(502).json({
+        success: false,
+        message: `Microsoft rejected the invitation for ${user.email}.`,
+        error: inviteResult.error,
+      });
+    } catch (error) {
+      console.error("Error resending Azure invitation:", error);
+      res.status(500).json({ success: false, message: "Failed to resend invitation" });
+    }
+  });
+
   // Send just the temporary password email (for password resets)
   app.post('/api/admin/users/:userId/send-password-email', isAuthenticated, isAdmin, async (req: any, res) => {
     try {
