@@ -1,4 +1,4 @@
-import { Clock, User, Building2, MessageSquare, Activity, TrendingDown, Calendar, AlertTriangle } from "lucide-react";
+import { Clock, User, Building2, MessageSquare, Activity, TrendingDown, Calendar, PoundSterling, Layers } from "lucide-react";
 
 // ── Realistic sample data ─────────────────────────────────────────────────────
 
@@ -34,14 +34,14 @@ const cases = [
     stage: "Legal Action",
     daysInactive: 112,
     lastActivity: "14 Feb 2026",
-    timeline: {
+    latestActivity: {
       code: "TL0088",
-      description: "Letter Before Claim issued — 14-day response window opened",
+      description: "Letter Before Claim issued to debtor — 14-day response window opened. No response received within the required period.",
       date: "14 Feb 2026",
     },
     messages: [
       { sender: "Henderson Building Supplies Ltd", direction: "in",  date: "12 Feb 2026", content: "We are disputing the invoice dated November 2024. Our records show a credit note was issued." },
-      { sender: "Sarah Mitchell",                  direction: "out", date: "14 Feb 2026", content: "Thank you for your message. We have reviewed the file and cannot identify a credit note. Please provide the credit note reference number so we can investigate." },
+      { sender: "Sarah Mitchell",                  direction: "out", date: "14 Feb 2026", content: "Thank you for your message. We reviewed the file and cannot identify a credit note. Please provide the reference number so we can investigate." },
       { sender: "Henderson Building Supplies Ltd", direction: "in",  date: "14 Feb 2026", content: "Will check with our accounts department and come back to you shortly." },
     ],
   },
@@ -56,9 +56,9 @@ const cases = [
     stage: "Pre-Legal",
     daysInactive: 84,
     lastActivity: "3 Apr 2026",
-    timeline: {
+    latestActivity: {
       code: "TL0045",
-      description: "Debtor requested payment plan — awaiting supporting financial information",
+      description: "Debtor contacted us requesting a payment arrangement. Offered to pay £800/month over 16 months. Awaiting statement of means to assess viability.",
       date: "3 Apr 2026",
     },
     messages: [
@@ -78,9 +78,9 @@ const cases = [
     stage: "Initial Contact",
     daysInactive: 61,
     lastActivity: "25 Apr 2026",
-    timeline: {
+    latestActivity: {
       code: "TL0012",
-      description: "First formal demand letter sent — no response received",
+      description: "First formal demand letter sent via recorded post. No response received from debtor within the 7-day deadline.",
       date: "25 Apr 2026",
     },
     messages: [
@@ -99,13 +99,13 @@ const cases = [
     stage: "Initial Contact",
     daysInactive: 38,
     lastActivity: "18 May 2026",
-    timeline: {
+    latestActivity: {
       code: "TL0005",
-      description: "Case opened — debtor details verified",
+      description: "Case opened and debtor details verified against Companies House records. Awaiting assignment to a case handler.",
       date: "18 May 2026",
     },
     messages: [
-      { sender: "System", direction: "out", date: "18 May 2026", content: "Case ACC-2025-0203 has been created and assigned for initial outreach." },
+      { sender: "System", direction: "out", date: "18 May 2026", content: "Case ACC-2025-0203 has been created and is pending handler assignment and initial outreach." },
     ],
   },
 ];
@@ -113,9 +113,15 @@ const cases = [
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function ageBandStyle(days: number) {
-  if (days >= 90) return { bg: "#FEF2F2", border: "#FECACA", text: "#991B1B", pill: "#EF4444" };
-  if (days >= 60) return { bg: "#FFF7ED", border: "#FED7AA", text: "#9A3412", pill: "#F97316" };
-  return { bg: "#FFFBEB", border: "#FDE68A", text: "#92400E", pill: "#FBBF24" };
+  if (days >= 90) return { bg: "#FEF2F2", border: "#FECACA", text: "#991B1B", badgeBg: "#EF4444" };
+  if (days >= 60) return { bg: "#FFF7ED", border: "#FED7AA", text: "#9A3412", badgeBg: "#F97316" };
+  return { bg: "#FFFBEB", border: "#FDE68A", text: "#92400E", badgeBg: "#FBBF24" };
+}
+
+function stageColor(stage: string): { bg: string; text: string; border: string } {
+  if (stage === "Legal Action") return { bg: "#FEF2F2", text: "#991B1B", border: "#FECACA" };
+  if (stage === "Pre-Legal")    return { bg: "#FFF7ED", text: "#9A3412", border: "#FED7AA" };
+  return                               { bg: "#EFF6FF", text: "#1E40AF", border: "#BFDBFE" };
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -139,7 +145,7 @@ function MessageBubble({ msg }: { msg: { sender: string; direction: string; date
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: isOut ? "flex-end" : "flex-start", marginBottom: 8 }}>
       <div style={{
-        maxWidth: "85%",
+        maxWidth: "88%",
         background: isOut ? "#EFF6FF" : "#F8FAFC",
         border: isOut ? "1px solid #BFDBFE" : "1px solid #E2E8F0",
         borderRadius: isOut ? "12px 12px 4px 12px" : "12px 12px 12px 4px",
@@ -155,98 +161,145 @@ function MessageBubble({ msg }: { msg: { sender: string; direction: string; date
 
 function CaseCard({ c }: { c: typeof cases[number] }) {
   const s = ageBandStyle(c.daysInactive);
+  const stageStyle = stageColor(c.stage);
+
   return (
     <div style={{
       background: "#fff", borderRadius: 14, marginBottom: 20,
       boxShadow: "0 2px 12px rgba(0,0,0,0.06)", border: "1px solid #E2E8F0", overflow: "hidden",
     }}>
-      {/* Case header bar */}
+
+      {/* ── Case header bar ── */}
       <div style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "14px 20px", background: "#F8FAFC", borderBottom: "1px solid #E2E8F0",
-        gap: 12, flexWrap: "wrap",
       }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 15, fontWeight: 700, color: "#0f172a" }}>{c.caseName}</span>
+        {/* Row 1: name + inactive badge */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", flex: 1, minWidth: 0 }}>
+            <span style={{ fontSize: 16, fontWeight: 700, color: "#0f172a" }}>{c.caseName}</span>
             <span style={{
-              fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 999,
+              fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 999,
               background: s.bg, color: s.text, border: `1px solid ${s.border}`,
-              display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap",
+              display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap", flexShrink: 0,
             }}>
               <Clock size={10} /> {c.daysInactive} days inactive
             </span>
           </div>
-          <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-            {[
-              { icon: null, text: c.accountNumber, prefix: "#" },
-              { icon: <Building2 size={11} />, text: c.organisation },
-              { icon: <User size={11} />, text: c.handler },
-            ].map((item, i) => (
-              <span key={i} style={{ fontSize: 12, color: "#64748b", display: "flex", alignItems: "center", gap: 4 }}>
-                {item.icon}{item.prefix && <span style={{ opacity: 0.5 }}>{item.prefix}</span>}{item.text}
-              </span>
-            ))}
-          </div>
         </div>
-        <div style={{ display: "flex", gap: 12, alignItems: "center", flexShrink: 0 }}>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 20, fontWeight: 800, color: "#0f172a" }}>{c.outstanding}</div>
-            <div style={{ fontSize: 11, color: "#94a3b8" }}>outstanding</div>
+
+        {/* Row 2: meta + key figures */}
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+
+          {/* Meta: account, org, handler */}
+          <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 12, color: "#64748b", display: "flex", alignItems: "center", gap: 4 }}>
+              <span style={{ opacity: 0.4, fontSize: 13 }}>#</span>{c.accountNumber}
+            </span>
+            <span style={{ fontSize: 12, color: "#64748b", display: "flex", alignItems: "center", gap: 4 }}>
+              <Building2 size={11} />{c.organisation}
+            </span>
+            <span style={{ fontSize: 12, color: "#64748b", display: "flex", alignItems: "center", gap: 4 }}>
+              <User size={11} />{c.handler}
+            </span>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-end" }}>
+
+          {/* Key figures: outstanding + stage + status */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+
+            {/* Outstanding amount */}
+            <div style={{
+              background: "#fff", border: "1px solid #E2E8F0", borderRadius: 10,
+              padding: "8px 14px", textAlign: "right",
+            }}>
+              <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 2 }}>Outstanding</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", display: "flex", alignItems: "center", gap: 2 }}>
+                <PoundSterling size={14} style={{ color: "#64748b" }} />
+                {c.outstanding.replace("£", "")}
+              </div>
+            </div>
+
+            {/* Stage */}
+            <div style={{
+              background: stageStyle.bg, border: `1px solid ${stageStyle.border}`,
+              borderRadius: 10, padding: "8px 14px", textAlign: "center",
+            }}>
+              <div style={{ fontSize: 10, color: stageStyle.text, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.4px", opacity: 0.75, marginBottom: 2 }}>Stage</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: stageStyle.text, display: "flex", alignItems: "center", gap: 5 }}>
+                <Layers size={11} />{c.stage}
+              </div>
+            </div>
+
+            {/* Status pill */}
             <span style={{
-              fontSize: 11, padding: "2px 10px", borderRadius: 999, fontWeight: 600,
+              fontSize: 12, padding: "6px 14px", borderRadius: 999, fontWeight: 600,
               background: "#DCFCE7", color: "#166534", border: "1px solid #BBF7D0",
             }}>{c.status}</span>
-            <span style={{
-              fontSize: 11, padding: "2px 10px", borderRadius: 999, fontWeight: 500,
-              background: "#F1F5F9", color: "#475569", border: "1px solid #E2E8F0",
-            }}>{c.stage}</span>
           </div>
         </div>
       </div>
 
-      {/* Body: two columns */}
+      {/* ── Body: two columns ── */}
       <div style={{ display: "flex" }}>
 
-        {/* Left: timeline + last activity */}
+        {/* Left: latest case activity + last-activity badge */}
         <div style={{
-          flex: "0 0 36%", borderRight: "1px solid #E2E8F0",
+          flex: "0 0 40%", borderRight: "1px solid #E2E8F0",
           padding: "14px 16px", background: "#FAFAFA",
         }}>
+          {/* Section label */}
           <div style={{
             fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.6px",
             color: "#94a3b8", display: "flex", alignItems: "center", gap: 5, marginBottom: 10,
           }}>
-            <Activity size={11} /> Latest Timeline Entry
+            <Activity size={11} /> Latest Case Activity
           </div>
 
+          {/* Activity card */}
           <div style={{
             background: "#fff", border: "1px solid #E2E8F0",
-            borderLeft: "3px solid #B45309", borderRadius: "0 8px 8px 0", padding: "10px 12px",
+            borderLeft: "3px solid #B45309", borderRadius: "0 8px 8px 0", padding: "12px 14px",
           }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: "#B45309", marginBottom: 4, fontFamily: "monospace", letterSpacing: "0.5px" }}>
-              {c.timeline.code}
+            {/* Code badge */}
+            <span style={{
+              display: "inline-block", fontSize: 10, fontWeight: 700, color: "#B45309",
+              background: "#FEF3C7", border: "1px solid #FDE68A",
+              borderRadius: 4, padding: "1px 6px", fontFamily: "monospace",
+              letterSpacing: "0.5px", marginBottom: 8,
+            }}>
+              {c.latestActivity.code}
+            </span>
+
+            {/* Description — this is the main focus */}
+            <div style={{
+              fontSize: 13, color: "#1e293b", lineHeight: 1.6, marginBottom: 8, fontWeight: 400,
+            }}>
+              {c.latestActivity.description}
             </div>
-            <div style={{ fontSize: 12, color: "#1e293b", lineHeight: 1.5, marginBottom: 6 }}>
-              {c.timeline.description}
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: "#94a3b8" }}>
-              <Calendar size={9} /> {c.timeline.date}
+
+            {/* Date */}
+            <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "#94a3b8" }}>
+              <Calendar size={10} /> {c.latestActivity.date}
             </div>
           </div>
 
-          {/* Last activity badge */}
+          {/* Last activity date badge */}
           <div style={{
-            marginTop: 12, padding: "10px 12px", borderRadius: 8,
+            marginTop: 12, padding: "10px 14px", borderRadius: 8,
             background: s.bg, border: `1px solid ${s.border}`,
+            display: "flex", justifyContent: "space-between", alignItems: "center",
           }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: s.text, marginBottom: 2, textTransform: "uppercase", letterSpacing: "0.4px" }}>
-              Last Activity
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: s.text, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 2 }}>
+                Last Activity
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: s.text }}>{c.lastActivity}</div>
             </div>
-            <div style={{ fontSize: 14, fontWeight: 800, color: s.text }}>{c.lastActivity}</div>
-            <div style={{ fontSize: 11, color: s.text, opacity: 0.75, marginTop: 1 }}>{c.daysInactive} days ago</div>
+            <div style={{
+              fontSize: 20, fontWeight: 800, color: s.text, lineHeight: 1,
+            }}>
+              {c.daysInactive}
+              <div style={{ fontSize: 10, fontWeight: 500, color: s.text, opacity: 0.7 }}>days ago</div>
+            </div>
           </div>
         </div>
 
