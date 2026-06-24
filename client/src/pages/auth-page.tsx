@@ -113,10 +113,6 @@ export default function AuthPage() {
     window.location.href = '/auth/azure/login';
   };
 
-  const handleAzureSignup = () => {
-    window.location.href = '/auth/azure/signup';
-  };
-
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-gray-50 dark:bg-gray-900">
       {/* Left side - Form */}
@@ -216,31 +212,6 @@ export default function AuthPage() {
                 <span className="ml-2">Sign in with Microsoft</span>
               </Button>
 
-              <div className="relative my-4">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-gray-200 dark:border-gray-700" />
-                </div>
-                <div className="relative flex justify-center text-xs">
-                  <span className="bg-card px-2 text-muted-foreground">First time here?</span>
-                </div>
-              </div>
-
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full h-11 font-medium"
-                onClick={handleAzureSignup}
-                data-testid="button-azure-signup"
-              >
-                Create your account
-              </Button>
-              <p className="mt-2 text-center text-xs font-medium text-teal-700 dark:text-teal-400">
-                You'll need to register before your first sign in. Use the same email address we invited.
-              </p>
-              <p className="mt-1 text-center text-xs text-muted-foreground">
-                Not been invited yet? Please contact us.
-              </p>
-
               <div className="mt-6 text-center text-xs text-[color:var(--muted-foreground)]">Contact us at email@acclaim.law | 0113 225 8811</div>
               <div className="mt-3 text-center text-xs text-muted-foreground">
                 <Link href="/terms" className="hover:text-primary hover:underline">
@@ -312,7 +283,7 @@ export default function AuthPage() {
                   </li>
                   <li className="flex gap-3">
                     <span className="flex-shrink-0 w-6 h-6 rounded-full bg-teal-600 text-white text-xs flex items-center justify-center font-semibold">3</span>
-                    <span><strong>Prefer Microsoft?</strong> You can also use <em>Sign in with Microsoft</em>. If you've not registered yet, click <em>Create your account</em> first using your invited email address.</span>
+                    <span><strong>Prefer Microsoft?</strong> You can also use <em>Sign in with Microsoft</em> with your invited email address.</span>
                   </li>
                 </ol>
                 <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">
