@@ -3730,3 +3730,178 @@ export async function sendEscalationReportEmail(
     return false;
   }
 }
+
+// ── Inactive Cases Weekly Report email ───────────────────────────────────────
+
+export async function sendInactiveCasesReportEmail(
+  cases: Array<{
+    caseId: number; caseName: string; accountNumber: string;
+    assignedTo: string | null; outstandingAmount: string;
+    status: string; stage: string; lastActivityDate: Date; daysInactive: number;
+  }>,
+  excelBuffer: Buffer,
+  excelFileName: string,
+  htmlContent: string,
+  htmlFileName: string,
+): Promise<boolean> {
+  try {
+    const APIM_KEY = process.env.APIM_SUBSCRIPTION_KEY;
+    if (!APIM_KEY && !process.env.SENDGRID_API_KEY) {
+      console.error('[InactiveCases] No email transport configured');
+      return false;
+    }
+
+    const today = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const totalCases = cases.length;
+    const longestCase = [...cases].sort((a, b) => b.daysInactive - a.daysInactive)[0];
+    const avgDays = totalCases > 0
+      ? Math.round(cases.reduce((s, c) => s + c.daysInactive, 0) / totalCases)
+      : 0;
+
+    const band30_60 = cases.filter(c => c.daysInactive >= 30 && c.daysInactive < 60).length;
+    const band60_90 = cases.filter(c => c.daysInactive >= 60 && c.daysInactive < 90).length;
+    const band90p   = cases.filter(c => c.daysInactive >= 90).length;
+
+    const htmlBody = `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+      <body style="margin:0;padding:0;background-color:#f1f5f9;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f1f5f9;">
+          <tr>
+            <td align="center" style="padding:40px 20px;">
+              <table role="presentation" width="620" cellspacing="0" cellpadding="0" style="max-width:620px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+                <!-- Header -->
+                <tr>
+                  <td style="background:linear-gradient(135deg,#B45309 0%,#78350F 100%);padding:36px 40px;text-align:center;">
+                    <img src="cid:logo" alt="Acclaim" style="height:36px;width:auto;margin-bottom:14px;" />
+                    <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">&#x1F550; Inactive Cases Report</h1>
+                    <p style="margin:8px 0 0 0;color:rgba(255,255,255,0.85);font-size:14px;">${today}</p>
+                  </td>
+                </tr>
+                <!-- Body -->
+                <tr>
+                  <td style="padding:36px 40px;">
+                    <!-- Summary cards -->
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:28px;">
+                      <tr>
+                        <td style="width:33%;padding-right:6px;">
+                          <div style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:10px;padding:16px;text-align:center;">
+                            <p style="margin:0;font-size:32px;font-weight:800;color:#92400E;">${totalCases}</p>
+                            <p style="margin:4px 0 0 0;font-size:12px;color:#78350F;">Inactive Cases</p>
+                          </div>
+                        </td>
+                        <td style="width:33%;padding:0 3px;">
+                          <div style="background:#FEE2E2;border:1px solid #EF4444;border-radius:10px;padding:16px;text-align:center;">
+                            <p style="margin:0;font-size:32px;font-weight:800;color:#991B1B;">${longestCase ? longestCase.daysInactive : 0}d</p>
+                            <p style="margin:4px 0 0 0;font-size:12px;color:#7F1D1D;">Longest Gap</p>
+                          </div>
+                        </td>
+                        <td style="width:33%;padding-left:6px;">
+                          <div style="background:#FFEDD5;border:1px solid #F97316;border-radius:10px;padding:16px;text-align:center;">
+                            <p style="margin:0;font-size:32px;font-weight:800;color:#9A3412;">${avgDays}d</p>
+                            <p style="margin:4px 0 0 0;font-size:12px;color:#7C2D12;">Average</p>
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- Age breakdown -->
+                    <h3 style="margin:0 0 10px 0;color:#0f172a;font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">By Inactivity Period</h3>
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-radius:8px;overflow:hidden;border:1px solid #E5E7EB;margin-bottom:24px;font-size:13px;">
+                      <tr style="background:#FFFBEB;"><td style="padding:7px 12px;color:#374151;">30–60 days</td><td style="padding:7px 12px;color:#92400E;font-weight:600;">${band30_60} case${band30_60 !== 1 ? 's' : ''}</td></tr>
+                      <tr style="background:#FFF7ED;"><td style="padding:7px 12px;color:#374151;">60–90 days</td><td style="padding:7px 12px;color:#9A3412;font-weight:600;">${band60_90} case${band60_90 !== 1 ? 's' : ''}</td></tr>
+                      <tr style="background:#FEF2F2;"><td style="padding:7px 12px;color:#374151;">90+ days</td><td style="padding:7px 12px;color:#991B1B;font-weight:600;">${band90p} case${band90p !== 1 ? 's' : ''}</td></tr>
+                    </table>
+
+                    <p style="margin:0 0 8px 0;color:#374151;font-size:13px;line-height:1.6;">Two attachments are included:</p>
+                    <ul style="margin:0 0 20px 0;padding-left:20px;color:#374151;font-size:13px;line-height:1.8;">
+                      <li><strong>Excel workbook</strong> — full case list with age-band colour coding and handler summary</li>
+                      <li><strong>HTML report</strong> — open in any browser for a formatted view including latest activity and recent messages per case</li>
+                    </ul>
+                    <p style="margin:0;color:#94a3b8;font-size:12px;">This report is generated automatically every Thursday at 8am and covers active cases with no activity for 30 or more days since 20 May 2026.</p>
+                  </td>
+                </tr>
+                <!-- Footer -->
+                <tr>
+                  <td style="background-color:#1f2937;padding:20px 40px;text-align:center;border-radius:0 0 16px 16px;">
+                    <p style="margin:0;color:#9ca3af;font-size:12px;">Automated weekly report — Acclaim Client Portal</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>`;
+
+    const textBody = `Inactive Cases Report — ${today}\n\n${totalCases} case${totalCases !== 1 ? 's' : ''} have had no activity for 30+ days.\n\nLongest gap: ${longestCase ? longestCase.daysInactive + ' days (' + longestCase.caseName + ')' : 'N/A'}\nAverage inactivity: ${avgDays} days\n\nAge breakdown:\n  30–60 days: ${band30_60}\n  60–90 days: ${band60_90}\n  90+ days:   ${band90p}\n\nFull details in the attached Excel and HTML report.`;
+
+    const attachments: Array<{ content: string; filename: string; type: string; disposition?: string; content_id?: string }> = [];
+    const logoBase64 = getLogoBase64();
+    if (logoBase64) attachments.push(logoBase64);
+    attachments.push({
+      content: excelBuffer.toString('base64'),
+      filename: excelFileName,
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      disposition: 'attachment',
+    });
+    attachments.push({
+      content: Buffer.from(htmlContent).toString('base64'),
+      filename: htmlFileName,
+      type: 'text/html',
+      disposition: 'attachment',
+    });
+
+    const RECIPIENT = 'email@acclaim.law';
+    const subject = `\u{1F550} Inactive Cases Report \u2014 ${totalCases} case${totalCases !== 1 ? 's' : ''} \u2014 ${today}`;
+
+    const emailPayload = {
+      personalizations: [{ to: [{ email: RECIPIENT }] }],
+      from: { email: 'email@acclaim.law', name: 'Acclaim Credit Management' },
+      subject,
+      content: [
+        { type: 'text/plain', value: textBody },
+        { type: 'text/html',  value: htmlBody },
+      ],
+      attachments,
+    };
+
+    if (APIM_KEY) {
+      try {
+        const resp = await fetch(APIM_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Ocp-Apim-Subscription-Key': APIM_KEY },
+          body: JSON.stringify(emailPayload),
+        });
+        if (resp.ok || resp.status === 202) {
+          console.log(`[InactiveCases] Report sent via APIM to ${RECIPIENT}`);
+          return true;
+        }
+        console.warn(`[InactiveCases] APIM returned ${resp.status}`);
+      } catch (e) {
+        console.warn(`[InactiveCases] APIM unreachable — ${e}`);
+      }
+    }
+
+    if (process.env.SENDGRID_API_KEY) {
+      const resp = await fetch('https://api.sendgrid.com/v3/mail/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.SENDGRID_API_KEY}` },
+        body: JSON.stringify(emailPayload),
+      });
+      if (resp.ok || resp.status === 202) {
+        console.log(`[InactiveCases] Report sent via SendGrid to ${RECIPIENT}`);
+        return true;
+      }
+      console.error(`[InactiveCases] SendGrid failed: ${resp.status}`);
+      return false;
+    }
+
+    console.error('[InactiveCases] No working email transport');
+    return false;
+  } catch (error) {
+    console.error('[InactiveCases] Error sending inactive cases report email:', error);
+    return false;
+  }
+}

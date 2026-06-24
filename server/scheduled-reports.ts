@@ -3,6 +3,7 @@ import { storage } from "./storage";
 import { sendScheduledReportEmailWithAttachments } from "./email-service-sendgrid";
 import type { InsertAuditLog } from "@shared/schema";
 import { processEscalationReport } from "./escalation-reports";
+import { processInactiveCasesReport } from "./inactive-cases-report";
 
 export interface ScheduledReportSettings {
   id: number;
@@ -997,6 +998,12 @@ export function scheduleReportProcessor(): void {
       await processEscalationReport();
     } catch (error) {
       console.error("Error processing escalation report:", error);
+    }
+    // Inactive cases report: Thursdays at 8am only
+    try {
+      await processInactiveCasesReport();
+    } catch (error) {
+      console.error("Error processing inactive cases report:", error);
     }
   }, 60 * 60 * 1000);
 

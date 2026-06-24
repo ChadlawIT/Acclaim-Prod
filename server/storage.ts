@@ -86,6 +86,20 @@ export interface IStorage {
     senderEmail: string;
     daysOverdue: number;
   }[]>;
+  getInactiveCases(minDaysInactive: number, activeFrom: Date): Promise<{
+    caseId: number;
+    caseName: string;
+    accountNumber: string;
+    organisationId: number;
+    assignedTo: string | null;
+    outstandingAmount: string;
+    status: string;
+    stage: string;
+    lastActivityDate: Date;
+    daysInactive: number;
+  }[]>;
+  getLatestCaseActivitiesBatch(caseIds: number[]): Promise<Map<number, { description: string; code: string; createdAt: Date }>>;
+  getLastMessagesBatch(caseIds: number[], limit?: number): Promise<Map<number, Array<{ sender: string; isAdmin: boolean; content: string; createdAt: Date }>>>;
 
   // Organisation operations
   getOrganisation(id: number): Promise<Organization | undefined>;
@@ -3394,6 +3408,120 @@ export class DatabaseStorage implements IStorage {
       .from(organisations)
       .where(eq(organisations.scheduledReportsEnabled, false));
     return results.map(r => r.id);
+  }
+
+  async getInactiveCases(minDaysInactive: number, activeFrom: Date): Promise<{
+    caseId: number;
+    caseName: string;
+    accountNumber: string;
+    organisationId: number;
+    assignedTo: string | null;
+    outstandingAmount: string;
+    status: string;
+    stage: string;
+    lastActivityDate: Date;
+    daysInactive: number;
+  }[]> {
+    const cutoffDate = new Date(Date.now() - minDaysInactive * 24 * 60 * 60 * 1000);
+
+    const rows = await db.execute(sql`
+      WITH case_last_activity AS (
+        SELECT
+          c.id                    AS case_id,
+          c.case_name,
+          c.account_number,
+          c.organisation_id,
+          c.assigned_to,
+          c.outstanding_amount,
+          c.status,
+          c.stage,
+          GREATEST(
+            c.updated_at,
+            COALESCE((SELECT MAX(ca.created_at) FROM case_activities ca WHERE ca.case_id = c.id), c.updated_at),
+            COALESCE((SELECT MAX(m.created_at)  FROM messages m          WHERE m.case_id  = c.id), c.updated_at),
+            COALESCE((SELECT MAX(p.created_at)  FROM payments p          WHERE p.case_id  = c.id), c.updated_at),
+            COALESCE((SELECT MAX(d.created_at)  FROM documents d         WHERE d.case_id  = c.id), c.updated_at)
+          ) AS last_activity_date
+        FROM cases c
+        WHERE c.status != 'closed'
+          AND (c.is_archived = false OR c.is_archived IS NULL)
+      )
+      SELECT * FROM case_last_activity
+      WHERE last_activity_date >= ${activeFrom}
+        AND last_activity_date < ${cutoffDate}
+      ORDER BY last_activity_date ASC
+    `);
+
+    const now = new Date();
+    return (rows.rows as any[]).map(r => ({
+      caseId:           Number(r.case_id),
+      caseName:         String(r.case_name),
+      accountNumber:    String(r.account_number),
+      organisationId:   Number(r.organisation_id),
+      assignedTo:       r.assigned_to ? String(r.assigned_to) : null,
+      outstandingAmount: String(r.outstanding_amount),
+      status:           String(r.status),
+      stage:            String(r.stage),
+      lastActivityDate: new Date(r.last_activity_date),
+      daysInactive:     Math.floor((now.getTime() - new Date(r.last_activity_date).getTime()) / (1000 * 60 * 60 * 24)),
+    }));
+  }
+
+  async getLatestCaseActivitiesBatch(caseIds: number[]): Promise<Map<number, { description: string; code: string; createdAt: Date }>> {
+    if (caseIds.length === 0) return new Map();
+
+    const all = await db
+      .select({ caseId: caseActivities.caseId, description: caseActivities.description, createdAt: caseActivities.createdAt })
+      .from(caseActivities)
+      .where(inArray(caseActivities.caseId, caseIds))
+      .orderBy(desc(caseActivities.createdAt));
+
+    const result = new Map<number, { description: string; code: string; createdAt: Date }>();
+    for (const r of all) {
+      if (result.has(r.caseId)) continue;
+      const codeMatch = r.description.match(/\b(TL\d{4})\b/);
+      result.set(r.caseId, {
+        description: r.description,
+        code: codeMatch ? codeMatch[1] : '',
+        createdAt: r.createdAt ?? new Date(),
+      });
+    }
+    return result;
+  }
+
+  async getLastMessagesBatch(caseIds: number[], limit = 3): Promise<Map<number, Array<{ sender: string; isAdmin: boolean; content: string; createdAt: Date }>>> {
+    if (caseIds.length === 0) return new Map();
+
+    const all = await db
+      .select({
+        caseId:    messages.caseId,
+        content:   messages.content,
+        createdAt: messages.createdAt,
+        firstName: users.firstName,
+        lastName:  users.lastName,
+        isAdmin:   users.isAdmin,
+      })
+      .from(messages)
+      .innerJoin(users, eq(messages.senderId, users.id))
+      .where(inArray(messages.caseId, caseIds))
+      .orderBy(desc(messages.createdAt));
+
+    const countByCaseId = new Map<number, number>();
+    const result = new Map<number, Array<{ sender: string; isAdmin: boolean; content: string; createdAt: Date }>>();
+    for (const r of all) {
+      if (r.caseId === null) continue;
+      const count = countByCaseId.get(r.caseId) ?? 0;
+      if (count >= limit) continue;
+      countByCaseId.set(r.caseId, count + 1);
+      if (!result.has(r.caseId)) result.set(r.caseId, []);
+      result.get(r.caseId)!.unshift({
+        sender:    `${r.firstName ?? ''} ${r.lastName ?? ''}`.trim() || 'Unknown',
+        isAdmin:   r.isAdmin ?? false,
+        content:   r.content,
+        createdAt: r.createdAt ?? new Date(),
+      });
+    }
+    return result;
   }
 }
 
