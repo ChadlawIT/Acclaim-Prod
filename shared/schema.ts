@@ -47,8 +47,6 @@ export const users = pgTable("users", {
   pushNotifications: boolean("push_notifications").default(true), // User preference for push notifications
   loginNotifications: boolean("login_notifications").default(true), // User preference for login alert emails
   canSubmitCases: boolean("can_submit_cases").default(true), // Admin-controlled permission to submit new cases
-  welcomeEmailSentAt: timestamp("welcome_email_sent_at"), // Last time a welcome email was sent
-  inviteEmailSentAt: timestamp("invite_email_sent_at"), // Last time an invite/resend email was sent
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

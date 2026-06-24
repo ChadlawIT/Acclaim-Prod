@@ -228,10 +228,6 @@ export interface IStorage {
 
   verifyUserPassword(userId: string, password: string): Promise<boolean>;
 
-  recordWelcomeEmailTimestamp(userId: string): Promise<void>;
-  recordInviteEmailTimestamp(userId: string): Promise<void>;
-  getEmailTimestamps(): Promise<Record<string, { welcomeSentAt?: string; inviteSentAt?: string }>>;
-
   checkMustChangePassword(userId: string): Promise<boolean>;
 
   deleteUser(userId: string): Promise<void>;
@@ -2097,31 +2093,6 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     return user || null;
-  }
-
-  async recordWelcomeEmailTimestamp(userId: string): Promise<void> {
-    await db.update(users).set({ welcomeEmailSentAt: new Date() }).where(eq(users.id, userId));
-  }
-
-  async recordInviteEmailTimestamp(userId: string): Promise<void> {
-    await db.update(users).set({ inviteEmailSentAt: new Date() }).where(eq(users.id, userId));
-  }
-
-  async getEmailTimestamps(): Promise<Record<string, { welcomeSentAt?: string; inviteSentAt?: string }>> {
-    const rows = await db
-      .select({ id: users.id, welcomeEmailSentAt: users.welcomeEmailSentAt, inviteEmailSentAt: users.inviteEmailSentAt })
-      .from(users)
-      .where(isNotNull(users.email));
-    const result: Record<string, { welcomeSentAt?: string; inviteSentAt?: string }> = {};
-    for (const row of rows) {
-      if (row.welcomeEmailSentAt || row.inviteEmailSentAt) {
-        result[row.id] = {
-          welcomeSentAt: row.welcomeEmailSentAt?.toISOString(),
-          inviteSentAt: row.inviteEmailSentAt?.toISOString(),
-        };
-      }
-    }
-    return result;
   }
 
   async resetUserPassword(userId: string): Promise<string> {
