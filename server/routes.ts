@@ -3259,11 +3259,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Always return success — log the failure but don't block the admin
+      // Always record the attempt — useful even if delivery failed
+      recordWelcomeEmail(userId);
       if (!welcomeEmailSent) {
         console.error(`[Welcome Email] All email attempts failed for ${user.email}`);
-      } else {
-        recordWelcomeEmail(userId);
       }
 
       res.json({ 
