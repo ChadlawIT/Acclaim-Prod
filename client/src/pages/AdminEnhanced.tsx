@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import ExcelJS from "exceljs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useAuth } from "@/hooks/use-auth";
-import { Users, Building, Plus, Edit, Trash2, Shield, UserPlus, AlertTriangle, ShieldCheck, ShieldAlert, ArrowLeft, Activity, FileText, CreditCard, Archive, ArchiveRestore, Download, Check, Eye, EyeOff, Mail, Bell, BellOff, FilePlus, FileX, BarChart3, Search, Crown, Calendar, CalendarOff, Pencil, LogOut, RefreshCw, ChevronDown, ChevronUp, ChevronRight, Clock, Send, History, KeyRound, Copy, HelpCircle, X } from "lucide-react";
+import { Users, Building, Plus, Edit, Trash2, Shield, UserPlus, AlertTriangle, ShieldCheck, ShieldAlert, ArrowLeft, Activity, FileText, CreditCard, Archive, ArchiveRestore, Download, Check, Eye, EyeOff, Mail, Bell, BellOff, FilePlus, FileX, BarChart3, Search, Crown, Calendar, CalendarOff, Pencil, LogOut, RefreshCw, ChevronDown, ChevronUp, ChevronRight, Clock, Send, History, KeyRound, Copy, HelpCircle, X, ClipboardList, ClipboardX } from "lucide-react";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { createUserSchema, updateUserSchema, createOrganisationSchema, updateOrganisationSchema } from "@shared/schema";
@@ -4584,6 +4584,9 @@ export default function AdminEnhanced() {
                             ) : (
                               <FilePlus className="h-3 w-3 text-green-500" title="Document notifications on" />
                             )}
+                            {(user as any).canSubmitCases === false && (
+                              <ClipboardX className="h-3 w-3 text-amber-400" title="Case submission disabled" />
+                            )}
                             {(user as any).mustChangePassword && (
                               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
                                 <KeyRound className="h-2.5 w-2.5" /> Not registered
@@ -4663,8 +4666,10 @@ export default function AdminEnhanced() {
                         {(user as any).documentNotifications !== false && (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700"><FilePlus className="h-3 w-3" /> Docs on</span>
                         )}
-                        {(user as any).canSubmitCases === false && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-500"><FileX className="h-3 w-3" /> No case submit</span>
+                        {(user as any).canSubmitCases !== false ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700"><ClipboardList className="h-3 w-3" /> Cases on</span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-700"><ClipboardX className="h-3 w-3" /> No case submit</span>
                         )}
                       </div>
                       {(emailTimestamps[user.id]?.welcomeSentAt || emailTimestamps[user.id]?.inviteSentAt) && (
