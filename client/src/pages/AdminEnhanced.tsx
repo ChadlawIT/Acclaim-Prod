@@ -247,7 +247,7 @@ interface CaseSubmission {
   processedBy?: string;
 }
 
-const DEFAULT_PAGE_SIZE = 10;
+const DEFAULT_PAGE_SIZE = 21;
 const PAGE_SIZE_OPTIONS = [10, 25, 50];
 
 function Pagination({ currentPage, totalPages, onPageChange }: { currentPage: number; totalPages: number; onPageChange: (page: number) => void }) {
@@ -701,7 +701,7 @@ function CaseManagementTab({ isSuperAdmin = false }: { isSuperAdmin?: boolean })
   });
 
   // Filter cases by search term
-  const filteredCases = caseSearchFilter.trim()
+  const filteredCases = (caseSearchFilter.trim()
     ? cases.filter((case_: Case) => {
         const search = caseSearchFilter.toLowerCase();
         return (
@@ -714,7 +714,15 @@ function CaseManagementTab({ isSuperAdmin = false }: { isSuperAdmin?: boolean })
           String(case_.id).includes(search)
         );
       })
-    : cases;
+    : [...(cases || [])]).sort((a: Case, b: Case) => {
+      const orgCompare = (a.organisationName || '').localeCompare(b.organisationName || '');
+      if (orgCompare !== 0) return orgCompare;
+      // Sort account numbers numerically (oldest/lowest first)
+      const aNum = parseInt((a.accountNumber || '').replace(/\D/g, ''), 10);
+      const bNum = parseInt((b.accountNumber || '').replace(/\D/g, ''), 10);
+      if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
+      return (a.accountNumber || '').localeCompare(b.accountNumber || '');
+    });
 
   // Pagination logic for cases
   const totalPages = Math.ceil((filteredCases?.length || 0) / pageSize);
@@ -3598,8 +3606,8 @@ export default function AdminEnhanced() {
     return true;
   });
 
-  // Filter organisations by search term
-  const filteredOrgs = orgSearchFilter.trim()
+  // Filter organisations by search term, sorted alphabetically by name
+  const filteredOrgs = (orgSearchFilter.trim()
     ? organisations.filter((org: Organisation) => {
         const search = orgSearchFilter.toLowerCase();
         return (
@@ -3608,7 +3616,8 @@ export default function AdminEnhanced() {
           String(org.id).includes(search)
         );
       })
-    : organisations;
+    : [...(organisations || [])]).sort((a: Organisation, b: Organisation) =>
+      (a.name || '').localeCompare(b.name || ''));
 
   // Pagination calculations
   const usersTotalPages = Math.ceil((filteredUsers?.length || 0) / usersPageSize);
@@ -4571,7 +4580,7 @@ export default function AdminEnhanced() {
                             )}
                             {(user as any).mustChangePassword && (
                               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
-                                <KeyRound className="h-2.5 w-2.5" /> Temp pwd
+                                <KeyRound className="h-2.5 w-2.5" /> Not registered
                               </span>
                             )}
                           </div>
@@ -4638,7 +4647,7 @@ export default function AdminEnhanced() {
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">User</span>
                         )}
                         {(user as any).mustChangePassword ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-700"><KeyRound className="h-3 w-3" /> Temp password</span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-700"><KeyRound className="h-3 w-3" /> Not registered</span>
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700"><Check className="h-3 w-3" /> Registered</span>
                         )}
