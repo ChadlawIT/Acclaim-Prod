@@ -1281,6 +1281,17 @@ Portal: https://acclaim-api-prod-uks-001.azurewebsites.net/auth
 
                       <!-- Sign-in steps -->
                       <div style="margin-bottom: 16px;">
+                        ${data.isAdmin ? `
+                        <!-- Admin: SSO only -->
+                        <div style="background: #e0f7f6; border: 1px solid #b2dfdb; border-radius: 12px; padding: 20px;">
+                          <div style="margin-bottom: 10px;">
+                            <span style="display: inline-block; background: #008b8b; color: #ffffff; padding: 4px 12px; border-radius: 50px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">How to sign in</span>
+                          </div>
+                          <p style="color: #00504e; margin: 0 0 8px 0; font-size: 15px; font-weight: 600;">Sign in with Microsoft</p>
+                          <p style="color: #00695c; margin: 0 0 10px 0; font-size: 13px; line-height: 1.6;">As a Chadwick Lawrence team member, you sign in using your existing Microsoft (Chadwick Lawrence) account — no separate portal password needed.</p>
+                          <p style="color: #00695c; margin: 0; font-size: 13px; line-height: 1.6;">On the sign-in page, click <strong>"Sign in with Microsoft"</strong> and sign in with your usual work email and password (with MFA if required).</p>
+                        </div>
+                        ` : `
                         <p style="color: #0f172a; margin: 0 0 16px 0; font-size: 15px; font-weight: 600;">There are two ways to sign in</p>
 
                         <!-- Option 1: Microsoft SSO (recommended) -->
@@ -1307,6 +1318,7 @@ Portal: https://acclaim-api-prod-uks-001.azurewebsites.net/auth
                           <p style="color: #475569; margin: 0; font-size: 13px; line-height: 1.6;">If you have any difficulty signing in with Microsoft, you can sign in with your email address and the password you have already set. Forgotten it? Use the <strong>"Forgotten your password?"</strong> link on the sign-in page to receive a one-time code by email.</p>
                           `}
                         </div>
+                        `}
                       </div>
                       
                     </td>
@@ -1336,7 +1348,11 @@ Welcome to the Acclaim Credit Management & Recovery Portal! Your account has bee
 
 Access the portal here: ${portalUrl}
 
-THERE ARE TWO WAYS TO SIGN IN
+${data.isAdmin ? `HOW TO SIGN IN
+
+Sign in with Microsoft
+As a Chadwick Lawrence team member, you sign in using your existing Microsoft (Chadwick Lawrence) account — no separate portal password needed.
+On the sign-in page, click "Sign in with Microsoft" and sign in with your usual work email and password (with MFA if required).` : `THERE ARE TWO WAYS TO SIGN IN
 
 Option 1 - Sign in with Microsoft (Single Sign-On) - RECOMMENDED & MOST SECURE
 Single Sign-On (SSO) lets you sign in using the Microsoft account you already use. There is no separate portal password to remember, and your sign-in is protected by your organisation's own security, including multi-factor authentication (MFA) where it is set up.
@@ -1345,7 +1361,7 @@ On the sign-in page, click "Sign in with Microsoft" and sign in using this email
 Option 2 - Email & password (backup)
 ${data.temporaryPassword ? `If you have any difficulty signing in with Microsoft, you can sign in with your email address and the temporary password below.
 Temporary password: ${data.temporaryPassword}
-Please note: this password is temporary. You'll be asked to set your own new password the first time you sign in.` : `If you have any difficulty signing in with Microsoft, you can sign in with your email address and the password you have already set. Forgotten it? Use the "Forgotten your password?" link on the sign-in page to receive a one-time code by email.`}
+Please note: this password is temporary. You'll be asked to set your own new password the first time you sign in.` : `If you have any difficulty signing in with Microsoft, you can sign in with your email address and the password you have already set. Forgotten it? Use the "Forgotten your password?" link on the sign-in page to receive a one-time code by email.`}`}
 
 What you can do in the portal:
 - View and track your cases

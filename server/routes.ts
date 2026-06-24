@@ -3246,11 +3246,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       //      generate and store a fresh temporary password and email that.
       //   3. Otherwise (an active user who has set their own password), send
       //      sign-in guidance only and never reset their password.
+      // Admin users only ever sign in via Microsoft SSO — they should never
+      // receive a temporary password in their welcome email.
       let passwordForEmail: string | undefined;
-      if (temporaryPassword && user.hashedPassword && await bcrypt.compare(temporaryPassword, user.hashedPassword)) {
-        passwordForEmail = temporaryPassword;
-      } else if (user.mustChangePassword) {
-        passwordForEmail = await storage.resetUserPassword(userId);
+      if (!user.isAdmin) {
+        if (temporaryPassword && user.hashedPassword && await bcrypt.compare(temporaryPassword, user.hashedPassword)) {
+          passwordForEmail = temporaryPassword;
+        } else if (user.mustChangePassword) {
+          passwordForEmail = await storage.resetUserPassword(userId);
+        }
       }
 
       const welcomeEmailData = {

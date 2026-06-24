@@ -760,6 +760,14 @@ To manage your notification preferences, visit your Profile settings in the port
               </a>
             </div>
 
+            ${data.isAdmin ? `
+            <div style="background: #e0f7f6; border: 1px solid #14b8a6; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+              <p style="display: inline-block; background: #0d9488; color: #ffffff; padding: 3px 10px; border-radius: 50px; font-size: 11px; font-weight: bold; text-transform: uppercase; margin: 0 0 8px 0;">How to sign in</p>
+              <h3 style="color: #0f766e; margin: 0 0 8px 0;">Sign in with Microsoft</h3>
+              <p style="color: #0f766e; margin: 0 0 8px 0; font-size: 13px; line-height: 1.6;">As a Chadwick Lawrence team member, you sign in using your existing Microsoft (Chadwick Lawrence) account — no separate portal password needed.</p>
+              <p style="color: #0f766e; margin: 0; font-size: 13px; line-height: 1.6;">On the sign-in page, click <strong>"Sign in with Microsoft"</strong> and sign in with your usual work email and password (with MFA if required).</p>
+            </div>
+            ` : `
             <p style="color: #0f172a; font-weight: bold; margin: 0 0 12px 0;">There are two ways to sign in</p>
 
             <div style="background: #e0f7f6; border: 1px solid #14b8a6; padding: 15px; border-radius: 8px; margin-bottom: 16px;">
@@ -782,6 +790,7 @@ To manage your notification preferences, visit your Profile settings in the port
               <p style="color: #475569; margin: 0; font-size: 13px; line-height: 1.6;">If you have any difficulty signing in with Microsoft, you can sign in with your email address and the password you have already set. Forgotten it? Use the <strong>"Forgotten your password?"</strong> link on the sign-in page to receive a one-time code by email.</p>
               `}
             </div>
+            `}
 
             <div style="background: #f8fafc; padding: 15px; border-radius: 8px; text-align: center;">
               <p style="color: #64748b; margin: 0; font-size: 12px;">
@@ -805,7 +814,11 @@ Your account has been created and you can now access the system to view and mana
 
 Access the portal here: ${portalUrl}
 
-THERE ARE TWO WAYS TO SIGN IN
+${data.isAdmin ? `HOW TO SIGN IN
+
+Sign in with Microsoft
+As a Chadwick Lawrence team member, you sign in using your existing Microsoft (Chadwick Lawrence) account — no separate portal password needed.
+On the sign-in page, click "Sign in with Microsoft" and sign in with your usual work email and password (with MFA if required).` : `THERE ARE TWO WAYS TO SIGN IN
 
 Option 1 - Sign in with Microsoft (Single Sign-On) - RECOMMENDED & MOST SECURE
 Single Sign-On (SSO) lets you sign in using the Microsoft account you already use. There is no separate portal password to remember, and your sign-in is protected by your organisation's own security, including multi-factor authentication (MFA) where it is set up.
@@ -814,7 +827,7 @@ On the sign-in page, click "Sign in with Microsoft" and sign in using this email
 Option 2 - Email & password (backup)
 ${data.temporaryPassword ? `If you have any difficulty signing in with Microsoft, you can sign in with your email address and the temporary password below.
 Temporary password: ${data.temporaryPassword}
-Please note: this password is temporary. You'll be asked to set your own new password the first time you sign in.` : `If you have any difficulty signing in with Microsoft, you can sign in with your email address and the password you have already set. Forgotten it? Use the "Forgotten your password?" link on the sign-in page to receive a one-time code by email.`}
+Please note: this password is temporary. You'll be asked to set your own new password the first time you sign in.` : `If you have any difficulty signing in with Microsoft, you can sign in with your email address and the password you have already set. Forgotten it? Use the "Forgotten your password?" link on the sign-in page to receive a one-time code by email.`}`}
 
 If you have any questions, please contact our support team.
       `;
