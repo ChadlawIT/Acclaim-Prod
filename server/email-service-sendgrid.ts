@@ -3546,3 +3546,187 @@ The Acclaim Team
     return false;
   }
 }
+
+// ── Escalation report email ──────────────────────────────────────────────────
+
+export async function sendEscalationReportEmail(
+  msgs: Array<{
+    caseId: number; caseName: string; accountNumber: string; caseHandler: string | null;
+    messageId: number; messageContent: string; messageSubject: string | null;
+    messageCreatedAt: Date; senderName: string; senderEmail: string; daysOverdue: number;
+  }>,
+  excelBuffer: Buffer,
+  fileName: string
+): Promise<boolean> {
+  try {
+    const APIM_KEY = process.env.APIM_SUBSCRIPTION_KEY;
+    if (!APIM_KEY && !process.env.SENDGRID_API_KEY) {
+      console.error('[Escalation] No email transport configured');
+      return false;
+    }
+
+    const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    const totalCases = new Set(msgs.map(m => m.caseId)).size;
+    const totalMsgs = msgs.length;
+
+    // Age breakdown
+    const bands = [
+      { label: '7–14 days', min: 7,  max: 14 },
+      { label: '14–21 days', min: 14, max: 21 },
+      { label: '21–28 days', min: 21, max: 28 },
+      { label: '28+ days',   min: 28, max: Infinity },
+    ];
+
+    // Handler breakdown
+    const handlerMap = new Map<string, number>();
+    for (const m of msgs) {
+      const key = m.caseHandler || 'Unassigned';
+      handlerMap.set(key, (handlerMap.get(key) ?? 0) + 1);
+    }
+    const handlerRows = [...handlerMap.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([h, c]) => `<tr><td style="padding:5px 12px;color:#374151;">${h}</td><td style="padding:5px 12px;color:#374151;font-weight:600;">${c}</td></tr>`)
+      .join('');
+
+    const ageBandRows = bands
+      .map(b => {
+        const count = msgs.filter(m => m.daysOverdue >= b.min && m.daysOverdue < b.max).length;
+        const bgColor = b.min >= 28 ? '#FEE2E2' : b.min >= 21 ? '#FEF3C7' : b.min >= 14 ? '#FFFBEB' : '#F9FAFB';
+        return `<tr style="background:${bgColor};"><td style="padding:5px 12px;color:#374151;">${b.label}</td><td style="padding:5px 12px;color:#374151;font-weight:600;">${count}</td></tr>`;
+      })
+      .join('');
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+      <body style="margin:0;padding:0;background-color:#f3f4f6;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f3f4f6;">
+          <tr>
+            <td align="center" style="padding:40px 20px;">
+              <table role="presentation" width="620" cellspacing="0" cellpadding="0" style="max-width:620px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+                <!-- Header -->
+                <tr>
+                  <td style="background:linear-gradient(135deg,#B45309 0%,#92400E 100%);padding:36px 40px;text-align:center;">
+                    <img src="cid:logo" alt="Acclaim" style="height:36px;width:auto;margin-bottom:14px;" />
+                    <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">Daily Escalation Report</h1>
+                    <p style="margin:8px 0 0 0;color:rgba(255,255,255,0.85);font-size:14px;">${today}</p>
+                  </td>
+                </tr>
+                <!-- Body -->
+                <tr>
+                  <td style="padding:36px 40px;">
+
+                    <!-- Summary cards -->
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:28px;">
+                      <tr>
+                        <td style="width:50%;padding-right:8px;">
+                          <div style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:10px;padding:16px;text-align:center;">
+                            <p style="margin:0;font-size:32px;font-weight:800;color:#92400E;">${totalMsgs}</p>
+                            <p style="margin:4px 0 0 0;font-size:13px;color:#78350F;">Total Messages Awaiting Response</p>
+                          </div>
+                        </td>
+                        <td style="width:50%;padding-left:8px;">
+                          <div style="background:#FEE2E2;border:1px solid #EF4444;border-radius:10px;padding:16px;text-align:center;">
+                            <p style="margin:0;font-size:32px;font-weight:800;color:#991B1B;">${totalCases}</p>
+                            <p style="margin:4px 0 0 0;font-size:13px;color:#7F1D1D;">Cases Affected</p>
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- Age breakdown -->
+                    <h3 style="margin:0 0 10px 0;color:#0f172a;font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">By Age</h3>
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-radius:8px;overflow:hidden;border:1px solid #E5E7EB;margin-bottom:24px;font-size:13px;">
+                      <tr style="background:#F9FAFB;"><th style="padding:8px 12px;text-align:left;color:#6B7280;font-weight:600;">Age Band</th><th style="padding:8px 12px;text-align:left;color:#6B7280;font-weight:600;">Messages</th></tr>
+                      ${ageBandRows}
+                    </table>
+
+                    <!-- Handler breakdown -->
+                    <h3 style="margin:0 0 10px 0;color:#0f172a;font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">By Case Handler</h3>
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-radius:8px;overflow:hidden;border:1px solid #E5E7EB;margin-bottom:28px;font-size:13px;">
+                      <tr style="background:#F9FAFB;"><th style="padding:8px 12px;text-align:left;color:#6B7280;font-weight:600;">Case Handler</th><th style="padding:8px 12px;text-align:left;color:#6B7280;font-weight:600;">Messages</th></tr>
+                      ${handlerRows}
+                    </table>
+
+                    <p style="margin:0 0 6px 0;color:#374151;font-size:13px;line-height:1.6;">The attached Excel report contains the full list, grouped by case (oldest first). Messages flagged as <em>"Likely Acknowledgement"</em> are shown in grey and may not require a reply — please use your judgement.</p>
+                    <p style="margin:0;color:#94a3b8;font-size:12px;">This report is generated automatically each weekday at 8am and covers messages received after 25 June 2026 with no response for 7 or more days.</p>
+                  </td>
+                </tr>
+                <!-- Footer -->
+                <tr>
+                  <td style="background-color:#1f2937;padding:20px 40px;text-align:center;border-radius:0 0 16px 16px;">
+                    <p style="margin:0;color:#9ca3af;font-size:12px;">Automated escalation report — Acclaim Client Portal</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>`;
+
+    const textContent = `Daily Escalation Report — ${today}\n\n${totalMsgs} messages across ${totalCases} cases are awaiting a response.\n\nThe full breakdown is in the attached Excel report.\n\nThis report covers messages received after 25 June 2026 with no response for 7+ days.`;
+
+    const attachments: Array<{ content: string; filename: string; type: string; disposition?: string; content_id?: string }> = [];
+    const logoBase64 = getLogoBase64();
+    if (logoBase64) attachments.push(logoBase64);
+    attachments.push({
+      content: excelBuffer.toString('base64'),
+      filename: fileName,
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      disposition: 'attachment',
+    });
+
+    const RECIPIENT = 'email@acclaim.law';
+    const subject = `⚠️ Escalation Report — ${totalMsgs} message${totalMsgs !== 1 ? 's' : ''} across ${totalCases} case${totalCases !== 1 ? 's' : ''} — ${today}`;
+
+    const emailPayload = {
+      personalizations: [{ to: [{ email: RECIPIENT }] }],
+      from: { email: 'email@acclaim.law', name: 'Acclaim Credit Management' },
+      subject,
+      content: [
+        { type: 'text/plain', value: textContent },
+        { type: 'text/html', value: htmlContent },
+      ],
+      attachments,
+    };
+
+    if (APIM_KEY) {
+      try {
+        const resp = await fetch(APIM_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Ocp-Apim-Subscription-Key': APIM_KEY },
+          body: JSON.stringify(emailPayload),
+        });
+        if (resp.ok || resp.status === 202) {
+          console.log(`[Escalation] Report sent via APIM to ${RECIPIENT}`);
+          return true;
+        }
+        console.warn(`[Escalation] APIM returned ${resp.status}`);
+      } catch (e) {
+        console.warn(`[Escalation] APIM unreachable — ${e}`);
+      }
+    }
+
+    if (process.env.SENDGRID_API_KEY) {
+      const resp = await fetch('https://api.sendgrid.com/v3/mail/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.SENDGRID_API_KEY}` },
+        body: JSON.stringify(emailPayload),
+      });
+      if (resp.ok || resp.status === 202) {
+        console.log(`[Escalation] Report sent via SendGrid to ${RECIPIENT}`);
+        return true;
+      }
+      console.error(`[Escalation] SendGrid failed: ${resp.status}`);
+      return false;
+    }
+
+    console.error('[Escalation] No working email transport');
+    return false;
+  } catch (error) {
+    console.error('[Escalation] Error sending escalation report email:', error);
+    return false;
+  }
+}

@@ -51,7 +51,7 @@ import {
   type InsertScheduledReport,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, sql, or, isNull, isNotNull, inArray, notInArray, gte, lt } from "drizzle-orm";
+import { eq, and, desc, sql, or, isNull, isNotNull, inArray, notInArray, gte, lt, not, ne } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import { nanoid } from "nanoid";
 import session, { SessionStore } from "express-session";
@@ -73,6 +73,19 @@ export interface IStorage {
   updateUserOrganisation(id: string, organisationId: number | null): Promise<User>;
   getAdminByName(fullName: string): Promise<User | undefined>;
   getAdminUsers(): Promise<User[]>;
+  getEscalatedCaseMessages(activationDate: Date, minDaysOld?: number): Promise<{
+    caseId: number;
+    caseName: string;
+    accountNumber: string;
+    caseHandler: string | null;
+    messageId: number;
+    messageContent: string;
+    messageSubject: string | null;
+    messageCreatedAt: Date;
+    senderName: string;
+    senderEmail: string;
+    daysOverdue: number;
+  }[]>;
 
   // Organisation operations
   getOrganisation(id: number): Promise<Organization | undefined>;
@@ -419,6 +432,95 @@ export class DatabaseStorage implements IStorage {
 
   async getAdminUsers(): Promise<User[]> {
     return await db.select().from(users).where(eq(users.isAdmin, true));
+  }
+
+  async getEscalatedCaseMessages(activationDate: Date, minDaysOld = 7): Promise<{
+    caseId: number;
+    caseName: string;
+    accountNumber: string;
+    caseHandler: string | null;
+    messageId: number;
+    messageContent: string;
+    messageSubject: string | null;
+    messageCreatedAt: Date;
+    senderName: string;
+    senderEmail: string;
+    daysOverdue: number;
+  }[]> {
+    const cutoffDate = new Date(Date.now() - minDaysOld * 24 * 60 * 60 * 1000);
+
+    // Step 1: user messages on active, non-archived cases after activation date, older than cutoff
+    const userMsgs = await db
+      .select({
+        messageId: messages.id,
+        caseId: messages.caseId,
+        content: messages.content,
+        subject: messages.subject,
+        createdAt: messages.createdAt,
+        senderFirstName: users.firstName,
+        senderLastName: users.lastName,
+        senderEmail: users.email,
+        caseName: cases.caseName,
+        accountNumber: cases.accountNumber,
+        caseHandler: cases.assignedTo,
+      })
+      .from(messages)
+      .innerJoin(users, eq(messages.senderId, users.id))
+      .innerJoin(cases, eq(messages.caseId, cases.id))
+      .where(
+        and(
+          isNotNull(messages.caseId),
+          eq(users.isAdmin, false),
+          gte(messages.createdAt, activationDate),
+          lt(messages.createdAt, cutoffDate),
+          ne(cases.status, 'closed'),
+          or(eq(cases.isArchived, false), isNull(cases.isArchived))
+        )
+      );
+
+    if (userMsgs.length === 0) return [];
+
+    // Step 2: fetch all admin messages on the same cases so we can check for responses
+    const caseIds = [...new Set(userMsgs.map(m => m.caseId).filter((id): id is number => id !== null))];
+
+    const adminMsgs = await db
+      .select({ caseId: messages.caseId, createdAt: messages.createdAt })
+      .from(messages)
+      .innerJoin(users, eq(messages.senderId, users.id))
+      .where(and(inArray(messages.caseId, caseIds), eq(users.isAdmin, true)));
+
+    // Build map: caseId → sorted list of admin message timestamps
+    const adminDatesByCaseId = new Map<number, Date[]>();
+    for (const m of adminMsgs) {
+      if (m.caseId === null || !m.createdAt) continue;
+      if (!adminDatesByCaseId.has(m.caseId)) adminDatesByCaseId.set(m.caseId, []);
+      adminDatesByCaseId.get(m.caseId)!.push(m.createdAt);
+    }
+
+    // Step 3: keep only user messages with no admin response after them
+    const now = new Date();
+    const result = [];
+    for (const m of userMsgs) {
+      if (m.caseId === null || !m.createdAt) continue;
+      const adminDates = adminDatesByCaseId.get(m.caseId) ?? [];
+      const hasResponse = adminDates.some(d => d > m.createdAt!);
+      if (!hasResponse) {
+        result.push({
+          caseId: m.caseId,
+          caseName: m.caseName,
+          accountNumber: m.accountNumber,
+          caseHandler: m.caseHandler,
+          messageId: m.messageId,
+          messageContent: m.content,
+          messageSubject: m.subject,
+          messageCreatedAt: m.createdAt,
+          senderName: `${m.senderFirstName || ''} ${m.senderLastName || ''}`.trim() || m.senderEmail || 'Unknown',
+          senderEmail: m.senderEmail || '',
+          daysOverdue: Math.floor((now.getTime() - m.createdAt.getTime()) / (1000 * 60 * 60 * 24)),
+        });
+      }
+    }
+    return result;
   }
 
   async getAdminByName(fullName: string): Promise<User | undefined> {

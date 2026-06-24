@@ -2,6 +2,7 @@ import ExcelJS from "exceljs";
 import { storage } from "./storage";
 import { sendScheduledReportEmailWithAttachments } from "./email-service-sendgrid";
 import type { InsertAuditLog } from "@shared/schema";
+import { processEscalationReport } from "./escalation-reports";
 
 export interface ScheduledReportSettings {
   id: number;
@@ -990,6 +991,12 @@ export function scheduleReportProcessor(): void {
       await processScheduledReports();
     } catch (error) {
       console.error("Error processing scheduled reports:", error);
+    }
+    // Escalation report: weekdays at 8am only (checked every hour, fires once)
+    try {
+      await processEscalationReport();
+    } catch (error) {
+      console.error("Error processing escalation report:", error);
     }
   }, 60 * 60 * 1000);
 
