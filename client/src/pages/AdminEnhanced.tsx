@@ -321,6 +321,7 @@ function CaseManagementTab({ isSuperAdmin = false }: { isSuperAdmin?: boolean })
   const queryClient = useQueryClient();
   const [deleteConfirmCase, setDeleteConfirmCase] = useState<Case | null>(null);
   const [archiveConfirmCase, setArchiveConfirmCase] = useState<Case | null>(null);
+  const [expandedCaseId, setExpandedCaseId] = useState<number | null>(null);
   const [showNewCaseDialog, setShowNewCaseDialog] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const casesTableTopRef = useRef<HTMLDivElement>(null);
@@ -782,215 +783,151 @@ function CaseManagementTab({ isSuperAdmin = false }: { isSuperAdmin?: boolean })
       
       {/* Scroll anchor for pagination */}
       <div ref={casesTableTopRef} className="scroll-mt-4" />
-      {/* Mobile Card Layout */}
-      <div className="block sm:hidden space-y-4">
-        {paginatedCases.map((case_: Case) => (
-          <div key={case_.id} className={`rounded-lg p-4 space-y-3 ${case_.isArchived ? 'bg-gray-50 border' : 'border'}`}>
-            <div className="flex justify-between items-start">
-              <div>
-                <div className="font-medium text-sm">{case_.accountNumber}</div>
-                <div className="text-sm text-gray-700">{case_.caseName}</div>
-                <div className="text-xs text-gray-500">{case_.organisationName || 'N/A'}</div>
-              </div>
-              <div className="flex flex-col gap-1 items-end">
-                {case_.isArchived ? (
-                  <Badge variant="secondary" className="text-xs">
-                    <Archive className="h-3 w-3 mr-1" />
-                    Archived
-                  </Badge>
-                ) : (
-                  <Badge variant="default" className="text-xs">Active</Badge>
-                )}
-                {restrictionCounts[case_.id] > 0 && (
-                  <Badge
-                    variant="destructive"
-                    className="text-xs"
-                    title={`${restrictionCounts[case_.id]} user(s) restricted from this case`}
-                    data-testid={`badge-restricted-${case_.id}`}
-                  >
-                    <EyeOff className="h-3 w-3 mr-1" />
-                    {restrictionCounts[case_.id]} restricted
-                  </Badge>
-                )}
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Status:</span>
-                <Badge variant={case_.status === 'active' ? 'default' : 'secondary'} className="text-xs">
-                  {case_.status}
-                </Badge>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Stage:</span>
-                <Badge variant="outline" className="text-xs">{case_.stage}</Badge>
-              </div>
-              <div className="flex justify-between col-span-2">
-                <span className="text-gray-600">Outstanding:</span>
-                <span className="font-medium">£{case_.outstandingAmount}</span>
-              </div>
-            </div>
-            
-            <div className="flex gap-2 pt-2">
-              {case_.isArchived ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => unarchiveCaseMutation.mutate(case_.id)}
-                  disabled={unarchiveCaseMutation.isPending}
-                >
-                  <ArchiveRestore className="h-3 w-3 mr-1" />
-                  Unarchive
-                </Button>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => setArchiveConfirmCase(case_)}
-                  disabled={archiveCaseMutation.isPending}
-                >
-                  <Archive className="h-3 w-3 mr-1" />
-                  Archive
-                </Button>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setRestrictAccessCase(case_);
-                  setBlockedUserIds([]);
-                }}
-                title="Restrict access"
+      {/* Unified Card Grid + Detail Panel */}
+      <div className="relative">
+        <div className={`grid gap-4 transition-all duration-200 grid-cols-1 sm:grid-cols-2 ${expandedCaseId ? 'lg:grid-cols-2 sm:mr-80' : 'lg:grid-cols-3'}`}>
+          {paginatedCases.map((case_: Case) => {
+            const isSelected = expandedCaseId === case_.id;
+            return (
+              <button
+                key={case_.id}
+                onClick={() => setExpandedCaseId(isSelected ? null : case_.id)}
+                data-testid={`card-case-${case_.id}`}
+                className={`w-full text-left rounded-xl border p-4 shadow-sm hover:shadow-md transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-blue-400/40 ${case_.isArchived ? 'bg-gray-50 dark:bg-gray-800/50' : 'bg-white dark:bg-gray-900'} ${isSelected ? 'ring-2 ring-blue-500 border-blue-300' : 'border-gray-200 dark:border-gray-700'}`}
               >
-                <EyeOff className="h-3 w-3" />
-              </Button>
-              {isSuperAdmin && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setDeleteConfirmCase(case_)}
-                  disabled={deleteCaseMutation.isPending}
-                  className="text-red-600 hover:text-red-700"
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm truncate">{case_.accountNumber}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 truncate mt-0.5">{case_.caseName}</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                    {case_.isArchived ? (
+                      <span className="inline-flex items-center gap-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded-full">
+                        <Archive className="h-3 w-3" />Archived
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-0.5 rounded-full">Active</span>
+                    )}
+                    <ChevronRight className={`h-4 w-4 text-gray-400 transition-transform ${isSelected ? 'rotate-90 text-blue-500' : ''}`} />
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 truncate mb-2">{case_.organisationName || 'No organisation'}</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300">£{case_.outstandingAmount}</span>
+                  <span className="text-xs text-gray-400">{case_.stage}</span>
+                  {restrictionCounts[case_.id] > 0 && (
+                    <span className="inline-flex items-center gap-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded-full" data-testid={`badge-restricted-${case_.id}`}>
+                      <EyeOff className="h-3 w-3" />{restrictionCounts[case_.id]}
+                    </span>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Backdrop */}
+        {expandedCaseId && <div className="hidden sm:block fixed inset-0 z-40" onClick={() => setExpandedCaseId(null)} aria-hidden="true" />}
+
+        {/* Detail panel */}
+        {expandedCaseId && (() => {
+          const case_ = paginatedCases.find((c: Case) => c.id === expandedCaseId);
+          if (!case_) return null;
+          return (
+            <div className="fixed inset-0 z-50 sm:inset-y-0 sm:right-0 sm:left-auto sm:top-0 sm:bottom-0 w-full sm:w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 shadow-2xl flex flex-col overflow-y-auto">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 sticky top-0 z-10">
+                <h2 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Case Details</h2>
+                <button onClick={() => setExpandedCaseId(null)} className="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 transition-colors" data-testid="button-close-case-panel">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="px-4 py-4 border-b border-gray-100 dark:border-gray-800 space-y-3">
+                <div>
+                  <p className="text-xs text-gray-400 mb-0.5">Account Number</p>
+                  <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{case_.accountNumber}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 mb-0.5">Case Name</p>
+                  <p className="text-sm text-gray-800 dark:text-gray-200">{case_.caseName}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 mb-0.5">Organisation</p>
+                  <p className="text-sm text-gray-800 dark:text-gray-200">{case_.organisationName || 'N/A'}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <p className="text-gray-400 mb-0.5">Status</p>
+                    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${case_.status === 'active' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'}`}>{case_.status}</span>
+                  </div>
+                  <div>
+                    <p className="text-gray-400 mb-0.5">Stage</p>
+                    <p className="font-medium text-gray-800 dark:text-gray-200">{case_.stage}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-400 mb-0.5">Outstanding</p>
+                    <p className="font-medium text-gray-800 dark:text-gray-200">£{case_.outstandingAmount}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-400 mb-0.5">Original</p>
+                    <p className="font-medium text-gray-800 dark:text-gray-200">£{case_.originalAmount}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-400 mb-0.5">Archived</p>
+                    <p className="font-medium text-gray-800 dark:text-gray-200">{case_.isArchived ? 'Yes' : 'No'}</p>
+                  </div>
+                  {restrictionCounts[case_.id] > 0 && (
+                    <div>
+                      <p className="text-gray-400 mb-0.5">Restricted</p>
+                      <p className="font-medium text-red-600 dark:text-red-400">{restrictionCounts[case_.id]} user{restrictionCounts[case_.id] !== 1 ? 's' : ''}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="px-4 py-3 flex flex-col gap-1">
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Actions</p>
+                {case_.isArchived ? (
+                  <button
+                    onClick={() => { unarchiveCaseMutation.mutate(case_.id); setExpandedCaseId(null); }}
+                    disabled={unarchiveCaseMutation.isPending}
+                    className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-50"
+                    data-testid="button-unarchive-case"
+                  >
+                    <ArchiveRestore className="h-4 w-4" /> Unarchive case
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => { setArchiveConfirmCase(case_); }}
+                    disabled={archiveCaseMutation.isPending}
+                    className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-50"
+                    data-testid="button-archive-case"
+                  >
+                    <Archive className="h-4 w-4" /> Archive case
+                  </button>
+                )}
+                <button
+                  onClick={() => { setRestrictAccessCase(case_); setBlockedUserIds([]); }}
+                  className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left"
+                  data-testid="button-restrict-case"
                 >
-                  <Trash2 className="h-3 w-3 mr-1" />
-                  Delete
-                </Button>
-              )}
+                  <EyeOff className="h-4 w-4" /> Manage access restrictions
+                </button>
+                {isSuperAdmin && (
+                  <button
+                    onClick={() => setDeleteConfirmCase(case_)}
+                    disabled={deleteCaseMutation.isPending}
+                    className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-left disabled:opacity-50"
+                    data-testid="button-delete-case"
+                  >
+                    <Trash2 className="h-4 w-4" /> Delete case
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })()}
       </div>
 
-      {/* Desktop Table Layout */}
-      <div className="hidden sm:block overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Account Number</TableHead>
-              <TableHead>Case Name</TableHead>
-              <TableHead>Organisation</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Stage</TableHead>
-              <TableHead>Outstanding</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedCases.map((case_: Case) => (
-              <TableRow key={case_.id} className={case_.isArchived ? 'bg-gray-50' : ''}>
-                <TableCell className="font-medium">{case_.accountNumber}</TableCell>
-                <TableCell>{case_.caseName}</TableCell>
-                <TableCell>{case_.organisationName || 'N/A'}</TableCell>
-                <TableCell>
-                  <Badge variant={case_.status === 'active' ? 'default' : 'secondary'}>
-                    {case_.status}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline">{case_.stage}</Badge>
-                </TableCell>
-                <TableCell>£{case_.outstandingAmount}</TableCell>
-                <TableCell>
-                  <div className="flex flex-col gap-1 items-start">
-                    {case_.isArchived ? (
-                      <Badge variant="secondary">
-                        <Archive className="h-3 w-3 mr-1" />
-                        Archived
-                      </Badge>
-                    ) : (
-                      <Badge variant="default">Active</Badge>
-                    )}
-                    {restrictionCounts[case_.id] > 0 && (
-                      <Badge
-                        variant="destructive"
-                        title={`${restrictionCounts[case_.id]} user(s) restricted from this case`}
-                        data-testid={`badge-restricted-${case_.id}`}
-                      >
-                        <EyeOff className="h-3 w-3 mr-1" />
-                        {restrictionCounts[case_.id]} restricted
-                      </Badge>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center space-x-2">
-                    {case_.isArchived ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => unarchiveCaseMutation.mutate(case_.id)}
-                        disabled={unarchiveCaseMutation.isPending}
-                        title="Unarchive case"
-                      >
-                        <ArchiveRestore className="h-3 w-3" />
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setArchiveConfirmCase(case_)}
-                        disabled={archiveCaseMutation.isPending}
-                        title="Archive case"
-                      >
-                        <Archive className="h-3 w-3" />
-                      </Button>
-                    )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setRestrictAccessCase(case_);
-                        setBlockedUserIds([]);
-                      }}
-                      title="Restrict access for specific users"
-                    >
-                      <EyeOff className="h-3 w-3" />
-                    </Button>
-                    {isSuperAdmin && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setDeleteConfirmCase(case_)}
-                        disabled={deleteCaseMutation.isPending}
-                        className="text-red-600 hover:text-red-700"
-                        title="Permanently delete case"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-
-      {/* Pagination */}
+            {/* Pagination */}
       <Pagination 
         currentPage={currentPage} 
         totalPages={totalPages} 
@@ -2224,6 +2161,7 @@ export default function AdminEnhanced() {
   
   // User audit log expand state
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+  const [expandedOrgId, setExpandedOrgId] = useState<number | null>(null);
 
   // Scheduled reports overview state
   const [expandedReportId, setExpandedReportId] = useState<number | null>(null);
@@ -4984,233 +4922,140 @@ export default function AdminEnhanced() {
               </div>
               {/* Scroll anchor for pagination */}
               <div ref={orgsTableTopRef} className="scroll-mt-4" />
-              {/* Mobile Card Layout */}
-              <div className="block sm:hidden space-y-4">
-                {paginatedOrgs?.map((org: Organisation) => {
+              {/* Unified Card Grid + Detail Panel */}
+              <div className="relative">
+                <div className={`grid gap-4 transition-all duration-200 grid-cols-1 sm:grid-cols-2 ${expandedOrgId ? 'lg:grid-cols-2 sm:mr-80' : 'lg:grid-cols-3'}`}>
+                  {paginatedOrgs?.map((org: Organisation) => {
+                    const orgReportCount = orgScheduledReportsMap[org.id]?.length || 0;
+                    const isSelected = expandedOrgId === org.id;
+                    const orgColors = ['#0d9488','#0284c7','#7c3aed','#db2777','#d97706','#16a34a','#dc2626','#475569'];
+                    const bgColor = orgColors[Math.abs(org.id) % orgColors.length];
+                    const initial = org.name?.[0]?.toUpperCase() ?? '?';
+                    return (
+                      <button
+                        key={org.id}
+                        onClick={() => setExpandedOrgId(isSelected ? null : org.id)}
+                        data-testid={`card-org-${org.id}`}
+                        className={`w-full text-left rounded-xl border bg-white dark:bg-gray-900 p-4 shadow-sm hover:shadow-md transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-acclaim-teal/40 ${isSelected ? 'ring-2 ring-acclaim-teal border-acclaim-teal/40' : 'border-gray-200 dark:border-gray-700'}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-base flex-shrink-0" style={{ background: bgColor }}>
+                            {initial}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-1">
+                              <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm truncate">{org.name}</p>
+                              <ChevronRight className={`h-4 w-4 flex-shrink-0 text-gray-400 transition-transform ${isSelected ? 'rotate-90 text-acclaim-teal' : ''}`} />
+                            </div>
+                            {org.externalRef && <p className="text-xs text-gray-500 mt-0.5 truncate">Code: {org.externalRef}</p>}
+                            <div className="flex items-center gap-2 mt-2 flex-wrap">
+                              <span className="inline-flex items-center gap-1 text-xs text-gray-500">
+                                <Users className="h-3 w-3" />{org.userCount} user{org.userCount !== 1 ? 's' : ''}
+                              </span>
+                              {isSuperAdmin && orgReportCount > 0 && (
+                                <span className="inline-flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                                  <Calendar className="h-3 w-3" />{orgReportCount} report{orgReportCount !== 1 ? 's' : ''}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-400 mt-1">{new Date(org.createdAt).toLocaleDateString('en-GB')}</p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Backdrop */}
+                {expandedOrgId && <div className="hidden sm:block fixed inset-0 z-40" onClick={() => setExpandedOrgId(null)} aria-hidden="true" />}
+
+                {/* Detail panel */}
+                {expandedOrgId && (() => {
+                  const org = paginatedOrgs?.find((o: Organisation) => o.id === expandedOrgId);
+                  if (!org) return null;
                   const orgReportCount = orgScheduledReportsMap[org.id]?.length || 0;
+                  const orgColors = ['#0d9488','#0284c7','#7c3aed','#db2777','#d97706','#16a34a','#dc2626','#475569'];
+                  const bgColor = orgColors[Math.abs(org.id) % orgColors.length];
+                  const initial = org.name?.[0]?.toUpperCase() ?? '?';
                   return (
-                    <div key={org.id} className="bg-gray-50 rounded-lg p-4 space-y-3">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <div className="font-medium">{org.name}</div>
-                          <div className="text-sm text-gray-500">ID: {org.id}</div>
-                          {org.externalRef && (
-                            <div className="text-xs text-gray-400">Code: {org.externalRef}</div>
+                    <div className="fixed inset-0 z-50 sm:inset-y-0 sm:right-0 sm:left-auto sm:top-0 sm:bottom-0 w-full sm:w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 shadow-2xl flex flex-col overflow-y-auto">
+                      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 sticky top-0 z-10">
+                        <h2 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Organisation Details</h2>
+                        <button onClick={() => setExpandedOrgId(null)} className="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 transition-colors" data-testid="button-close-org-panel">
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <div className="px-4 py-4 border-b border-gray-100 dark:border-gray-800">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0" style={{ background: bgColor }}>
+                            {initial}
+                          </div>
+                          <div className="min-w-0">
+                            <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{org.name}</h3>
+                            {org.externalRef && <p className="text-xs text-gray-500 mt-0.5">Code: {org.externalRef}</p>}
+                            <p className="text-xs text-gray-400 mt-0.5">ID: {org.id}</p>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 text-xs">
+                          <div>
+                            <p className="text-gray-400 mb-0.5">Users</p>
+                            <p className="font-medium text-gray-800 dark:text-gray-200">{org.userCount}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-400 mb-0.5">Created</p>
+                            <p className="font-medium text-gray-800 dark:text-gray-200">{new Date(org.createdAt).toLocaleDateString('en-GB')}</p>
+                          </div>
+                          {isSuperAdmin && (
+                            <div>
+                              <p className="text-gray-400 mb-0.5">Scheduled Reports</p>
+                              <p className="font-medium text-gray-800 dark:text-gray-200">{orgReportCount > 0 ? orgReportCount + ' active' : 'None'}</p>
+                            </div>
                           )}
                         </div>
-                        <Badge variant="outline">{org.userCount} users</Badge>
                       </div>
-                      
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600">Created:</span>
-                          <span>{new Date(org.createdAt).toLocaleDateString('en-GB')}</span>
-                        </div>
-                        
-                        {isSuperAdmin && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-gray-600">Scheduled Reports:</span>
-                            {orgReportCount > 0 ? (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-acclaim-teal hover:text-acclaim-teal/80 p-1 h-auto"
-                                onClick={() => {
-                                  setSelectedOrgForReports(org);
-                                  setShowOrgReportsDialog(true);
-                                }}
-                                title="View and manage scheduled reports"
-                              >
-                                <Calendar className="h-4 w-4 mr-1" />
-                                <span className="text-xs">{orgReportCount} report{orgReportCount !== 1 ? 's' : ''}</span>
-                              </Button>
-                            ) : (
-                              <span className="text-gray-400 text-xs">None</span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className={`grid ${isSuperAdmin ? 'grid-cols-3' : 'grid-cols-2'} gap-2 pt-2 border-t border-gray-200`}>
-                        {isSuperAdmin && (
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => {
-                              setSelectedOrgForSchedule(org);
-                              setOrgScheduleForm({
-                                recipientEmail: '',
-                                recipientName: '',
-                                frequency: 'weekly',
-                                dayOfWeek: 1,
-                                dayOfMonth: 1,
-                                timeOfDay: 9,
-                                includeCaseSummary: true,
-                                includeActivityReport: true,
-                                caseStatusFilter: 'active',
-                              });
-                              setShowOrgScheduleDialog(true);
-                            }}
-                            title="Schedule a new report for this organisation"
-                            className="text-acclaim-teal hover:text-acclaim-teal/80"
-                          >
-                            <Plus className="h-3 w-3 mr-1" />
-                            Report
-                          </Button>
-                        )}
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => {
-                            setEditingOrg(org);
-                            setOrgFormData({ 
-                              name: org.name, 
-                              externalRef: org.externalRef || undefined 
-                            });
-                            setShowEditOrg(true);
-                          }}
-                          title="Edit organisation details"
+                      <div className="px-4 py-3 flex flex-col gap-1">
+                        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Actions</p>
+                        <button
+                          onClick={() => { setEditingOrg(org); setOrgFormData({ name: org.name, externalRef: org.externalRef || undefined }); setShowEditOrg(true); }}
+                          className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left"
+                          data-testid="button-edit-org"
                         >
-                          <Edit className="h-3 w-3 mr-1" />
-                          Edit
-                        </Button>
+                          <Edit className="h-4 w-4" /> Edit details
+                        </button>
                         {isSuperAdmin && (
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => {
-                              if (confirm(`Are you sure you want to delete "${org.name}"? This action cannot be undone.`)) {
-                                deleteOrganisationMutation.mutate(org.id);
-                              }
-                            }}
-                            disabled={deleteOrganisationMutation.isPending}
-                            className="text-red-600 hover:text-red-700"
-                            title="Delete organisation permanently"
+                          <button
+                            onClick={() => { setSelectedOrgForSchedule(org); setOrgScheduleForm({ recipientEmail: '', recipientName: '', frequency: 'weekly', dayOfWeek: 1, dayOfMonth: 1, timeOfDay: 9, includeCaseSummary: true, includeActivityReport: true, caseStatusFilter: 'active' }); setShowOrgScheduleDialog(true); }}
+                            className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left"
+                            data-testid="button-schedule-org-report"
                           >
-                            <Trash2 className="h-3 w-3 mr-1" />
-                            Delete
-                          </Button>
+                            <Plus className="h-4 w-4" /> Schedule report
+                          </button>
+                        )}
+                        {isSuperAdmin && orgReportCount > 0 && (
+                          <button
+                            onClick={() => { setSelectedOrgForReports(org); setShowOrgReportsDialog(true); }}
+                            className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left"
+                            data-testid="button-view-org-reports"
+                          >
+                            <Calendar className="h-4 w-4" /> View reports ({orgReportCount})
+                          </button>
+                        )}
+                        {isSuperAdmin && (
+                          <button
+                            onClick={() => { if (confirm('Are you sure you want to delete "' + org.name + '"? This action cannot be undone.')) { deleteOrganisationMutation.mutate(org.id); setExpandedOrgId(null); } }}
+                            disabled={deleteOrganisationMutation.isPending}
+                            className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-left disabled:opacity-50"
+                            data-testid="button-delete-org"
+                          >
+                            <Trash2 className="h-4 w-4" /> Delete organisation
+                          </button>
                         )}
                       </div>
                     </div>
                   );
-                })}
+                })()}
               </div>
-
-              {/* Desktop Table Layout */}
-              <div className="hidden sm:block">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Organisation</TableHead>
-                      <TableHead>Users</TableHead>
-                      {isSuperAdmin && <TableHead>Scheduled Reports</TableHead>}
-                      <TableHead>Created</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginatedOrgs?.map((org: Organisation) => {
-                      const orgReportCount = orgScheduledReportsMap[org.id]?.length || 0;
-                      return (
-                      <TableRow key={org.id}>
-                        <TableCell>
-                          <div className="font-medium">{org.name}</div>
-                          <div className="text-sm text-gray-500">ID: {org.id}</div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{org.userCount} users</Badge>
-                        </TableCell>
-                        {isSuperAdmin && (
-                          <TableCell>
-                            {orgReportCount > 0 ? (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-acclaim-teal hover:text-acclaim-teal/80"
-                                onClick={() => {
-                                  setSelectedOrgForReports(org);
-                                  setShowOrgReportsDialog(true);
-                                }}
-                                title="View and manage scheduled reports"
-                              >
-                                <Calendar className="h-4 w-4 mr-1" />
-                                <span>{orgReportCount} report{orgReportCount !== 1 ? 's' : ''}</span>
-                              </Button>
-                            ) : (
-                              <span className="text-gray-400 text-sm">None</span>
-                            )}
-                          </TableCell>
-                        )}
-                        <TableCell>
-                          {new Date(org.createdAt).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
-                            {isSuperAdmin && (
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedOrgForSchedule(org);
-                                  setOrgScheduleForm({
-                                    recipientEmail: '',
-                                    recipientName: '',
-                                    frequency: 'weekly',
-                                    dayOfWeek: 1,
-                                    dayOfMonth: 1,
-                                    timeOfDay: 9,
-                                    includeCaseSummary: true,
-                                    includeActivityReport: true,
-                                    caseStatusFilter: 'active',
-                                  });
-                                  setShowOrgScheduleDialog(true);
-                                }}
-                                title="Schedule a new report for this organisation"
-                                className="text-acclaim-teal hover:text-acclaim-teal/80"
-                              >
-                                <Plus className="h-3 w-3" />
-                              </Button>
-                            )}
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => {
-                                setEditingOrg(org);
-                                setOrgFormData({ 
-                                  name: org.name, 
-                                  externalRef: org.externalRef || undefined 
-                                });
-                                setShowEditOrg(true);
-                              }}
-                              title="Edit organisation details"
-                            >
-                              <Edit className="h-3 w-3" />
-                            </Button>
-                            {isSuperAdmin && (
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => {
-                                  if (confirm(`Are you sure you want to delete "${org.name}"? This action cannot be undone.`)) {
-                                    deleteOrganisationMutation.mutate(org.id);
-                                  }
-                                }}
-                                disabled={deleteOrganisationMutation.isPending}
-                                className="text-red-600 hover:text-red-700"
-                                title="Delete organisation permanently"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );})}
-                  </TableBody>
-                </Table>
-              </div>
-              {/* Pagination */}
+                            {/* Pagination */}
               <Pagination 
                 currentPage={orgsPage} 
                 totalPages={orgsTotalPages} 
