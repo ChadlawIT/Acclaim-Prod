@@ -4660,7 +4660,7 @@ export default function AdminEnhanced() {
                   const bgColor = avatarColors[Math.abs(code) % avatarColors.length];
                   const initials = `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}`.toUpperCase();
                   return (
-                    <div className="fixed inset-0 z-50 sm:z-auto sm:absolute sm:inset-y-0 sm:right-0 sm:left-auto w-full sm:w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 shadow-2xl flex flex-col overflow-y-auto">
+                    <div className="fixed inset-0 z-50 sm:inset-y-0 sm:right-0 sm:left-auto sm:top-0 sm:bottom-0 w-full sm:w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 shadow-2xl flex flex-col overflow-y-auto">
                       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 sticky top-0 z-10">
                         <h2 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">User Details</h2>
                         <button onClick={() => setExpandedUserId(null)} className="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 transition-colors" data-testid="button-close-user-panel">
