@@ -202,7 +202,7 @@ export default function AuthPage() {
 
               <Button
                 type="button"
-                className="w-full h-11 font-medium bg-acclaim-teal hover:bg-acclaim-teal/90"
+                className="w-full h-11 font-medium bg-black hover:bg-black/85 text-white"
                 onClick={handleAzureLogin}
                 data-testid="button-azure-login"
               >
