@@ -11,3 +11,4 @@
 - [SOS timeline codes](sos-timeline-codes.md) — case_activities encode action codes (TL0001=opened) in description text; match by code with alphanumeric boundaries both sides; createdAt = real SOS action date.
 - [Recovery "time to conclusion" metric](recovery-conclusion-metric.md) — concluded = status closed; timing = open→last payment (no close date; status changes aren't logged anywhere).
 - [Legacy primary org required](legacy-primary-org.md) — users need a legacy users.organisationId set (primary); org-scoped endpoints (cases, payments) hard-fail on null; junction-only assignment is unsafe.
+- [Welcome email temp-password](welcome-email-temp-password.md) — send-welcome-email reuses caller temp pw only if bcrypt-matches stored hash; else reset for onboarding, guidance-only for active users.

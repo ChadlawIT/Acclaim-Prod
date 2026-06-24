@@ -3235,12 +3235,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "Admin user not found" });
       }
 
+      // The welcome email carries a working temporary password as a backup for
+      // users who have trouble with Microsoft SSO. To guarantee the emailed
+      // password actually works, we only ever email a password that matches the
+      // currently stored credential:
+      //   1. If the caller supplied a password (e.g. straight from the create or
+      //      reset flow) and it still matches the stored hash, reuse it so the
+      //      email matches what the admin was shown.
+      //   2. Otherwise, if the user is still being onboarded (mustChangePassword),
+      //      generate and store a fresh temporary password and email that.
+      //   3. Otherwise (an active user who has set their own password), send
+      //      sign-in guidance only and never reset their password.
+      let passwordForEmail: string | undefined;
+      if (temporaryPassword && user.hashedPassword && await bcrypt.compare(temporaryPassword, user.hashedPassword)) {
+        passwordForEmail = temporaryPassword;
+      } else if (user.mustChangePassword) {
+        passwordForEmail = await storage.resetUserPassword(userId);
+      }
+
       const welcomeEmailData = {
         userEmail: user.email,
         userName: `${user.firstName} ${user.lastName}`,
         firstName: user.firstName,
         lastName: user.lastName,
         username: user.username,
+        temporaryPassword: passwordForEmail,
         organisationName: organisation.name,
         adminName: `${admin.firstName} ${admin.lastName}`,
         portalUrl: 'https://acclaim-api-prod-uks-001.azurewebsites.net/auth',

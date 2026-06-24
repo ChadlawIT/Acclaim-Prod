@@ -1210,16 +1210,6 @@ Portal: https://acclaim-api-prod-uks-001.azurewebsites.net/auth
 
     try {
       const portalUrl = data.portalUrl || 'https://acclaim-api-prod-uks-001.azurewebsites.net/auth';
-      let signupUrl: string;
-      try {
-        const u = new URL(portalUrl);
-        u.pathname = '/auth/azure/signup';
-        u.search = '';
-        u.hash = '';
-        signupUrl = u.toString();
-      } catch {
-        signupUrl = 'https://acclaim-api-prod-uks-001.azurewebsites.net/auth/azure/signup';
-      }
       const subject = `Welcome to the Acclaim Credit Management & Recovery Portal!`;
 
       const htmlContent = `
@@ -1270,18 +1260,9 @@ Portal: https://acclaim-api-prod-uks-001.azurewebsites.net/auth
                       
                       <!-- CTA Button -->
                       <div style="text-align: center; margin-bottom: 30px;">
-                        ${data.isAdmin ? `
                         <a href="${portalUrl}" style="display: inline-block; background-color: #008b8b; background: linear-gradient(135deg, #008b8b 0%, #006666 100%); color: #ffffff !important; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 12px rgba(0,139,139,0.3);">
                           Access the Portal →
                         </a>
-                        ` : `
-                        <a href="${signupUrl}" style="display: inline-block; background-color: #008b8b; background: linear-gradient(135deg, #008b8b 0%, #006666 100%); color: #ffffff !important; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 12px rgba(0,139,139,0.3);">
-                          Register your account →
-                        </a>
-                        <p style="margin: 14px 0 0 0; color: #94a3b8; font-size: 13px;">
-                          Already registered? <a href="${portalUrl}" style="color: #008b8b; text-decoration: none; font-weight: 600;">Sign in here</a>
-                        </p>
-                        `}
                       </div>
                       
                       <!-- Features Card -->
@@ -1299,46 +1280,33 @@ Portal: https://acclaim-api-prod-uks-001.azurewebsites.net/auth
                       </div>
 
                       <!-- Sign-in steps -->
-                      <div style="background: #e0f7f6; border-radius: 12px; padding: 20px; margin-bottom: 16px;">
-                        ${data.isAdmin ? `
-                        <p style="color: #00695c; margin: 0 0 12px 0; font-size: 14px; font-weight: 600;">How to sign in:</p>
-                        <table role="presentation" cellspacing="0" cellpadding="0" width="100%">
-                          <tr>
-                            <td style="padding: 6px 0; vertical-align: top;">
-                              <span style="display: inline-block; width: 22px; height: 22px; background: #008b8b; color: #fff; border-radius: 50%; text-align: center; font-size: 12px; font-weight: 700; line-height: 22px; margin-right: 10px;">1</span>
-                              <span style="color: #00695c; font-size: 13px;">Click <strong>Access the Portal</strong> above.</span>
-                            </td>
-                          </tr>
-                          <tr>
-                            <td style="padding: 6px 0; vertical-align: top;">
-                              <span style="display: inline-block; width: 22px; height: 22px; background: #008b8b; color: #fff; border-radius: 50%; text-align: center; font-size: 12px; font-weight: 700; line-height: 22px; margin-right: 10px;">2</span>
-                              <span style="color: #00695c; font-size: 13px;">Click <strong>"Sign in with Microsoft"</strong> and sign in with your usual Microsoft password (and MFA if required).</span>
-                            </td>
-                          </tr>
-                        </table>
-                        ` : `
-                        <p style="color: #00695c; margin: 0 0 12px 0; font-size: 14px; font-weight: 600;">Getting started — it only takes a minute:</p>
-                        <table role="presentation" cellspacing="0" cellpadding="0" width="100%">
-                          <tr>
-                            <td style="padding: 6px 0; vertical-align: top;">
-                              <span style="display: inline-block; width: 22px; height: 22px; background: #008b8b; color: #fff; border-radius: 50%; text-align: center; font-size: 12px; font-weight: 700; line-height: 22px; margin-right: 10px;">1</span>
-                              <span style="color: #00695c; font-size: 13px;">Click <strong>Register your account</strong> above — this takes you straight to Microsoft's sign-up screen.</span>
-                            </td>
-                          </tr>
-                          <tr>
-                            <td style="padding: 6px 0; vertical-align: top;">
-                              <span style="display: inline-block; width: 22px; height: 22px; background: #008b8b; color: #fff; border-radius: 50%; text-align: center; font-size: 12px; font-weight: 700; line-height: 22px; margin-right: 10px;">2</span>
-                              <span style="color: #00695c; font-size: 13px;">Register using <strong>this email address</strong> and follow the on-screen steps.</span>
-                            </td>
-                          </tr>
-                          <tr>
-                            <td style="padding: 6px 0; vertical-align: top;">
-                              <span style="display: inline-block; width: 22px; height: 22px; background: #008b8b; color: #fff; border-radius: 50%; text-align: center; font-size: 12px; font-weight: 700; line-height: 22px; margin-right: 10px;">3</span>
-                              <span style="color: #00695c; font-size: 13px;">Once registered, return to the portal and sign in with your Microsoft account.</span>
-                            </td>
-                          </tr>
-                        </table>
-                        `}
+                      <div style="margin-bottom: 16px;">
+                        <p style="color: #0f172a; margin: 0 0 16px 0; font-size: 15px; font-weight: 600;">There are two ways to sign in</p>
+
+                        <!-- Option 1: Microsoft SSO (recommended) -->
+                        <div style="background: #e0f7f6; border: 1px solid #b2dfdb; border-radius: 12px; padding: 20px; margin-bottom: 16px;">
+                          <div style="margin-bottom: 10px;">
+                            <span style="display: inline-block; background: #008b8b; color: #ffffff; padding: 4px 12px; border-radius: 50px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Recommended &amp; most secure</span>
+                          </div>
+                          <p style="color: #00504e; margin: 0 0 8px 0; font-size: 15px; font-weight: 600;">Option 1 — Sign in with Microsoft (Single Sign-On)</p>
+                          <p style="color: #00695c; margin: 0 0 10px 0; font-size: 13px; line-height: 1.6;">Single Sign-On (SSO) lets you sign in using the Microsoft account you already use — there's no separate portal password to remember, and your sign-in is protected by your organisation's own security, including multi-factor authentication (MFA) where it is set up.</p>
+                          <p style="color: #00695c; margin: 0; font-size: 13px; line-height: 1.6;">On the sign-in page, click <strong>"Sign in with Microsoft"</strong> and sign in using this email address.</p>
+                        </div>
+
+                        <!-- Option 2: Email & password (backup) -->
+                        <div style="background: #f8fafb; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px;">
+                          <p style="color: #0f172a; margin: 0 0 6px 0; font-size: 15px; font-weight: 600;">Option 2 — Email &amp; password (backup)</p>
+                          ${data.temporaryPassword ? `
+                          <p style="color: #475569; margin: 0 0 12px 0; font-size: 13px; line-height: 1.6;">If you have any difficulty signing in with Microsoft, you can sign in with your email address and the temporary password below.</p>
+                          <div style="background: #ffffff; border: 2px solid #008b8b; border-radius: 8px; padding: 14px; text-align: center; margin-bottom: 12px;">
+                            <p style="color: #64748b; margin: 0 0 6px 0; font-size: 12px;">Your temporary password</p>
+                            <p style="color: #008b8b; margin: 0; font-size: 22px; font-weight: 700; font-family: monospace; letter-spacing: 1px;">${data.temporaryPassword}</p>
+                          </div>
+                          <p style="color: #92400e; background: #fef3c7; border-radius: 6px; padding: 10px 12px; margin: 0; font-size: 12px; line-height: 1.5;"><strong>Please note:</strong> this password is temporary. You'll be asked to set your own new password the first time you sign in.</p>
+                          ` : `
+                          <p style="color: #475569; margin: 0; font-size: 13px; line-height: 1.6;">If you have any difficulty signing in with Microsoft, you can sign in with your email address and the password you have already set. Forgotten it? Use the <strong>"Forgotten your password?"</strong> link on the sign-in page to receive a one-time code by email.</p>
+                          `}
+                        </div>
                       </div>
                       
                     </td>
@@ -1366,17 +1334,18 @@ Hello ${data.firstName},
 
 Welcome to the Acclaim Credit Management & Recovery Portal! Your account has been created and you can now access the system to view and manage your cases.
 
-${data.isAdmin ? `Access the portal here: ${portalUrl}
+Access the portal here: ${portalUrl}
 
-How to sign in:
+THERE ARE TWO WAYS TO SIGN IN
 
-1. Click the link above to visit the portal.
-2. Click "Sign in with Microsoft" and sign in with your usual Microsoft password (and MFA if required).` : `Getting started — it only takes a minute:
+Option 1 - Sign in with Microsoft (Single Sign-On) - RECOMMENDED & MOST SECURE
+Single Sign-On (SSO) lets you sign in using the Microsoft account you already use. There is no separate portal password to remember, and your sign-in is protected by your organisation's own security, including multi-factor authentication (MFA) where it is set up.
+On the sign-in page, click "Sign in with Microsoft" and sign in using this email address.
 
-1. Register your account here: ${signupUrl}
-   (This takes you straight to Microsoft's sign-up screen.)
-2. Register using this email address and follow the on-screen steps.
-3. Once registered, sign in to the portal here: ${portalUrl}`}
+Option 2 - Email & password (backup)
+${data.temporaryPassword ? `If you have any difficulty signing in with Microsoft, you can sign in with your email address and the temporary password below.
+Temporary password: ${data.temporaryPassword}
+Please note: this password is temporary. You'll be asked to set your own new password the first time you sign in.` : `If you have any difficulty signing in with Microsoft, you can sign in with your email address and the password you have already set. Forgotten it? Use the "Forgotten your password?" link on the sign-in page to receive a one-time code by email.`}
 
 What you can do in the portal:
 - View and track your cases

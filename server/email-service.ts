@@ -736,16 +736,6 @@ To manage your notification preferences, visit your Profile settings in the port
     try {
       const subject = `Welcome to the Acclaim Credit Management & Recovery Portal!`;
       const portalUrl = data.portalUrl || 'https://acclaim-api-prod-uks-001.azurewebsites.net/auth';
-      let signupUrl: string;
-      try {
-        const u = new URL(portalUrl);
-        u.pathname = '/auth/azure/signup';
-        u.search = '';
-        u.hash = '';
-        signupUrl = u.toString();
-      } catch {
-        signupUrl = 'https://acclaim-api-prod-uks-001.azurewebsites.net/auth/azure/signup';
-      }
 
       const htmlContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc;">
@@ -764,33 +754,32 @@ To manage your notification preferences, visit your Profile settings in the port
               <p style="color: #475569; margin-bottom: 20px;">Welcome to the Acclaim Credit Management & Recovery Portal! Your account has been created and you can now access the system to view and manage your cases.</p>
             </div>
 
-            <div style="background: #e0f7f6; border: 1px solid #14b8a6; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-              ${data.isAdmin ? `
-              <h3 style="color: #0f766e; margin-top: 0; margin-bottom: 10px;">How to sign in</h3>
-              <ol style="color: #0f766e; line-height: 1.8; padding-left: 20px; margin: 0; font-size: 14px;">
-                <li>Click <strong>Access the Portal</strong> below.</li>
-                <li>Click <strong>"Sign in with Microsoft"</strong> and sign in with your usual Microsoft password (and MFA if required).</li>
-              </ol>
-              ` : `
-              <h3 style="color: #0f766e; margin-top: 0; margin-bottom: 10px;">Getting started — it only takes a minute</h3>
-              <ol style="color: #0f766e; line-height: 1.8; padding-left: 20px; margin: 0; font-size: 14px;">
-                <li>Click <strong>Register your account</strong> below — this takes you straight to Microsoft's sign-up screen.</li>
-                <li>Register using this email address and follow the on-screen steps.</li>
-                <li>Once registered, return to the portal and sign in with your Microsoft account.</li>
-              </ol>
-              `}
-            </div>
-
-            <div style="text-align: center; margin: 30px 0;">
-              ${data.isAdmin ? `
+            <div style="text-align: center; margin: 20px 0 30px 0;">
               <a href="${portalUrl}" style="background: #14b8a6; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block; font-weight: bold;">
                 Access the Portal
               </a>
+            </div>
+
+            <p style="color: #0f172a; font-weight: bold; margin: 0 0 12px 0;">There are two ways to sign in</p>
+
+            <div style="background: #e0f7f6; border: 1px solid #14b8a6; padding: 15px; border-radius: 8px; margin-bottom: 16px;">
+              <p style="display: inline-block; background: #0d9488; color: #ffffff; padding: 3px 10px; border-radius: 50px; font-size: 11px; font-weight: bold; text-transform: uppercase; margin: 0 0 8px 0;">Recommended &amp; most secure</p>
+              <h3 style="color: #0f766e; margin: 0 0 8px 0;">Option 1 — Sign in with Microsoft (Single Sign-On)</h3>
+              <p style="color: #0f766e; margin: 0 0 8px 0; font-size: 13px; line-height: 1.6;">Single Sign-On (SSO) lets you sign in using the Microsoft account you already use — there's no separate portal password to remember, and your sign-in is protected by your organisation's own security, including multi-factor authentication (MFA) where it is set up.</p>
+              <p style="color: #0f766e; margin: 0; font-size: 13px; line-height: 1.6;">On the sign-in page, click <strong>"Sign in with Microsoft"</strong> and sign in using this email address.</p>
+            </div>
+
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+              <h3 style="color: #1e293b; margin: 0 0 8px 0;">Option 2 — Email &amp; password (backup)</h3>
+              ${data.temporaryPassword ? `
+              <p style="color: #475569; margin: 0 0 10px 0; font-size: 13px; line-height: 1.6;">If you have any difficulty signing in with Microsoft, you can sign in with your email address and the temporary password below.</p>
+              <div style="background: #ffffff; border: 2px solid #14b8a6; border-radius: 6px; padding: 12px; text-align: center; margin-bottom: 10px;">
+                <p style="color: #64748b; margin: 0 0 4px 0; font-size: 12px;">Your temporary password</p>
+                <p style="color: #0d9488; margin: 0; font-size: 20px; font-weight: bold; font-family: monospace;">${data.temporaryPassword}</p>
+              </div>
+              <p style="color: #92400e; background: #fef3c7; border-radius: 6px; padding: 8px 10px; margin: 0; font-size: 12px; line-height: 1.5;"><strong>Please note:</strong> this password is temporary. You'll be asked to set your own new password the first time you sign in.</p>
               ` : `
-              <a href="${signupUrl}" style="background: #14b8a6; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block; font-weight: bold;">
-                Register your account
-              </a>
-              <p style="margin: 12px 0 0 0; color: #94a3b8; font-size: 13px;">Already registered? <a href="${portalUrl}" style="color: #0f766e;">Sign in here</a></p>
+              <p style="color: #475569; margin: 0; font-size: 13px; line-height: 1.6;">If you have any difficulty signing in with Microsoft, you can sign in with your email address and the password you have already set. Forgotten it? Use the <strong>"Forgotten your password?"</strong> link on the sign-in page to receive a one-time code by email.</p>
               `}
             </div>
 
@@ -814,13 +803,18 @@ Hello ${data.firstName},
 
 Your account has been created and you can now access the system to view and manage your cases.
 
-${data.isAdmin ? `How to sign in:
-1. Visit ${portalUrl}
-2. Click "Sign in with Microsoft" and sign in with your usual Microsoft password (and MFA if required).` : `Getting started — it only takes a minute:
-1. Register your account here: ${signupUrl}
-   (This takes you straight to Microsoft's sign-up screen.)
-2. Register using this email address and follow the on-screen steps.
-3. Once registered, sign in to the portal here: ${portalUrl}`}
+Access the portal here: ${portalUrl}
+
+THERE ARE TWO WAYS TO SIGN IN
+
+Option 1 - Sign in with Microsoft (Single Sign-On) - RECOMMENDED & MOST SECURE
+Single Sign-On (SSO) lets you sign in using the Microsoft account you already use. There is no separate portal password to remember, and your sign-in is protected by your organisation's own security, including multi-factor authentication (MFA) where it is set up.
+On the sign-in page, click "Sign in with Microsoft" and sign in using this email address.
+
+Option 2 - Email & password (backup)
+${data.temporaryPassword ? `If you have any difficulty signing in with Microsoft, you can sign in with your email address and the temporary password below.
+Temporary password: ${data.temporaryPassword}
+Please note: this password is temporary. You'll be asked to set your own new password the first time you sign in.` : `If you have any difficulty signing in with Microsoft, you can sign in with your email address and the password you have already set. Forgotten it? Use the "Forgotten your password?" link on the sign-in page to receive a one-time code by email.`}
 
 If you have any questions, please contact our support team.
       `;
