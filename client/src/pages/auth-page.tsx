@@ -156,7 +156,7 @@ export default function AuthPage() {
               <CardDescription>
                 {showAltLogin
                   ? "Enter your email address and password below."
-                  : "Sign in with your Microsoft account to access the portal."}
+                  : "Sign in with your Microsoft account, or with your email and password."}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -202,6 +202,25 @@ export default function AuthPage() {
                   <p className="mt-1 text-center text-xs text-muted-foreground">
                     Not been invited yet? Please contact us.
                   </p>
+
+                  <div className="relative my-4">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t border-gray-200 dark:border-gray-700" />
+                    </div>
+                    <div className="relative flex justify-center text-xs">
+                      <span className="bg-card px-2 text-muted-foreground">Or</span>
+                    </div>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full h-11 font-medium"
+                    onClick={() => { setShowAltLogin(true); setError(""); }}
+                    data-testid="button-password-login"
+                  >
+                    Sign in with email and password
+                  </Button>
                 </>
               ) : (
                 <form onSubmit={handleAltLogin} className="space-y-4">
