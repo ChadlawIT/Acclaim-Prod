@@ -2856,18 +2856,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Send Azure SSO invitation in the background (non-blocking)
-      if (isAzureAuthEnabled()) {
-        const appBaseUrl = `${req.headers["x-forwarded-proto"] || req.protocol}://${req.headers["x-forwarded-host"] || req.headers.host}`;
-        const displayName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim() || userData.email;
-        inviteUserToAzure(userData.email, displayName, appBaseUrl)
-          .then((inviteResult) => {
-            if (!inviteResult.success) {
-              console.warn(`[Azure Invite] Could not invite ${userData.email}: ${inviteResult.error}`);
-            }
-          })
-          .catch((err) => console.error("[Azure Invite] Unexpected error:", err));
-      }
+      // Azure SSO invitations are sent manually by admins via the
+      // POST /api/admin/users/:userId/resend-invite endpoint, so that
+      // the invite is not triggered before the admin is ready to onboard the user.
 
       // Return user info and temporary password (in production, this would be sent via email)
       res.status(201).json({

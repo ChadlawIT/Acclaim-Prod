@@ -1210,16 +1210,6 @@ Portal: https://acclaim-api-prod-uks-001.azurewebsites.net/auth
 
     try {
       const portalUrl = data.portalUrl || 'https://acclaim-api-prod-uks-001.azurewebsites.net/auth';
-      let signupUrl: string;
-      try {
-        const u = new URL(portalUrl);
-        u.pathname = '/auth/azure/signup';
-        u.search = '';
-        u.hash = '';
-        signupUrl = u.toString();
-      } catch {
-        signupUrl = 'https://acclaim-api-prod-uks-001.azurewebsites.net/auth/azure/signup';
-      }
       const subject = `Welcome to the Acclaim Credit Management & Recovery Portal!`;
 
       const htmlContent = `
@@ -1275,12 +1265,9 @@ Portal: https://acclaim-api-prod-uks-001.azurewebsites.net/auth
                           Access the Portal →
                         </a>
                         ` : `
-                        <a href="${signupUrl}" style="display: inline-block; background-color: #008b8b; background: linear-gradient(135deg, #008b8b 0%, #006666 100%); color: #ffffff !important; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 12px rgba(0,139,139,0.3);">
-                          Register your account →
+                        <a href="${portalUrl}" style="display: inline-block; background-color: #008b8b; background: linear-gradient(135deg, #008b8b 0%, #006666 100%); color: #ffffff !important; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 12px rgba(0,139,139,0.3);">
+                          Access the Portal →
                         </a>
-                        <p style="margin: 14px 0 0 0; color: #94a3b8; font-size: 13px;">
-                          Already registered? <a href="${portalUrl}" style="color: #008b8b; text-decoration: none; font-weight: 600;">Sign in here</a>
-                        </p>
                         `}
                       </div>
                       
@@ -1317,24 +1304,24 @@ Portal: https://acclaim-api-prod-uks-001.azurewebsites.net/auth
                           </tr>
                         </table>
                         ` : `
-                        <p style="color: #00695c; margin: 0 0 12px 0; font-size: 14px; font-weight: 600;">Getting started — it only takes a minute:</p>
+                        <p style="color: #00695c; margin: 0 0 12px 0; font-size: 14px; font-weight: 600;">How to access the portal:</p>
                         <table role="presentation" cellspacing="0" cellpadding="0" width="100%">
                           <tr>
                             <td style="padding: 6px 0; vertical-align: top;">
                               <span style="display: inline-block; width: 22px; height: 22px; background: #008b8b; color: #fff; border-radius: 50%; text-align: center; font-size: 12px; font-weight: 700; line-height: 22px; margin-right: 10px;">1</span>
-                              <span style="color: #00695c; font-size: 13px;">Click <strong>Register your account</strong> above — this takes you straight to Microsoft's sign-up screen.</span>
+                              <span style="color: #00695c; font-size: 13px;">Look out for a separate email from <strong>Microsoft</strong> (invitations@microsoft.com) — this is your invitation to access the portal.</span>
                             </td>
                           </tr>
                           <tr>
                             <td style="padding: 6px 0; vertical-align: top;">
                               <span style="display: inline-block; width: 22px; height: 22px; background: #008b8b; color: #fff; border-radius: 50%; text-align: center; font-size: 12px; font-weight: 700; line-height: 22px; margin-right: 10px;">2</span>
-                              <span style="color: #00695c; font-size: 13px;">Register using <strong>this email address</strong> and follow the on-screen steps.</span>
+                              <span style="color: #00695c; font-size: 13px;">Open the Microsoft email and click <strong>Accept invitation</strong>. You will not be able to sign in until this step is completed.</span>
                             </td>
                           </tr>
                           <tr>
                             <td style="padding: 6px 0; vertical-align: top;">
                               <span style="display: inline-block; width: 22px; height: 22px; background: #008b8b; color: #fff; border-radius: 50%; text-align: center; font-size: 12px; font-weight: 700; line-height: 22px; margin-right: 10px;">3</span>
-                              <span style="color: #00695c; font-size: 13px;">Once registered, return to the portal and sign in with your Microsoft account.</span>
+                              <span style="color: #00695c; font-size: 13px;">Once accepted, click <strong>Access the Portal</strong> above and sign in using the <strong>Sign in with Microsoft</strong> button.</span>
                             </td>
                           </tr>
                         </table>
@@ -1373,10 +1360,9 @@ How to sign in:
 1. Click the link above to visit the portal.
 2. Click "Sign in with Microsoft" and sign in with your usual Microsoft password (and MFA if required).` : `Getting started — it only takes a minute:
 
-1. Register your account here: ${signupUrl}
-   (This takes you straight to Microsoft's sign-up screen.)
-2. Register using this email address and follow the on-screen steps.
-3. Once registered, sign in to the portal here: ${portalUrl}`}
+1. Look out for a separate email from Microsoft (invitations@microsoft.com) — this is your invitation to access the portal.
+2. Open the Microsoft email and click Accept invitation. You will not be able to sign in until this step is completed.
+3. Once accepted, visit the portal here: ${portalUrl} and sign in using the Sign in with Microsoft button.`}
 
 What you can do in the portal:
 - View and track your cases
