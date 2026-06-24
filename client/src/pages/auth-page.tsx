@@ -178,30 +178,6 @@ export default function AuthPage() {
                     <span className="ml-2">Sign in with Microsoft</span>
                   </Button>
 
-                  <div className="relative my-4">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t border-gray-200 dark:border-gray-700" />
-                    </div>
-                    <div className="relative flex justify-center text-xs">
-                      <span className="bg-card px-2 text-muted-foreground">First time here?</span>
-                    </div>
-                  </div>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full h-11 font-medium"
-                    onClick={handleAzureSignup}
-                    data-testid="button-azure-signup"
-                  >
-                    Create your account
-                  </Button>
-                  <p className="mt-2 text-center text-xs font-medium text-teal-700 dark:text-teal-400">
-                    You'll need to register before your first sign in. Use the same email address we invited.
-                  </p>
-                  <p className="mt-1 text-center text-xs text-muted-foreground">
-                    Not been invited yet? Please contact us.
-                  </p>
                 </>
               ) : (
                 <form onSubmit={handleAltLogin} className="space-y-4">
@@ -308,24 +284,24 @@ export default function AuthPage() {
                 {!showAltLogin ? (
                   <>
                     <p className="font-medium text-gray-800 dark:text-gray-100 mb-3">
-                      If you haven't used this portal before, you'll need to register first. Here's how:
+                      Signing in for the first time? Here's what to do:
                     </p>
                     <ol className="space-y-3">
                       <li className="flex gap-3">
                         <span className="flex-shrink-0 w-6 h-6 rounded-full bg-teal-600 text-white text-xs flex items-center justify-center font-semibold">1</span>
-                        <span><strong>Click "Create your account" above</strong> — this takes you straight to the Microsoft registration screen.</span>
+                        <span><strong>Check your email for a Microsoft invitation</strong> — you should have received an email from <em>invitations@microsoft.com</em> sent by Chadwick Lawrence.</span>
                       </li>
                       <li className="flex gap-3">
                         <span className="flex-shrink-0 w-6 h-6 rounded-full bg-teal-600 text-white text-xs flex items-center justify-center font-semibold">2</span>
-                        <span><strong>Register with your invited email address</strong> — use the same email address we sent your invitation to, then follow the on-screen steps.</span>
+                        <span><strong>Accept the invitation</strong> — click the link in that email and follow the on-screen steps. You won't be able to sign in until this is done.</span>
                       </li>
                       <li className="flex gap-3">
                         <span className="flex-shrink-0 w-6 h-6 rounded-full bg-teal-600 text-white text-xs flex items-center justify-center font-semibold">3</span>
-                        <span><strong>Return here and sign in</strong> — once registered, come back to this page and click <em>Sign in with Microsoft</em> using that same email address.</span>
+                        <span><strong>Return here and click "Sign in with Microsoft"</strong> — use the same email address the invitation was sent to.</span>
                       </li>
                     </ol>
                     <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">
-                      Haven't been invited yet, or completed registration but still can't access the portal? Please contact us at <strong>email@acclaim.law</strong> or call <strong>0113 225 8811</strong>.
+                      Haven't received an invitation, or accepted it but still can't access the portal? Please contact us at <strong>email@acclaim.law</strong> or call <strong>0113 225 8811</strong>.
                     </p>
                     <div className="mt-3 pt-3 border-t border-teal-200 dark:border-teal-700">
                       <button
