@@ -58,7 +58,6 @@ import { setupAzureAuth, inviteUserToAzure, isAzureAuthEnabled } from "./azure-a
 import ExcelJS from "exceljs";
 import { loginRateLimiter } from "./rate-limiter";
 import { computeRecoveryPerformance } from "./recovery-report";
-import { recordWelcomeEmail, recordInviteEmail, getAllTimestamps } from "./emailTracker";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -3260,7 +3259,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Always record the attempt — useful even if delivery failed
-      recordWelcomeEmail(userId);
+      await storage.recordWelcomeEmailTimestamp(userId);
       if (!welcomeEmailSent) {
         console.error(`[Welcome Email] All email attempts failed for ${user.email}`);
       }
@@ -3312,7 +3311,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const inviteResult = await inviteUserToAzure(user.email, displayName, appBaseUrl);
 
       if (inviteResult.success) {
-        recordInviteEmail(userId);
+        await storage.recordInviteEmailTimestamp(userId);
         return res.json({
           success: true,
           message: `Microsoft invitation sent to ${user.email}. They should receive an email from Microsoft to accept it.`,
@@ -3330,9 +3329,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // GET email send timestamps (stored in data/email-timestamps.json, no DB change)
-  app.get('/api/admin/users/email-timestamps', isAuthenticated, isAdmin, (_req, res) => {
-    res.json(getAllTimestamps());
+  // GET email send timestamps (stored in users table)
+  app.get('/api/admin/users/email-timestamps', isAuthenticated, isAdmin, async (_req, res) => {
+    try {
+      const timestamps = await storage.getEmailTimestamps();
+      res.json(timestamps);
+    } catch (error) {
+      console.error("Error fetching email timestamps:", error);
+      res.status(500).json({ message: "Failed to fetch email timestamps" });
+    }
   });
 
   // Send just the temporary password email (for password resets)
