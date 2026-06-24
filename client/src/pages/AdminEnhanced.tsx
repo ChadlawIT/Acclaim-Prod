@@ -4652,6 +4652,7 @@ export default function AdminEnhanced() {
                 </div>
 
                 {/* Detail panel — fixed full-screen on mobile, absolute side panel on sm+ */}
+                {expandedUserId && <div className="hidden sm:block fixed inset-0 z-40" onClick={() => setExpandedUserId(null)} aria-hidden="true" />}
                 {expandedUserId && (() => {
                   const user = paginatedUsers?.find((u: User) => u.id === expandedUserId);
                   if (!user) return null;
@@ -4867,6 +4868,7 @@ export default function AdminEnhanced() {
                     </div>
                   );
                 })()}
+
               </div>
 
               {/* Pagination */}
