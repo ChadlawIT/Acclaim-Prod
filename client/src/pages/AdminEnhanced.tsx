@@ -144,7 +144,6 @@ interface User {
   createdAt: string;
   isAdmin?: boolean;
   phone?: string;
-  mustChangePassword?: boolean;
 }
 
 interface Organisation {
@@ -2270,7 +2269,6 @@ export default function AdminEnhanced() {
   });
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [createdUserId, setCreatedUserId] = useState<string | null>(null);
-  const [createdTempPassword, setCreatedTempPassword] = useState<string | null>(null);
   const [showResetPasswordDialog, setShowResetPasswordDialog] = useState(false);
   const [resetPasswordUser, setResetPasswordUser] = useState<User | null>(null);
   const [resetPasswordResult, setResetPasswordResult] = useState<{ tempPassword: string; email: string } | null>(null);
@@ -3105,7 +3103,6 @@ export default function AdminEnhanced() {
       // Handle nested user structure from API: data.user.user.id or data.user.id
       const userId = data.user?.user?.id || data.user?.id || null;
       setCreatedUserId(userId);
-      setCreatedTempPassword(data.tempPassword || data.user?.tempPassword || null);
       setShowPasswordDialog(true);
     },
     onError: (error) => {
@@ -3450,10 +3447,8 @@ export default function AdminEnhanced() {
 
   // Send welcome email mutation
   const sendWelcomeEmailMutation = useMutation({
-    mutationFn: async (params: string | { userId: string; temporaryPassword?: string }) => {
-      const userId = typeof params === "string" ? params : params.userId;
-      const temporaryPassword = typeof params === "string" ? undefined : params.temporaryPassword;
-      const response = await apiRequest("POST", `/api/admin/users/${userId}/send-welcome-email`, temporaryPassword ? { temporaryPassword } : {});
+    mutationFn: async (userId: string) => {
+      const response = await apiRequest("POST", `/api/admin/users/${userId}/send-welcome-email`);
       return await response.json();
     },
     onSuccess: (data) => {
@@ -3586,7 +3581,7 @@ export default function AdminEnhanced() {
 
     setSendingWelcomeEmail(true);
     try {
-      const response = await apiRequest("POST", `/api/admin/users/${createdUserId}/send-welcome-email`, createdTempPassword ? { temporaryPassword: createdTempPassword } : {});
+      const response = await apiRequest("POST", `/api/admin/users/${createdUserId}/send-welcome-email`, {});
       const result = await response.json();
       
       if (result.emailSent) {
@@ -4693,10 +4688,10 @@ export default function AdminEnhanced() {
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          const stillOnboarding = user.mustChangePassword;
-                          const message = stillOnboarding
-                            ? `Send welcome email to ${user.firstName} ${user.lastName}?\n\nThis will send sign-in guidance to ${user.email}, including a fresh temporary password as a backup for Microsoft sign-in.`
-                            : `Send welcome email to ${user.firstName} ${user.lastName}?\n\nThis user has already set their own password, so the email will include sign-in guidance only — their password will NOT be changed.`;
+                          const hasTemporaryPassword = (user as any).temporaryPassword;
+                          const message = hasTemporaryPassword
+                            ? `Send welcome email to ${user.firstName} ${user.lastName}?\n\nThis will send their username and temporary password to ${user.email}.`
+                            : `Send welcome email to ${user.firstName} ${user.lastName}?\n\nNote: This user has already logged in, so the email will include instructions to reset their password if needed.`;
                           
                           const confirmation = confirm(message);
                           if (confirmation) {
@@ -5020,10 +5015,10 @@ export default function AdminEnhanced() {
                               variant="outline"
                               size="sm"
                               onClick={() => {
-                                const stillOnboarding = user.mustChangePassword;
-                                const message = stillOnboarding
-                                  ? `Send welcome email to ${user.firstName} ${user.lastName}?\n\nThis will send sign-in guidance to ${user.email}, including a fresh temporary password as a backup for Microsoft sign-in.`
-                                  : `Send welcome email to ${user.firstName} ${user.lastName}?\n\nThis user has already set their own password, so the email will include sign-in guidance only — their password will NOT be changed.`;
+                                const hasTemporaryPassword = (user as any).temporaryPassword;
+                                const message = hasTemporaryPassword
+                                  ? `Send welcome email to ${user.firstName} ${user.lastName}?\n\nThis will send their username and temporary password to ${user.email}.`
+                                  : `Send welcome email to ${user.firstName} ${user.lastName}?\n\nNote: This user has already logged in, so the email will include instructions to reset their password if needed.`;
                                 
                                 const confirmation = confirm(message);
                                 if (confirmation) {
@@ -6774,7 +6769,7 @@ export default function AdminEnhanced() {
             <Button
               variant="outline"
               onClick={() => {
-                if (resetPasswordUser) sendWelcomeEmailMutation.mutate({ userId: resetPasswordUser.id, temporaryPassword: resetPasswordResult?.tempPassword });
+                if (resetPasswordUser) sendWelcomeEmailMutation.mutate(resetPasswordUser.id);
                 setShowResetPasswordDialog(false);
               }}
             >
