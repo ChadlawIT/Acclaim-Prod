@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import ExcelJS from "exceljs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useAuth } from "@/hooks/use-auth";
-import { Users, Building, Plus, Edit, Trash2, Shield, UserPlus, AlertTriangle, ShieldCheck, ShieldAlert, ArrowLeft, Activity, FileText, CreditCard, Archive, ArchiveRestore, Download, Check, Eye, EyeOff, Mail, Bell, BellOff, FilePlus, FileX, BarChart3, Search, Crown, Calendar, CalendarOff, Pencil, LogOut, RefreshCw, ChevronDown, ChevronUp, Clock, Send, History, KeyRound, Copy, HelpCircle } from "lucide-react";
+import { Users, Building, Plus, Edit, Trash2, Shield, UserPlus, AlertTriangle, ShieldCheck, ShieldAlert, ArrowLeft, Activity, FileText, CreditCard, Archive, ArchiveRestore, Download, Check, Eye, EyeOff, Mail, Bell, BellOff, FilePlus, FileX, BarChart3, Search, Crown, Calendar, CalendarOff, Pencil, LogOut, RefreshCw, ChevronDown, ChevronUp, ChevronRight, Clock, Send, History, KeyRound, Copy, HelpCircle, X } from "lucide-react";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { createUserSchema, updateUserSchema, createOrganisationSchema, updateOrganisationSchema } from "@shared/schema";
@@ -4564,652 +4564,311 @@ export default function AdminEnhanced() {
               </div>
               {/* Scroll anchor for pagination */}
               <div ref={usersTableTopRef} className="scroll-mt-4" />
-              {/* Mobile Card Layout */}
-              <div className="block sm:hidden space-y-4">
-                {paginatedUsers?.map((user: User) => (
-                  <div key={user.id} className="bg-gray-50 rounded-lg p-4 space-y-3">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="font-medium">{user.firstName} {user.lastName}</div>
-                        <div className="text-sm text-gray-500">{user.id}</div>
-                      </div>
-                      <div className="flex gap-1">
-                        {(user as any).isSuperAdmin && (
-                          <Badge variant="default" className="bg-fuchsia-200 text-fuchsia-700 dark:bg-fuchsia-200 dark:text-fuchsia-700 text-xs font-semibold">
-                            Admin+
-                          </Badge>
-                        )}
-                        {user.isAdmin && !(user as any).isSuperAdmin && (
-                          <Badge variant="default" className="bg-blue-100 text-blue-800 text-xs">
-                            Admin
-                          </Badge>
-                        )}
-                        {(user as any).mustChangePassword && (
-                          <Badge variant="default" className="bg-amber-100 text-amber-700 dark:bg-amber-100 dark:text-amber-700 text-xs">
-                            Not Registered
-                          </Badge>
-                        )}
-                        <Badge variant="outline" className="text-xs">Active</Badge>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600">Email:</span>
-                        <div className="flex items-center space-x-1">
-                          <span className="text-right">{user.email}</span>
-                          {user.email?.endsWith('@chadlaw.co.uk') && (
-                            <Shield className="h-3 w-3 text-blue-600" />
-                          )}
-                          {(user as any).emailNotifications === false ? (
-                            <BellOff className="h-3 w-3 text-gray-400" title="Message notifications disabled" />
-                          ) : (
-                            <Bell className="h-3 w-3 text-green-500" title="Message notifications enabled" />
-                          )}
-                          {(user as any).documentNotifications === false ? (
-                            <FileX className="h-3 w-3 text-gray-400" title="Document notifications disabled" />
-                          ) : (
-                            <FilePlus className="h-3 w-3 text-green-500" title="Document notifications enabled" />
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600">Phone:</span>
-                        <span>{user.phone || "-"}</span>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600">Organisations:</span>
-                        {renderOrgBadge(user)}
-                      </div>
-                    </div>
-                    
-                    {/* Scheduled Reports Row - Super Admin Only */}
-                    {isSuperAdmin && (
-                      <div className="flex items-center justify-between pt-2 pb-2 border-t border-gray-200">
-                        <span className="text-sm text-gray-600">Scheduled Reports:</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="p-1 h-auto"
-                          onClick={() => openScheduledReportDialog(user)}
-                          title="Configure scheduled reports"
-                        >
-                          {scheduledReportsMap[user.id]?.length > 0 ? (
-                            (() => {
-                              const reports = scheduledReportsMap[user.id];
-                              const enabledCount = reports.filter((r: any) => r.enabled).length;
-                              return enabledCount > 0 ? (
-                                <div className="flex items-center text-green-600">
-                                  <Calendar className="h-4 w-4 mr-1" />
-                                  <span className="text-xs">{enabledCount} active</span>
-                                </div>
+              {/* Unified card grid + slide-in detail panel */}
+              <div className="relative">
+                <div className={`grid gap-4 transition-all duration-200 grid-cols-1 sm:grid-cols-2 ${expandedUserId ? 'lg:grid-cols-2 sm:mr-80' : 'lg:grid-cols-3'}`}>
+                  {paginatedUsers?.map((user: User) => {
+                    const avatarColors = ['#0d9488','#0284c7','#7c3aed','#db2777','#d97706','#16a34a','#dc2626','#475569'];
+                    const code = user.id.charCodeAt(0) + (user.id.charCodeAt(1) || 0);
+                    const bgColor = avatarColors[Math.abs(code) % avatarColors.length];
+                    const initials = `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}`.toUpperCase();
+                    const isSelected = expandedUserId === user.id;
+                    return (
+                      <button
+                        key={user.id}
+                        onClick={() => setExpandedUserId(isSelected ? null : user.id)}
+                        className={`group text-left bg-white dark:bg-gray-900 border rounded-xl p-5 hover:border-teal-400 hover:shadow-md transition-all duration-150 relative flex flex-col gap-3 ${isSelected ? 'border-teal-400 shadow-md ring-2 ring-teal-200 dark:ring-teal-800' : 'border-gray-200 dark:border-gray-700'}`}
+                        data-testid={`card-user-${user.id}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0" style={{ background: bgColor }}>
+                            {initials}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-semibold text-gray-900 dark:text-gray-100 text-sm leading-tight">
+                                {user.firstName} {user.lastName}
+                              </span>
+                              {(user as any).isSuperAdmin ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">
+                                  <ShieldAlert className="h-3 w-3" /> Super Admin
+                                </span>
+                              ) : user.isAdmin ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                                  <Shield className="h-3 w-3" /> Admin
+                                </span>
+                              ) : (user as any).isOwner ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                                  <Crown className="h-3 w-3" /> Owner
+                                </span>
                               ) : (
-                                <div className="flex items-center text-gray-400">
-                                  <CalendarOff className="h-4 w-4 mr-1" />
-                                  <span className="text-xs">{reports.length} (off)</span>
-                                </div>
-                              );
-                            })()
-                          ) : (
-                            <div className="flex items-center text-gray-400">
-                              <CalendarOff className="h-4 w-4 mr-1" />
-                              <span className="text-xs">None</span>
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+                                  User
+                                </span>
+                              )}
                             </div>
-                          )}
-                        </Button>
-                      </div>
-                    )}
-                    
-                    <div className="grid grid-cols-4 gap-2 pt-2">
-                      <Button
-                        variant={expandedUserId === user.id ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setExpandedUserId(expandedUserId === user.id ? null : user.id)}
-                        title={expandedUserId === user.id ? "Hide login history" : "Show login history"}
-                      >
-                        <History className="h-3 w-3 mr-1" />
-                        History
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedUser(user);
-                          setShowAssignUser(true);
-                        }}
-                        title="Assign user to organisation"
-                      >
-                        <UserPlus className="h-3 w-3 mr-1" />
-                        Assign
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const hasTemporaryPassword = (user as any).temporaryPassword;
-                          const message = hasTemporaryPassword
-                            ? `Send welcome email to ${user.firstName} ${user.lastName}?\n\nThis will send their username and temporary password to ${user.email}.`
-                            : `Send welcome email to ${user.firstName} ${user.lastName}?\n\nNote: This user has already logged in, so the email will include instructions to reset their password if needed.`;
-                          
-                          const confirmation = confirm(message);
-                          if (confirmation) {
-                            sendWelcomeEmailMutation.mutate(user.id);
-                          }
-                        }}
-                        disabled={sendWelcomeEmailMutation.isPending}
-                        title="Send welcome email with login details"
-                      >
-                        <Mail className="h-3 w-3 mr-1" />
-                        Email
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const confirmation = confirm(`Send a Microsoft sign-in invitation to ${user.firstName} ${user.lastName} (${user.email})?\n\nThey will receive an email from Microsoft to accept the invitation, after which they can use "Sign in with SSO".`);
-                          if (confirmation) {
-                            resendInviteMutation.mutate(user.id);
-                          }
-                        }}
-                        disabled={resendInviteMutation.isPending}
-                        title="Send Microsoft (SSO) invitation"
-                        data-testid={`button-resend-invite-${user.id}`}
-                      >
-                        <Send className="h-3 w-3 mr-1" />
-                        Invite
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const confirmation = confirm(`Reset password for ${user.firstName} ${user.lastName}?\n\nThis will generate a new temporary password. The user will need to change it on next sign in.`);
-                          if (confirmation) {
-                            setResetPasswordUser(user);
-                            resetPasswordMutation.mutate(user.id);
-                          }
-                        }}
-                        disabled={resetPasswordMutation.isPending}
-                        title="Reset temporary password"
-                      >
-                        <KeyRound className="h-3 w-3 mr-1" />
-                        Reset Pwd
-                      </Button>
-                      {!user.isAdmin && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setManageRestrictionsUser(user);
-                            setSelectedLiftCaseIds([]);
-                            setSelectedRestoreCaseIds([]);
-                          }}
-                          title="Manage case access restrictions"
-                          data-testid={`button-manage-restrictions-${user.id}`}
-                        >
-                          <EyeOff className="h-3 w-3 mr-1" />
-                          Restrictions
-                        </Button>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          if (!user.isAdmin && !user.email?.endsWith('@chadlaw.co.uk')) {
-                            alert('Admin privileges can only be granted to @chadlaw.co.uk email addresses.');
-                            return;
-                          }
-                          
-                          const action = user.isAdmin ? 'remove admin privileges from' : 'grant admin privileges to';
-                          const confirmation = confirm(`Are you sure you want to ${action} ${user.firstName} ${user.lastName}?`);
-                          if (confirmation) {
-                            toggleAdminMutation.mutate({
-                              userId: user.id,
-                              makeAdmin: !user.isAdmin
-                            });
-                          }
-                        }}
-                        disabled={toggleAdminMutation.isPending || (!user.isAdmin && !user.email?.endsWith('@chadlaw.co.uk'))}
-                        className={(!user.isAdmin && !user.email?.endsWith('@chadlaw.co.uk')) ? 'opacity-50 cursor-not-allowed' : ''}
-                        title={user.isAdmin ? "Remove admin privileges" : "Grant admin privileges"}
-                      >
-                        {user.isAdmin ? (
-                          <ShieldCheck className="h-3 w-3 text-blue-600" />
-                        ) : (
-                          <Shield className="h-3 w-3" />
-                        )}
-                        Admin
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setEditingUser(user);
-                          setShowEditUser(true);
-                        }}
-                        title="Edit user details"
-                        data-testid={`button-edit-user-${user.id}`}
-                      >
-                        <Pencil className="h-3 w-3 mr-1" />
-                        Edit
-                      </Button>
-                      {isSuperAdmin && user.isAdmin && user.email?.endsWith('@chadlaw.co.uk') && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            if (user.id === currentUser?.id) {
-                              alert('You cannot change your own super admin status.');
-                              return;
-                            }
-                            const action = (user as any).isSuperAdmin ? 'remove super admin privileges from' : 'grant super admin privileges to';
-                            const confirmation = confirm(`Are you sure you want to ${action} ${user.firstName} ${user.lastName}?`);
-                            if (confirmation) {
-                              toggleSuperAdminMutation.mutate({
-                                userId: user.id,
-                                makeSuperAdmin: !(user as any).isSuperAdmin,
-                                userName: [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email
-                              });
-                            }
-                          }}
-                          disabled={toggleSuperAdminMutation.isPending || user.id === currentUser?.id}
-                          className={(user as any).isSuperAdmin ? 'border-purple-300' : ''}
-                          title={(user as any).isSuperAdmin ? "Remove super admin privileges" : "Grant super admin privileges"}
-                        >
-                          {(user as any).isSuperAdmin ? (
-                            <ShieldAlert className="h-3 w-3 text-purple-600" />
-                          ) : (
-                            <ShieldAlert className="h-3 w-3 text-gray-400" />
-                          )}
-                          Super
-                        </Button>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const currentValue = (user as any).canSubmitCases !== false;
-                          const action = currentValue ? 'disable' : 'enable';
-                          const confirmation = confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} case submission for ${user.firstName} ${user.lastName}?`);
-                          if (confirmation) {
-                            toggleCaseSubmissionMutation.mutate({
-                              userId: user.id,
-                              canSubmitCases: !currentValue
-                            });
-                          }
-                        }}
-                        disabled={toggleCaseSubmissionMutation.isPending}
-                        title={(user as any).canSubmitCases !== false ? "Can submit cases - click to disable" : "Cannot submit cases - click to enable"}
-                      >
-                        {(user as any).canSubmitCases !== false ? (
-                          <FilePlus className="h-3 w-3 text-green-600" />
-                        ) : (
-                          <FileX className="h-3 w-3 text-gray-400" />
-                        )}
-                        Cases
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const confirmation = confirm(`Force logout ${user.firstName} ${user.lastName}? This will end all their active sessions and require them to log in again.`);
-                          if (confirmation) {
-                            forceLogoutMutation.mutate({ userId: user.id, reason: 'Admin initiated force logout' });
-                          }
-                        }}
-                        disabled={forceLogoutMutation.isPending}
-                        className="text-orange-600 hover:text-orange-700"
-                        title="Force logout user (end all sessions)"
-                      >
-                        <LogOut className="h-3 w-3 mr-1" />
-                        Logout
-                      </Button>
-                      {isSuperAdmin && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const confirmation = confirm(`Are you sure you want to permanently delete ${user.firstName} ${user.lastName}? This action cannot be undone.`);
-                            if (confirmation) {
-                              deleteUserMutation.mutate(user.id);
-                            }
-                          }}
-                          disabled={deleteUserMutation.isPending}
-                          className="text-red-600 hover:text-red-700"
-                          title="Delete user permanently"
-                        >
-                          <Trash2 className="h-3 w-3 mr-1" />
-                          Delete
-                        </Button>
-                      )}
-                    </div>
-                    {expandedUserId === user.id && (
-                      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                        <MobileUserAuditSection userId={user.id} />
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Desktop Table Layout */}
-              <div className="hidden sm:block overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>User</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Phone</TableHead>
-                      <TableHead>Organisation</TableHead>
-                      <TableHead>Status</TableHead>
-                      {isSuperAdmin && <TableHead>Reports</TableHead>}
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginatedUsers?.map((user: User) => (
-                      <Fragment key={user.id}>
-                      <TableRow>
-                        <TableCell>
-                          <div className="font-medium">{user.firstName} {user.lastName}</div>
-                          <div className="text-sm text-gray-500">{user.id}</div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
-                            <span>{user.email}</span>
-                            {user.email?.endsWith('@chadlaw.co.uk') && (
-                              <Shield className="h-3 w-3 text-blue-600" />
-                            )}
+                            <p className="text-xs text-gray-500 mt-0.5 truncate">{user.email}</p>
+                          </div>
+                          <ChevronRight className={`h-4 w-4 flex-shrink-0 mt-1 transition-colors ${isSelected ? 'text-teal-500' : 'text-gray-300 group-hover:text-teal-500'}`} />
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                          <Building className="h-3 w-3 flex-shrink-0" />
+                          <span className="truncate">
+                            {(user as any).organisations?.length > 0
+                              ? (user as any).organisations.map((o: any) => o.name).join(', ')
+                              : (user as any).organisationName ?? 'No organisation'}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800">
+                          <div className="flex items-center gap-2">
                             {(user as any).emailNotifications === false ? (
-                              <BellOff className="h-3 w-3 text-gray-400" title="Message notifications disabled" />
+                              <BellOff className="h-3 w-3 text-gray-300" title="Message notifications off" />
                             ) : (
-                              <Bell className="h-3 w-3 text-green-500" title="Message notifications enabled" />
+                              <Bell className="h-3 w-3 text-green-500" title="Message notifications on" />
                             )}
                             {(user as any).documentNotifications === false ? (
-                              <FileX className="h-3 w-3 text-gray-400" title="Document notifications disabled" />
+                              <FileX className="h-3 w-3 text-gray-300" title="Document notifications off" />
                             ) : (
-                              <FilePlus className="h-3 w-3 text-green-500" title="Document notifications enabled" />
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>{user.phone || "-"}</TableCell>
-                        <TableCell>
-                          {renderOrgBadge(user)}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
-                            {(user as any).isSuperAdmin && (
-                              <Badge variant="default" className="bg-fuchsia-200 text-fuchsia-700 dark:bg-fuchsia-200 dark:text-fuchsia-700 font-semibold">
-                                Admin+
-                              </Badge>
-                            )}
-                            {user.isAdmin && !(user as any).isSuperAdmin && (
-                              <Badge variant="default" className="bg-blue-100 text-blue-800">
-                                Admin
-                              </Badge>
+                              <FilePlus className="h-3 w-3 text-green-500" title="Document notifications on" />
                             )}
                             {(user as any).mustChangePassword && (
-                              <Badge variant="default" className="bg-amber-100 text-amber-700 dark:bg-amber-100 dark:text-amber-700">
-                                Not Registered
-                              </Badge>
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                                <KeyRound className="h-2.5 w-2.5" /> Temp pwd
+                              </span>
                             )}
-                            <Badge variant="outline">Active</Badge>
                           </div>
-                        </TableCell>
-                        {isSuperAdmin && (
-                          <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="p-1 h-auto"
-                              onClick={() => openScheduledReportDialog(user)}
-                              title="Configure scheduled reports"
-                            >
-                              {scheduledReportsMap[user.id]?.length > 0 ? (
-                                (() => {
-                                  const reports = scheduledReportsMap[user.id];
-                                  const enabledCount = reports.filter((r: any) => r.enabled).length;
-                                  return enabledCount > 0 ? (
-                                    <div className="flex items-center text-green-600">
-                                      <Calendar className="h-4 w-4 mr-1" />
-                                      <span className="text-xs">{enabledCount} active</span>
-                                    </div>
-                                  ) : (
-                                    <div className="flex items-center text-gray-400">
-                                      <CalendarOff className="h-4 w-4 mr-1" />
-                                      <span className="text-xs">{reports.length} (off)</span>
-                                    </div>
-                                  );
-                                })()
-                              ) : (
-                                <div className="flex items-center text-gray-300">
-                                  <CalendarOff className="h-4 w-4" />
-                                </div>
-                              )}
-                            </Button>
-                          </TableCell>
+                          {isSuperAdmin && scheduledReportsMap[user.id]?.length > 0 && (() => {
+                            const enabledCount = scheduledReportsMap[user.id].filter((r: any) => r.enabled).length;
+                            return enabledCount > 0 ? (
+                              <span className="flex items-center gap-1 text-xs text-green-600"><Calendar className="h-3 w-3" />{enabledCount}</span>
+                            ) : (
+                              <span className="flex items-center gap-1 text-xs text-gray-400"><CalendarOff className="h-3 w-3" />{scheduledReportsMap[user.id].length}</span>
+                            );
+                          })()}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Detail panel — fixed full-screen on mobile, absolute side panel on sm+ */}
+                {expandedUserId && (() => {
+                  const user = paginatedUsers?.find((u: User) => u.id === expandedUserId);
+                  if (!user) return null;
+                  const avatarColors = ['#0d9488','#0284c7','#7c3aed','#db2777','#d97706','#16a34a','#dc2626','#475569'];
+                  const code = user.id.charCodeAt(0) + (user.id.charCodeAt(1) || 0);
+                  const bgColor = avatarColors[Math.abs(code) % avatarColors.length];
+                  const initials = `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}`.toUpperCase();
+                  return (
+                    <div className="fixed inset-0 z-50 sm:z-auto sm:absolute sm:inset-y-0 sm:right-0 sm:left-auto w-full sm:w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 shadow-2xl flex flex-col overflow-y-auto">
+                      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 sticky top-0 z-10">
+                        <h2 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">User Details</h2>
+                        <button onClick={() => setExpandedUserId(null)} className="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 transition-colors" data-testid="button-close-user-panel">
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <div className="px-4 py-4 border-b border-gray-100 dark:border-gray-800">
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0" style={{ background: bgColor }}>
+                            {initials}
+                          </div>
+                          <div className="min-w-0">
+                            <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{user.firstName} {user.lastName}</h3>
+                            <p className="text-xs text-gray-500 mt-0.5 break-all">{user.email}</p>
+                            {user.phone && <p className="text-xs text-gray-400 mt-0.5">{user.phone}</p>}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-2">
+                          <Building className="h-3.5 w-3.5 flex-shrink-0" />
+                          <span>
+                            {(user as any).organisations?.length > 0
+                              ? (user as any).organisations.map((o: any) => o.name).join(', ')
+                              : (user as any).organisationName ?? 'No organisation'}
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-400 font-mono">ID: {user.id}</div>
+                      </div>
+                      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex flex-wrap gap-1.5">
+                        {(user as any).isSuperAdmin ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700"><ShieldAlert className="h-3 w-3" /> Super Admin</span>
+                        ) : user.isAdmin ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700"><Shield className="h-3 w-3" /> Admin</span>
+                        ) : (user as any).isOwner ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700"><Crown className="h-3 w-3" /> Owner</span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">User</span>
                         )}
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
-                            <Button
-                              variant={expandedUserId === user.id ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => setExpandedUserId(expandedUserId === user.id ? null : user.id)}
-                              title={expandedUserId === user.id ? "Hide login history" : "Show login history"}
-                            >
-                              <History className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
+                        {(user as any).mustChangePassword ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-700"><KeyRound className="h-3 w-3" /> Temp password</span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700"><Check className="h-3 w-3" /> Registered</span>
+                        )}
+                        {(user as any).emailNotifications !== false && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700"><Bell className="h-3 w-3" /> Msgs on</span>
+                        )}
+                        {(user as any).documentNotifications !== false && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700"><FilePlus className="h-3 w-3" /> Docs on</span>
+                        )}
+                        {(user as any).canSubmitCases === false && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-500"><FileX className="h-3 w-3" /> No case submit</span>
+                        )}
+                      </div>
+                      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Login History</p>
+                        <MobileUserAuditSection userId={user.id} />
+                      </div>
+                      <div className="px-4 py-3 flex-1">
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Actions</p>
+                        <div className="space-y-0.5">
+                          <button
+                            onClick={() => {
+                              const msg = (user as any).temporaryPassword
+                                ? `Send welcome email to ${user.firstName} ${user.lastName}?\n\nThis will send their username and temporary password to ${user.email}.`
+                                : `Send welcome email to ${user.firstName} ${user.lastName}?\n\nNote: This user has already logged in, so the email will include instructions to reset their password if needed.`;
+                              if (confirm(msg)) sendWelcomeEmailMutation.mutate(user.id);
+                            }}
+                            disabled={sendWelcomeEmailMutation.isPending}
+                            className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-50"
+                          >
+                            <Mail className="h-4 w-4 text-gray-400" /> Send welcome email
+                          </button>
+                          {!user.isAdmin && (
+                            <button
                               onClick={() => {
-                                setSelectedUser(user);
-                                setShowAssignUser(true);
-                              }}
-                              title="Assign to organisation"
-                            >
-                              <UserPlus className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                const hasTemporaryPassword = (user as any).temporaryPassword;
-                                const message = hasTemporaryPassword
-                                  ? `Send welcome email to ${user.firstName} ${user.lastName}?\n\nThis will send their username and temporary password to ${user.email}.`
-                                  : `Send welcome email to ${user.firstName} ${user.lastName}?\n\nNote: This user has already logged in, so the email will include instructions to reset their password if needed.`;
-                                
-                                const confirmation = confirm(message);
-                                if (confirmation) {
-                                  sendWelcomeEmailMutation.mutate(user.id);
-                                }
-                              }}
-                              disabled={sendWelcomeEmailMutation.isPending}
-                              title="Send welcome email with login details"
-                            >
-                              <Mail className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                const confirmation = confirm(`Send a Microsoft sign-in invitation to ${user.firstName} ${user.lastName} (${user.email})?\n\nThey will receive an email from Microsoft to accept the invitation, after which they can use "Sign in with SSO".`);
-                                if (confirmation) {
+                                if (confirm(`Send a Microsoft sign-in invitation to ${user.firstName} ${user.lastName} (${user.email})?\n\nThey will receive an email from Microsoft to accept the invitation, after which they can use "Sign in with SSO".`)) {
                                   resendInviteMutation.mutate(user.id);
                                 }
                               }}
                               disabled={resendInviteMutation.isPending}
-                              title="Send Microsoft (SSO) invitation"
-                              data-testid={`button-resend-invite-mobile-${user.id}`}
+                              className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-50"
+                              data-testid={`button-resend-invite-panel-${user.id}`}
                             >
-                              <Send className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                const confirmation = confirm(`Reset password for ${user.firstName} ${user.lastName}?\n\nThis will generate a new temporary password. The user will need to change it on next sign in.`);
-                                if (confirmation) {
-                                  setResetPasswordUser(user);
-                                  resetPasswordMutation.mutate(user.id);
-                                }
-                              }}
-                              disabled={resetPasswordMutation.isPending}
-                              title="Reset temporary password"
+                              <Send className="h-4 w-4 text-gray-400" /> Send Microsoft invitation
+                            </button>
+                          )}
+                          <button
+                            onClick={() => {
+                              if (confirm(`Reset password for ${user.firstName} ${user.lastName}?\n\nThis will generate a new temporary password. The user will need to change it on next sign in.`)) {
+                                setResetPasswordUser(user);
+                                resetPasswordMutation.mutate(user.id);
+                              }
+                            }}
+                            disabled={resetPasswordMutation.isPending}
+                            className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-50"
+                          >
+                            <KeyRound className="h-4 w-4 text-gray-400" /> Reset password
+                          </button>
+                          <button
+                            onClick={() => { setSelectedUser(user); setShowAssignUser(true); }}
+                            className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left"
+                          >
+                            <UserPlus className="h-4 w-4 text-gray-400" /> Assign to organisation
+                          </button>
+                          {!user.isAdmin && (
+                            <button
+                              onClick={() => { setManageRestrictionsUser(user); setSelectedLiftCaseIds([]); setSelectedRestoreCaseIds([]); }}
+                              className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left"
+                              data-testid={`button-manage-restrictions-panel-${user.id}`}
                             >
-                              <KeyRound className="h-3 w-3" />
-                            </Button>
-                            {!user.isAdmin && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setManageRestrictionsUser(user);
-                                  setSelectedLiftCaseIds([]);
-                                  setSelectedRestoreCaseIds([]);
-                                }}
-                                title="Manage case access restrictions"
-                                data-testid={`button-manage-restrictions-compact-${user.id}`}
-                              >
-                                <EyeOff className="h-3 w-3" />
-                              </Button>
-                            )}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                // Check if trying to grant admin to non-chadlaw email
-                                if (!user.isAdmin && !user.email?.endsWith('@chadlaw.co.uk')) {
-                                  alert('Admin privileges can only be granted to @chadlaw.co.uk email addresses.');
-                                  return;
-                                }
-                                
-                                const action = user.isAdmin ? 'remove admin privileges from' : 'grant admin privileges to';
-                                const confirmation = confirm(`Are you sure you want to ${action} ${user.firstName} ${user.lastName}?`);
-                                if (confirmation) {
-                                  toggleAdminMutation.mutate({
-                                    userId: user.id,
-                                    makeAdmin: !user.isAdmin
-                                  });
-                                }
-                              }}
-                              disabled={toggleAdminMutation.isPending || (!user.isAdmin && !user.email?.endsWith('@chadlaw.co.uk'))}
-                              className={(!user.isAdmin && !user.email?.endsWith('@chadlaw.co.uk')) ? 'opacity-50 cursor-not-allowed' : ''}
-                              title={user.isAdmin ? "Remove admin privileges" : "Grant admin privileges"}
+                              <EyeOff className="h-4 w-4 text-gray-400" /> Manage case restrictions
+                            </button>
+                          )}
+                          {isSuperAdmin && (
+                            <button
+                              onClick={() => openScheduledReportDialog(user)}
+                              className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left"
                             >
-                              {user.isAdmin ? (
-                                <ShieldCheck className="h-3 w-3 text-blue-600" />
-                              ) : (
-                                <Shield className="h-3 w-3" />
+                              <Calendar className="h-4 w-4 text-gray-400" /> Scheduled reports
+                              {scheduledReportsMap[user.id]?.filter((r: any) => r.enabled).length > 0 && (
+                                <span className="ml-auto text-xs text-green-600">{scheduledReportsMap[user.id].filter((r: any) => r.enabled).length} active</span>
                               )}
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
+                            </button>
+                          )}
+                          <button
+                            onClick={() => {
+                              if (!user.isAdmin && !user.email?.endsWith('@chadlaw.co.uk')) { alert('Admin privileges can only be granted to @chadlaw.co.uk email addresses.'); return; }
+                              const action = user.isAdmin ? 'remove admin privileges from' : 'grant admin privileges to';
+                              if (confirm(`Are you sure you want to ${action} ${user.firstName} ${user.lastName}?`)) {
+                                toggleAdminMutation.mutate({ userId: user.id, makeAdmin: !user.isAdmin });
+                              }
+                            }}
+                            disabled={toggleAdminMutation.isPending || (!user.isAdmin && !user.email?.endsWith('@chadlaw.co.uk'))}
+                            className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-50"
+                          >
+                            {user.isAdmin ? <ShieldCheck className="h-4 w-4 text-blue-500" /> : <Shield className="h-4 w-4 text-gray-400" />}
+                            {user.isAdmin ? 'Remove admin' : 'Grant admin'}
+                          </button>
+                          {isSuperAdmin && user.isAdmin && user.email?.endsWith('@chadlaw.co.uk') && (
+                            <button
                               onClick={() => {
-                                setEditingUser(user);
-                                setShowEditUser(true);
-                              }}
-                              title="Edit user details"
-                              data-testid={`button-edit-user-compact-${user.id}`}
-                            >
-                              <Pencil className="h-3 w-3" />
-                            </Button>
-                            {isSuperAdmin && user.isAdmin && user.email?.endsWith('@chadlaw.co.uk') && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  if (user.id === currentUser?.id) {
-                                    alert('You cannot change your own super admin status.');
-                                    return;
-                                  }
-                                  const action = (user as any).isSuperAdmin ? 'remove super admin privileges from' : 'grant super admin privileges to';
-                                  const confirmation = confirm(`Are you sure you want to ${action} ${user.firstName} ${user.lastName}?`);
-                                  if (confirmation) {
-                                    toggleSuperAdminMutation.mutate({
-                                      userId: user.id,
-                                      makeSuperAdmin: !(user as any).isSuperAdmin,
-                                      userName: [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email
-                                    });
-                                  }
-                                }}
-                                disabled={toggleSuperAdminMutation.isPending || user.id === currentUser?.id}
-                                className={(user as any).isSuperAdmin ? 'border-purple-300' : ''}
-                                title={(user as any).isSuperAdmin ? "Remove super admin privileges" : "Grant super admin privileges"}
-                              >
-                                {(user as any).isSuperAdmin ? (
-                                  <ShieldAlert className="h-3 w-3 text-purple-600" />
-                                ) : (
-                                  <ShieldAlert className="h-3 w-3 text-gray-400" />
-                                )}
-                              </Button>
-                            )}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                const currentValue = (user as any).canSubmitCases !== false;
-                                const action = currentValue ? 'disable' : 'enable';
-                                const confirmation = confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} case submission for ${user.firstName} ${user.lastName}?`);
-                                if (confirmation) {
-                                  toggleCaseSubmissionMutation.mutate({
-                                    userId: user.id,
-                                    canSubmitCases: !currentValue
-                                  });
+                                if (user.id === currentUser?.id) { alert('You cannot change your own super admin status.'); return; }
+                                const action = (user as any).isSuperAdmin ? 'remove super admin privileges from' : 'grant super admin privileges to';
+                                if (confirm(`Are you sure you want to ${action} ${user.firstName} ${user.lastName}?`)) {
+                                  toggleSuperAdminMutation.mutate({ userId: user.id, makeSuperAdmin: !(user as any).isSuperAdmin, userName: [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email });
                                 }
                               }}
-                              disabled={toggleCaseSubmissionMutation.isPending}
-                              title={(user as any).canSubmitCases !== false ? "Can submit cases - click to disable" : "Cannot submit cases - click to enable"}
+                              disabled={toggleSuperAdminMutation.isPending || user.id === currentUser?.id}
+                              className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-50"
                             >
-                              {(user as any).canSubmitCases !== false ? (
-                                <FilePlus className="h-3 w-3 text-green-600" />
-                              ) : (
-                                <FileX className="h-3 w-3 text-gray-400" />
-                              )}
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                const confirmation = confirm(`Force logout ${user.firstName} ${user.lastName}? This will end all their active sessions.`);
-                                if (confirmation) {
-                                  forceLogoutMutation.mutate({ userId: user.id, reason: 'Admin initiated force logout' });
-                                }
-                              }}
-                              disabled={forceLogoutMutation.isPending}
-                              className="text-orange-600 hover:text-orange-700"
-                              title="Force logout user (end all sessions)"
-                            >
-                              <LogOut className="h-3 w-3" />
-                            </Button>
-                            {isSuperAdmin && (
-                              <Button
-                                variant="outline"
-                                size="sm"
+                              {(user as any).isSuperAdmin ? <ShieldAlert className="h-4 w-4 text-purple-500" /> : <ShieldAlert className="h-4 w-4 text-gray-400" />}
+                              {(user as any).isSuperAdmin ? 'Remove super admin' : 'Grant super admin'}
+                            </button>
+                          )}
+                          <button
+                            onClick={() => {
+                              const currentValue = (user as any).canSubmitCases !== false;
+                              const action = currentValue ? 'disable' : 'enable';
+                              if (confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} case submission for ${user.firstName} ${user.lastName}?`)) {
+                                toggleCaseSubmissionMutation.mutate({ userId: user.id, canSubmitCases: !currentValue });
+                              }
+                            }}
+                            disabled={toggleCaseSubmissionMutation.isPending}
+                            className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-50"
+                          >
+                            {(user as any).canSubmitCases !== false ? <FilePlus className="h-4 w-4 text-green-500" /> : <FileX className="h-4 w-4 text-gray-400" />}
+                            {(user as any).canSubmitCases !== false ? 'Disable case submission' : 'Enable case submission'}
+                          </button>
+                          <button
+                            onClick={() => { setEditingUser(user); setShowEditUser(true); }}
+                            className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left"
+                            data-testid={`button-edit-user-panel-${user.id}`}
+                          >
+                            <Pencil className="h-4 w-4 text-gray-400" /> Edit details
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (confirm(`Force logout ${user.firstName} ${user.lastName}? This will end all their active sessions.`)) {
+                                forceLogoutMutation.mutate({ userId: user.id, reason: 'Admin initiated force logout' });
+                              }
+                            }}
+                            disabled={forceLogoutMutation.isPending}
+                            className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors text-left disabled:opacity-50"
+                          >
+                            <LogOut className="h-4 w-4" /> Force logout
+                          </button>
+                          {isSuperAdmin && (
+                            <>
+                              <div className="my-2 border-t border-gray-100 dark:border-gray-800" />
+                              <button
                                 onClick={() => {
-                                  const confirmation = confirm(`Are you sure you want to permanently delete ${user.firstName} ${user.lastName}? This action cannot be undone.`);
-                                  if (confirmation) {
+                                  if (confirm(`Are you sure you want to permanently delete ${user.firstName} ${user.lastName}? This action cannot be undone.`)) {
                                     deleteUserMutation.mutate(user.id);
                                   }
                                 }}
                                 disabled={deleteUserMutation.isPending}
-                                className="text-red-600 hover:text-red-700"
-                                title="Delete user permanently"
+                                className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-left disabled:opacity-50"
                               >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                      {expandedUserId === user.id && <UserAuditRow userId={user.id} />}
-                      </Fragment>
-                    ))}
-                  </TableBody>
-                </Table>
+                                <Trash2 className="h-4 w-4" /> Delete user
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
+
               {/* Pagination */}
               <Pagination 
                 currentPage={usersPage} 
