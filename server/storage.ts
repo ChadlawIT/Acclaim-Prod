@@ -72,6 +72,7 @@ export interface IStorage {
   updateUserPassword(id: string, passwordData: { hashedPassword?: string; tempPassword?: string | null; mustChangePassword?: boolean }): Promise<User>;
   updateUserOrganisation(id: string, organisationId: number | null): Promise<User>;
   getAdminByName(fullName: string): Promise<User | undefined>;
+  getAdminUsers(): Promise<User[]>;
 
   // Organisation operations
   getOrganisation(id: number): Promise<Organization | undefined>;
@@ -414,6 +415,10 @@ export class DatabaseStorage implements IStorage {
 
   async linkAzureAccount(userId: string, azureId: string): Promise<void> {
     await db.update(users).set({ azureId, updatedAt: new Date() }).where(eq(users.id, userId));
+  }
+
+  async getAdminUsers(): Promise<User[]> {
+    return await db.select().from(users).where(eq(users.isAdmin, true));
   }
 
   async getAdminByName(fullName: string): Promise<User | undefined> {

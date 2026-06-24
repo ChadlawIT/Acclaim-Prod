@@ -84,6 +84,48 @@ async function getAdminEmailForCase(caseAssignedTo: string | null | undefined): 
   return DEFAULT_ADMIN_EMAIL;
 }
 
+// Checks whether an admin's recorded first name plausibly matches a name the
+// user typed in a greeting. Handles common shortenings and diminutives, e.g.:
+//   Admin "Matthew" ↔ user types "Mat", "Matt", "Matty", "Matthew"
+//   Admin "Matt"    ↔ user types "Mat", "Matt", "Matty"
+function nameVariantsMatch(adminFirstName: string, mentionedName: string): boolean {
+  if (!adminFirstName || !mentionedName) return false;
+  const admin = adminFirstName.toLowerCase().trim();
+  const mentioned = mentionedName.toLowerCase().trim();
+  if (mentioned.length < 2 || admin.length < 2) return false;
+
+  // Both must share the same opening letters (min 3, or shorter name's full length)
+  const sharedLen = Math.min(3, admin.length, mentioned.length);
+  if (admin.slice(0, sharedLen) !== mentioned.slice(0, sharedLen)) return false;
+
+  // Exact match
+  if (admin === mentioned) return true;
+  // One is a prefix of the other (Mat→Matt, Matt→Matthew)
+  if (admin.startsWith(mentioned) || mentioned.startsWith(admin)) return true;
+  // Strip diminutive suffixes and compare stems (Matty→matt, Mattie→matt)
+  const stem = (s: string) => s.replace(/(?:ty|ie|ey|y)$/, '');
+  const aStem = stem(admin);
+  const mStem = stem(mentioned);
+  if (aStem.length >= 2 && mStem.length >= 2) {
+    if (aStem === mStem) return true;
+    if (aStem.startsWith(mStem) || mStem.startsWith(aStem)) return true;
+  }
+  return false;
+}
+
+async function findAdminByMentionedName(mentionedName: string): Promise<any | null> {
+  try {
+    const admins = await storage.getAdminUsers();
+    for (const admin of admins) {
+      if (!admin.firstName) continue;
+      if (nameVariantsMatch(admin.firstName, mentionedName)) return admin;
+    }
+  } catch (e) {
+    console.error('[SecondaryEmail] Error finding admin by mentioned name:', e);
+  }
+  return null;
+}
+
 const upload = multer({
   dest: "uploads/",
   limits: { fileSize: 25 * 1024 * 1024 }, // 25MB limit
@@ -1741,6 +1783,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
             },
             adminEmail
           );
+
+          // ── Safeguard 2: Reply detection ─────────────────────────────────────
+          // If the message body contains "From: Acclaim (Name)" the user is
+          // replying to a previous message from that named admin. If that admin is
+          // not the case handler they won't have received the primary email above,
+          // so send them a copy.
+          const replyPatternMatch = (messageData.content || '').match(
+            /From:\s*Acclaim\s*\(([^)]+)\)/i
+          );
+          if (replyPatternMatch) {
+            const originalSenderName = replyPatternMatch[1].trim();
+            const originalSender = await storage.getAdminByName(originalSenderName);
+            if (originalSender?.email && originalSender.email.toLowerCase() !== adminEmail.toLowerCase()) {
+              const recipientFullName = `${originalSender.firstName || ''} ${originalSender.lastName || ''}`.trim();
+              await sendGridEmailService.sendCopyNotification({
+                type: 'reply',
+                recipientName: recipientFullName,
+                caseHandlerName: caseHandler || 'the Case Handler',
+                userEmail: user.email || '',
+                userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || '',
+                messageContent: messageData.content,
+                caseReference,
+                organisationName,
+                caseDetails,
+              }, originalSender.email);
+              console.log(`[Safeguard2] Reply-copy sent to ${originalSender.email} (case handler: ${adminEmail})`);
+            }
+          }
+
+          // ── Safeguard 3: Name-mention detection ──────────────────────────────
+          // If the user opens their message with "Hi Name" / "Hello Name" etc.
+          // and that name fuzzy-matches an admin who is NOT the case handler,
+          // send that admin a copy so they are aware the client addressed them.
+          const greetingMatch = (messageData.content || '').slice(0, 200).match(
+            /^[\r\n\s]*(?:hi|hello|dear|hey|good\s+morning|morning|good\s+afternoon|afternoon)\s+([a-zA-Z]+)[,\s!.\r\n]/i
+          );
+          if (greetingMatch) {
+            const mentionedName = greetingMatch[1].trim();
+            const namedAdmin = await findAdminByMentionedName(mentionedName);
+            if (namedAdmin?.email && namedAdmin.email.toLowerCase() !== adminEmail.toLowerCase()) {
+              const recipientFullName = `${namedAdmin.firstName || ''} ${namedAdmin.lastName || ''}`.trim();
+              await sendGridEmailService.sendCopyNotification({
+                type: 'name-mention',
+                recipientName: recipientFullName,
+                caseHandlerName: caseHandler || 'the Case Handler',
+                userEmail: user.email || '',
+                userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || '',
+                messageContent: messageData.content,
+                caseReference,
+                organisationName,
+                caseDetails,
+                mentionedAs: mentionedName,
+              }, namedAdmin.email);
+              console.log(`[Safeguard3] Name-mention copy sent to ${namedAdmin.email} (user wrote "Hi ${mentionedName}", handler: ${adminEmail})`);
+            }
+          }
+
         } catch (emailError) {
           // Log email error but don't fail the message creation
           console.error("Failed to send user-to-admin email notification:", emailError);

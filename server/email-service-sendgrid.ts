@@ -691,7 +691,16 @@ Portal: https://acclaim-api-prod-uks-001.azurewebsites.net/auth
                           User Message
                         </span>
                       </div>
-                      
+
+                      ${data.caseDetails?.assignedTo && data.caseDetails.assignedTo !== 'Not assigned' ? `
+                      <!-- Case Handler Responsibility Notice -->
+                      <div style="background: #fffbeb; border: 2px solid #f59e0b; border-radius: 10px; padding: 16px 20px; margin-bottom: 24px;">
+                        <p style="margin: 0 0 8px 0; font-weight: 700; color: #92400e; font-size: 14px;">⚠️ Case Handler Responsibility Notice</p>
+                        <p style="margin: 0 0 6px 0; color: #78350f; font-size: 13px; line-height: 1.6;"><strong>${data.caseDetails.assignedTo}</strong> is recorded as the Case Handler for this matter and is primarily responsible for actioning this message.</p>
+                        <p style="margin: 0; color: #78350f; font-size: 13px; line-height: 1.6;">No other team members have directly received this notification — it is your responsibility to either action this message yourself or distribute it accordingly if necessary.</p>
+                      </div>
+                      ` : ''}
+
                       <!-- Sender Info Card -->
                       <div style="background: #f8fafb; border-radius: 12px; padding: 24px; margin-bottom: 24px; border-left: 4px solid #008b8b;">
                         <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
@@ -858,6 +867,125 @@ Please log in to the Acclaim Portal to view and respond to this message.
       });
     } catch (error) {
       console.error('❌ Failed to send user-to-admin email via SendGrid:', error);
+      return false;
+    }
+  }
+
+  async sendCopyNotification(data: {
+    type: 'reply' | 'name-mention';
+    recipientName: string;
+    caseHandlerName: string;
+    userEmail: string;
+    userName: string;
+    messageContent: string;
+    caseReference?: string;
+    organisationName: string;
+    caseDetails?: {
+      caseName: string;
+      debtorType: string;
+      originalAmount: string;
+      outstandingAmount: string;
+      status: string;
+      stage: string;
+      assignedTo?: string | null;
+    };
+    mentionedAs?: string;
+  }, recipientEmail: string): Promise<boolean> {
+    if (!this.initialized) return false;
+    try {
+      const isReply = data.type === 'reply';
+      const reasonText = isReply
+        ? `A client replied directly to a message you sent, but <strong>${data.caseHandlerName}</strong> is recorded as the Case Handler for this matter — not you.`
+        : `A client has addressed you by name (<em>"${data.mentionedAs || data.recipientName}"</em>) in a message, but <strong>${data.caseHandlerName}</strong> is recorded as the Case Handler for this matter — not you.`;
+
+      const actionText = `Please liaise with the Case Handler (<strong>${data.caseHandlerName}</strong>) to ensure this message is properly actioned. Do not assume the Case Handler is already aware.`;
+
+      const subject = data.caseReference
+        ? `⚠️ Copy: User Message [${data.caseReference}] — Action Required`
+        : `⚠️ Copy: User Message — Action Required`;
+
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+        <body style="margin:0;padding:0;background-color:#f0f4f8;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f0f4f8;">
+            <tr>
+              <td align="center" style="padding:40px 20px;">
+                <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+                  <!-- Header -->
+                  <tr>
+                    <td style="background:linear-gradient(135deg,#d97706 0%,#b45309 100%);padding:32px 40px;text-align:center;">
+                      <img src="cid:logo" alt="Acclaim" style="height:32px;width:auto;margin-bottom:12px;" />
+                      <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">Copy Notification — Action Required</h1>
+                      ${data.caseReference ? `<p style="margin:6px 0 0 0;color:rgba(255,255,255,0.85);font-size:13px;">Case: ${data.caseReference}</p>` : ''}
+                    </td>
+                  </tr>
+                  <!-- Body -->
+                  <tr>
+                    <td style="padding:32px 40px;">
+                      <p style="margin:0 0 4px 0;color:#1e293b;font-size:15px;">Dear ${data.recipientName},</p>
+
+                      <!-- Why you're receiving this -->
+                      <div style="background:#fef3c7;border:2px solid #f59e0b;border-radius:10px;padding:16px 20px;margin:20px 0;">
+                        <p style="margin:0 0 8px 0;font-weight:700;color:#92400e;font-size:13px;">Why you have received this copy</p>
+                        <p style="margin:0 0 8px 0;color:#78350f;font-size:13px;line-height:1.7;">${reasonText}</p>
+                        <p style="margin:0;color:#78350f;font-size:13px;line-height:1.7;">${actionText}</p>
+                      </div>
+
+                      <!-- Sender Info -->
+                      <div style="background:#f8fafb;border-radius:10px;padding:20px;margin-bottom:20px;border-left:4px solid #d97706;">
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="font-size:13px;">
+                          <tr><td style="padding:5px 0;color:#64748b;width:120px;">From (client)</td><td style="padding:5px 0;color:#1e293b;font-weight:500;">${data.userName}</td></tr>
+                          <tr><td style="padding:5px 0;color:#64748b;">Email</td><td style="padding:5px 0;color:#1e293b;">${data.userEmail}</td></tr>
+                          <tr><td style="padding:5px 0;color:#64748b;">Organisation</td><td style="padding:5px 0;color:#1e293b;">${data.organisationName}</td></tr>
+                          ${data.caseReference ? `<tr><td style="padding:5px 0;color:#64748b;">Case Ref</td><td style="padding:5px 0;color:#1e293b;font-weight:500;">${data.caseReference}</td></tr>` : ''}
+                          <tr><td style="padding:5px 0;color:#64748b;">Case Handler</td><td style="padding:5px 0;color:#1e293b;font-weight:600;">${data.caseHandlerName}</td></tr>
+                        </table>
+                      </div>
+
+                      ${data.caseDetails ? `
+                      <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:20px;margin-bottom:20px;">
+                        <p style="margin:0 0 12px 0;color:#0f172a;font-size:13px;font-weight:700;">Case Details</p>
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="font-size:13px;">
+                          <tr><td style="padding:5px 0;color:#64748b;width:120px;">Case Name</td><td style="padding:5px 0;color:#1e293b;font-weight:500;">${data.caseDetails.caseName}</td></tr>
+                          <tr><td style="padding:5px 0;color:#64748b;">Outstanding</td><td style="padding:5px 0;color:#008b8b;font-weight:700;">£${data.caseDetails.outstandingAmount}</td></tr>
+                          <tr><td style="padding:5px 0;color:#64748b;">Status / Stage</td><td style="padding:5px 0;color:#1e293b;">${data.caseDetails.status.toUpperCase()} — ${data.caseDetails.stage.replace('_',' ')}</td></tr>
+                        </table>
+                      </div>
+                      ` : ''}
+
+                      <!-- Message Content -->
+                      <div style="background:#fafbfc;border-radius:10px;padding:20px;">
+                        <p style="margin:0 0 10px 0;color:#0f172a;font-size:13px;font-weight:700;">Message Content</p>
+                        <div style="color:#475569;line-height:1.7;font-size:13px;white-space:pre-wrap;">${data.messageContent.replace(/\r\n/g,'\n').replace(/\n/g,'<br>')}</div>
+                      </div>
+
+                      <p style="margin:20px 0 0 0;color:#94a3b8;font-size:12px;">You are receiving this copy automatically as a safeguard. Please do not reply to this email — log in to the Acclaim Portal to respond.</p>
+                    </td>
+                  </tr>
+                  <!-- Footer -->
+                  <tr>
+                    <td style="background-color:#1f2937;padding:20px 40px;text-align:center;border-radius:0 0 12px 12px;">
+                      <p style="margin:0;color:#9ca3af;font-size:12px;">Automated safeguard notification — Acclaim Client Portal</p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>`;
+
+      const textContent = `Copy Notification — Action Required\n\nDear ${data.recipientName},\n\n${isReply ? `A client replied to a message you sent, but ${data.caseHandlerName} is the Case Handler — not you.` : `A client addressed you by name ("${data.mentionedAs || data.recipientName}") but ${data.caseHandlerName} is the Case Handler.`}\n\nPlease liaise with ${data.caseHandlerName} to ensure this message is actioned.\n\nFrom: ${data.userName} (${data.userEmail})\nOrganisation: ${data.organisationName}\n${data.caseReference ? `Case Ref: ${data.caseReference}\n` : ''}Case Handler: ${data.caseHandlerName}\n\nMessage:\n${data.messageContent}`;
+
+      const attachments: Array<{ content: string; filename: string; type: string; disposition?: string; content_id?: string }> = [];
+      const logoBase64 = getLogoBase64();
+      if (logoBase64) attachments.push(logoBase64);
+
+      return await this.sendViaAPIM({ to: recipientEmail, subject, textContent, htmlContent, attachments });
+    } catch (error) {
+      console.error('❌ Failed to send copy notification email:', error);
       return false;
     }
   }
