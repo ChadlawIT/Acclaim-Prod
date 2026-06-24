@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FileText, MessageSquare, TrendingUp, Shield, ChevronDown, ChevronUp, Info, ArrowLeft, Loader2 } from "lucide-react";
+import { FileText, MessageSquare, TrendingUp, Shield, ChevronDown, ChevronUp, Info, Loader2 } from "lucide-react";
 import acclaimLogo from "@assets/acclaim_rose_transparent_1768474381340.png";
 
 const MicrosoftIcon = () => (
@@ -23,7 +23,6 @@ export default function AuthPage() {
   const { user } = useAuth();
   const [error, setError] = useState("");
   const [showFirstTimeGuide, setShowFirstTimeGuide] = useState(false);
-  const [showAltLogin, setShowAltLogin] = useState(false);
   const [altEmail, setAltEmail] = useState("");
   const [altPassword, setAltPassword] = useState("");
   const [altLoading, setAltLoading] = useState(false);
@@ -142,130 +141,105 @@ export default function AuthPage() {
 
           <Card className="shadow-lg border-0">
             <CardHeader className="pb-4">
-              <CardTitle className="text-lg">
-                {showAltLogin ? (
-                  <button
-                    onClick={() => { setShowAltLogin(false); setAltError(""); }}
-                    className="flex items-center gap-2 text-base font-semibold text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                    Sign In
-                  </button>
-                ) : "Sign In"}
-              </CardTitle>
+              <CardTitle className="text-lg">Sign In</CardTitle>
               <CardDescription>
-                {showAltLogin
-                  ? "Enter your email address and password below."
-                  : "Sign in with your Microsoft account, or with your email and password."}
+                Sign in with your email and password, or with your Microsoft account.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {error && !showAltLogin && (
+              {error && (
                 <Alert variant="destructive" className="mb-4">
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
 
-              {!showAltLogin ? (
-                <>
-                  <Button
-                    type="button"
-                    className="w-full h-11 font-medium bg-acclaim-teal hover:bg-acclaim-teal/90"
-                    onClick={handleAzureLogin}
-                    data-testid="button-azure-login"
-                  >
-                    <MicrosoftIcon />
-                    <span className="ml-2">Sign in with Microsoft</span>
-                  </Button>
+              <form onSubmit={handleAltLogin} className="space-y-4">
+                {altError && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{altError}</AlertDescription>
+                  </Alert>
+                )}
+                <div className="space-y-1.5">
+                  <Label htmlFor="alt-email">Email address</Label>
+                  <Input
+                    id="alt-email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={altEmail}
+                    onChange={e => setAltEmail(e.target.value)}
+                    autoComplete="email"
+                    required
+                    data-testid="input-email"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="alt-password">Password</Label>
+                  <Input
+                    id="alt-password"
+                    type="password"
+                    placeholder="Enter your password"
+                    value={altPassword}
+                    onChange={e => setAltPassword(e.target.value)}
+                    autoComplete="current-password"
+                    required
+                    data-testid="input-password"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full h-11 font-medium bg-acclaim-teal hover:bg-acclaim-teal/90"
+                  disabled={altLoading || !altEmail.trim() || !altPassword}
+                  data-testid="button-password-login"
+                >
+                  {altLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  {altLoading ? "Signing in…" : "Login"}
+                </Button>
+              </form>
 
-                  <div className="relative my-4">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t border-gray-200 dark:border-gray-700" />
-                    </div>
-                    <div className="relative flex justify-center text-xs">
-                      <span className="bg-card px-2 text-muted-foreground">First time here?</span>
-                    </div>
-                  </div>
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-gray-200 dark:border-gray-700" />
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  <span className="bg-card px-2 text-muted-foreground">Or</span>
+                </div>
+              </div>
 
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full h-11 font-medium"
-                    onClick={handleAzureSignup}
-                    data-testid="button-azure-signup"
-                  >
-                    Create your account
-                  </Button>
-                  <p className="mt-2 text-center text-xs font-medium text-teal-700 dark:text-teal-400">
-                    You'll need to register before your first sign in. Use the same email address we invited.
-                  </p>
-                  <p className="mt-1 text-center text-xs text-muted-foreground">
-                    Not been invited yet? Please contact us.
-                  </p>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full h-11 font-medium"
+                onClick={handleAzureLogin}
+                data-testid="button-azure-login"
+              >
+                <MicrosoftIcon />
+                <span className="ml-2">Sign in with Microsoft</span>
+              </Button>
 
-                  <div className="relative my-4">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t border-gray-200 dark:border-gray-700" />
-                    </div>
-                    <div className="relative flex justify-center text-xs">
-                      <span className="bg-card px-2 text-muted-foreground">Or</span>
-                    </div>
-                  </div>
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-gray-200 dark:border-gray-700" />
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  <span className="bg-card px-2 text-muted-foreground">First time here?</span>
+                </div>
+              </div>
 
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full h-11 font-medium"
-                    onClick={() => { setShowAltLogin(true); setError(""); }}
-                    data-testid="button-password-login"
-                  >
-                    Sign in with email and password
-                  </Button>
-                </>
-              ) : (
-                <form onSubmit={handleAltLogin} className="space-y-4">
-                  {altError && (
-                    <Alert variant="destructive">
-                      <AlertDescription>{altError}</AlertDescription>
-                    </Alert>
-                  )}
-                  <div className="space-y-1.5">
-                    <Label htmlFor="alt-email">Email address</Label>
-                    <Input
-                      id="alt-email"
-                      type="email"
-                      placeholder="you@example.com"
-                      value={altEmail}
-                      onChange={e => setAltEmail(e.target.value)}
-                      autoComplete="email"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="alt-password">Password</Label>
-                    <Input
-                      id="alt-password"
-                      type="password"
-                      placeholder="Enter your password"
-                      value={altPassword}
-                      onChange={e => setAltPassword(e.target.value)}
-                      autoComplete="current-password"
-                      required
-                    />
-                  </div>
-                  <Button
-                    type="submit"
-                    className="w-full h-11 font-medium bg-acclaim-teal hover:bg-acclaim-teal/90"
-                    disabled={altLoading || !altEmail.trim() || !altPassword}
-                  >
-                    {altLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                    {altLoading ? "Signing in…" : "Sign In"}
-                  </Button>
-                  <p className="text-xs text-center text-muted-foreground">
-                    Use the temporary password provided to you by Acclaim. You will be asked to set a new password on first sign in.
-                  </p>
-                </form>
-              )}
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full h-11 font-medium"
+                onClick={handleAzureSignup}
+                data-testid="button-azure-signup"
+              >
+                Create your account
+              </Button>
+              <p className="mt-2 text-center text-xs font-medium text-teal-700 dark:text-teal-400">
+                You'll need to register before your first sign in. Use the same email address we invited.
+              </p>
+              <p className="mt-1 text-center text-xs text-muted-foreground">
+                Not been invited yet? Please contact us.
+              </p>
 
               <div className="mt-6 text-center text-xs text-[color:var(--muted-foreground)]">Contact us at email@acclaim.law | 0113 225 8811</div>
               <div className="mt-3 text-center text-xs text-muted-foreground">
@@ -324,61 +298,26 @@ export default function AuthPage() {
 
             {showFirstTimeGuide && (
               <div className="mt-2 px-4 py-4 rounded-lg bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 text-sm text-gray-700 dark:text-gray-300">
-                {!showAltLogin ? (
-                  <>
-                    <p className="font-medium text-gray-800 dark:text-gray-100 mb-3">
-                      If you haven't used this portal before, you'll need to register first. Here's how:
-                    </p>
-                    <ol className="space-y-3">
-                      <li className="flex gap-3">
-                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-teal-600 text-white text-xs flex items-center justify-center font-semibold">1</span>
-                        <span><strong>Click "Create your account" above</strong> — this takes you straight to the Microsoft registration screen.</span>
-                      </li>
-                      <li className="flex gap-3">
-                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-teal-600 text-white text-xs flex items-center justify-center font-semibold">2</span>
-                        <span><strong>Register with your invited email address</strong> — use the same email address we sent your invitation to, then follow the on-screen steps.</span>
-                      </li>
-                      <li className="flex gap-3">
-                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-teal-600 text-white text-xs flex items-center justify-center font-semibold">3</span>
-                        <span><strong>Return here and sign in</strong> — once registered, come back to this page and click <em>Sign in with Microsoft</em> using that same email address.</span>
-                      </li>
-                    </ol>
-                    <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">
-                      Haven't been invited yet, or completed registration but still can't access the portal? Please contact us at <strong>email@acclaim.law</strong> or call <strong>0113 225 8811</strong>.
-                    </p>
-                    <div className="mt-3 pt-3 border-t border-teal-200 dark:border-teal-700">
-                      <button
-                        onClick={() => { setShowAltLogin(true); setError(""); }}
-                        className="text-xs text-muted-foreground hover:text-primary hover:underline transition-colors"
-                      >
-                        Sign in another way
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <p className="font-medium text-gray-800 dark:text-gray-100 mb-3">
-                      Signing in with your password for the first time:
-                    </p>
-                    <ol className="space-y-3">
-                      <li className="flex gap-3">
-                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-teal-600 text-white text-xs flex items-center justify-center font-semibold">1</span>
-                        <span><strong>Enter your email address</strong> — use the same email address your account was set up with.</span>
-                      </li>
-                      <li className="flex gap-3">
-                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-teal-600 text-white text-xs flex items-center justify-center font-semibold">2</span>
-                        <span><strong>Enter your temporary password</strong> — this was provided to you by Acclaim when your account was created.</span>
-                      </li>
-                      <li className="flex gap-3">
-                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-teal-600 text-white text-xs flex items-center justify-center font-semibold">3</span>
-                        <span><strong>Set a new password</strong> — you will be prompted to choose a permanent password before accessing the portal.</span>
-                      </li>
-                    </ol>
-                    <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">
-                      If you don't have a temporary password or are having difficulty signing in, please contact us at <strong>email@acclaim.law</strong> or call <strong>0113 225 8811</strong>.
-                    </p>
-                  </>
-                )}
+                <p className="font-medium text-gray-800 dark:text-gray-100 mb-3">
+                  Signing in with your email and password:
+                </p>
+                <ol className="space-y-3">
+                  <li className="flex gap-3">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-teal-600 text-white text-xs flex items-center justify-center font-semibold">1</span>
+                    <span><strong>Enter your email address and password above</strong> — use the same email address your account was set up with.</span>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-teal-600 text-white text-xs flex items-center justify-center font-semibold">2</span>
+                    <span><strong>First time signing in?</strong> Use the temporary password provided to you by Acclaim. You'll be asked to set a new password.</span>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-teal-600 text-white text-xs flex items-center justify-center font-semibold">3</span>
+                    <span><strong>Prefer Microsoft?</strong> You can also use <em>Sign in with Microsoft</em>. If you've not registered yet, click <em>Create your account</em> first using your invited email address.</span>
+                  </li>
+                </ol>
+                <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">
+                  Haven't been invited yet, or still can't access the portal? Please contact us at <strong>email@acclaim.law</strong> or call <strong>0113 225 8811</strong>.
+                </p>
               </div>
             )}
           </div>
