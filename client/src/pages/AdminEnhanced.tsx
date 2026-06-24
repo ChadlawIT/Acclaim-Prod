@@ -793,7 +793,7 @@ function CaseManagementTab({ isSuperAdmin = false }: { isSuperAdmin?: boolean })
       <div ref={casesTableTopRef} className="scroll-mt-4" />
       {/* Unified Card Grid + Detail Panel */}
       <div className="relative">
-        <div className={`grid gap-4 transition-all duration-200 grid-cols-1 sm:grid-cols-2 ${expandedCaseId ? 'lg:grid-cols-2 sm:mr-80' : 'lg:grid-cols-3'}`}>
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {paginatedCases.map((case_: Case) => {
             const isSelected = expandedCaseId === case_.id;
             return (
@@ -4519,7 +4519,7 @@ export default function AdminEnhanced() {
               <div ref={usersTableTopRef} className="scroll-mt-4" />
               {/* Unified card grid + slide-in detail panel */}
               <div className="relative">
-                <div className={`grid gap-4 transition-all duration-200 grid-cols-1 sm:grid-cols-2 ${expandedUserId ? 'lg:grid-cols-2 sm:mr-80' : 'lg:grid-cols-3'}`}>
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                   {paginatedUsers?.map((user: User) => {
                     const avatarColors = ['#0d9488','#0284c7','#7c3aed','#db2777','#d97706','#16a34a','#dc2626','#475569'];
                     const code = user.id.charCodeAt(0) + (user.id.charCodeAt(1) || 0);
@@ -4973,7 +4973,7 @@ export default function AdminEnhanced() {
               <div ref={orgsTableTopRef} className="scroll-mt-4" />
               {/* Unified Card Grid + Detail Panel */}
               <div className="relative">
-                <div className={`grid gap-4 transition-all duration-200 grid-cols-1 sm:grid-cols-2 ${expandedOrgId ? 'lg:grid-cols-2 sm:mr-80' : 'lg:grid-cols-3'}`}>
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                   {paginatedOrgs?.map((org: Organisation) => {
                     const orgReportCount = orgScheduledReportsMap[org.id]?.length || 0;
                     const isSelected = expandedOrgId === org.id;
