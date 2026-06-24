@@ -1,11 +1,6 @@
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const DATA_FILE = path.join(__dirname, "../data/email-timestamps.json");
+import { db } from "./db";
+import { auditLog } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 interface UserEmailTimestamps {
   welcomeSentAt?: string;
@@ -14,41 +9,58 @@ interface UserEmailTimestamps {
 
 type EmailTimestampsStore = Record<string, UserEmailTimestamps>;
 
-function load(): EmailTimestampsStore {
-  try {
-    if (fs.existsSync(DATA_FILE)) {
-      return JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
-    }
-  } catch {
-    // ignore parse errors — return empty store
-  }
-  return {};
-}
+const TABLE_NAME = "email_notifications";
 
-function save(store: EmailTimestampsStore): void {
+export async function recordWelcomeEmail(userId: string): Promise<void> {
   try {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(store, null, 2), "utf8");
+    await db.insert(auditLog).values({
+      tableName: TABLE_NAME,
+      recordId: userId,
+      operation: "INSERT",
+      fieldName: "welcomeSentAt",
+      description: "Welcome email sent",
+    });
   } catch (err) {
-    console.error("[emailTracker] Failed to write email timestamps:", err);
+    console.error("[emailTracker] Failed to record welcome email:", err);
   }
 }
 
-export function recordWelcomeEmail(userId: string): void {
-  const store = load();
-  store[userId] = { ...store[userId], welcomeSentAt: new Date().toISOString() };
-  save(store);
+export async function recordInviteEmail(userId: string): Promise<void> {
+  try {
+    await db.insert(auditLog).values({
+      tableName: TABLE_NAME,
+      recordId: userId,
+      operation: "INSERT",
+      fieldName: "inviteSentAt",
+      description: "Microsoft invitation sent",
+    });
+  } catch (err) {
+    console.error("[emailTracker] Failed to record invite email:", err);
+  }
 }
 
-export function recordInviteEmail(userId: string): void {
-  const store = load();
-  store[userId] = { ...store[userId], inviteSentAt: new Date().toISOString() };
-  save(store);
-}
+export async function getAllTimestamps(): Promise<EmailTimestampsStore> {
+  try {
+    const rows = await db
+      .select()
+      .from(auditLog)
+      .where(eq(auditLog.tableName, TABLE_NAME))
+      .orderBy(auditLog.timestamp);
 
-export function getAllTimestamps(): EmailTimestampsStore {
-  return load();
-}
-
-export function getTimestampsForUser(userId: string): UserEmailTimestamps {
-  return load()[userId] || {};
+    const store: EmailTimestampsStore = {};
+    for (const row of rows) {
+      if (!store[row.recordId]) store[row.recordId] = {};
+      const ts = row.timestamp?.toISOString();
+      if (!ts) continue;
+      if (row.fieldName === "welcomeSentAt") {
+        store[row.recordId].welcomeSentAt = ts;
+      } else if (row.fieldName === "inviteSentAt") {
+        store[row.recordId].inviteSentAt = ts;
+      }
+    }
+    return store;
+  } catch (err) {
+    console.error("[emailTracker] Failed to read email timestamps:", err);
+    return {};
+  }
 }

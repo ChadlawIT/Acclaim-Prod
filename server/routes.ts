@@ -3330,9 +3330,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // GET email send timestamps (stored in data/email-timestamps.json, no DB change)
-  app.get('/api/admin/users/email-timestamps', isAuthenticated, isAdmin, (_req, res) => {
-    res.json(getAllTimestamps());
+  // GET email send timestamps (stored in audit_log table under tableName='email_notifications')
+  app.get('/api/admin/users/email-timestamps', isAuthenticated, isAdmin, async (_req, res) => {
+    res.json(await getAllTimestamps());
   });
 
   // Send just the temporary password email (for password resets)
