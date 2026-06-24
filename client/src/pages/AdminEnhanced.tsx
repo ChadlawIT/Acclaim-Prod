@@ -3392,12 +3392,17 @@ export default function AdminEnhanced() {
   });
 
   // Send welcome email mutation
+  const { data: emailTimestamps = {} } = useQuery<Record<string, { welcomeSentAt?: string; inviteSentAt?: string }>>({
+    queryKey: ['/api/admin/users/email-timestamps'],
+  });
+
   const sendWelcomeEmailMutation = useMutation({
     mutationFn: async (userId: string) => {
       const response = await apiRequest("POST", `/api/admin/users/${userId}/send-welcome-email`);
       return await response.json();
     },
     onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users/email-timestamps'] });
       if (data.emailSent) {
         toast({
           title: "Welcome Email Sent",
@@ -3439,6 +3444,7 @@ export default function AdminEnhanced() {
       return await response.json();
     },
     onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users/email-timestamps'] });
       toast({
         title: "Invitation Sent",
         description: data.message,
@@ -4661,6 +4667,35 @@ export default function AdminEnhanced() {
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-500"><FileX className="h-3 w-3" /> No case submit</span>
                         )}
                       </div>
+                      {(emailTimestamps[user.id]?.welcomeSentAt || emailTimestamps[user.id]?.inviteSentAt) && (
+                        <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+                          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Email History</p>
+                          <div className="space-y-2">
+                            {emailTimestamps[user.id]?.welcomeSentAt && (
+                              <div className="flex items-start gap-2 text-xs">
+                                <Mail className="h-3.5 w-3.5 text-blue-400 flex-shrink-0 mt-0.5" />
+                                <div>
+                                  <p className="text-gray-500">Welcome email last sent</p>
+                                  <p className="font-medium text-gray-800 dark:text-gray-200">
+                                    {new Date(emailTimestamps[user.id].welcomeSentAt!).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                            {emailTimestamps[user.id]?.inviteSentAt && (
+                              <div className="flex items-start gap-2 text-xs">
+                                <Send className="h-3.5 w-3.5 text-purple-400 flex-shrink-0 mt-0.5" />
+                                <div>
+                                  <p className="text-gray-500">Microsoft invitation last sent</p>
+                                  <p className="font-medium text-gray-800 dark:text-gray-200">
+                                    {new Date(emailTimestamps[user.id].inviteSentAt!).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                       <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
                         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Login History</p>
                         <MobileUserAuditSection userId={user.id} />
