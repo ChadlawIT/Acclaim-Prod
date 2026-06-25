@@ -2113,6 +2113,7 @@ export class DatabaseStorage implements IStorage {
     phone?: string;
     organisationId?: number;
     isAdmin?: boolean;
+    canSubmitCases?: boolean;
   }): Promise<{ user: User; tempPassword: string }> {
     const tempPassword = nanoid(12); // Generate temporary password
     const hashedPassword = await bcrypt.hash(tempPassword, 10);
@@ -2136,6 +2137,7 @@ export class DatabaseStorage implements IStorage {
         hashedPassword,
         tempPassword,
         mustChangePassword: true,
+        canSubmitCases: userData.canSubmitCases ?? false,
       })
       .returning();
 

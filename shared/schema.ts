@@ -541,6 +541,7 @@ export const createUserSchema = z.object({
   organisationId: z.number().optional(),
   organisationIds: z.number().array().optional(),
   isAdmin: z.boolean().default(false),
+  canSubmitCases: z.boolean().default(false),
 });
 
 export const updateUserSchema = z.object({

@@ -2300,6 +2300,7 @@ export default function AdminEnhanced() {
     phone: "",
     organisationIds: [],
     isAdmin: false,
+    canSubmitCases: false,
   });
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [createdUserId, setCreatedUserId] = useState<string | null>(null);
@@ -3156,6 +3157,7 @@ export default function AdminEnhanced() {
         phone: "",
         organisationIds: [],
         isAdmin: false,
+        canSubmitCases: false,
       });
       setOrgSearchTerm("");
       setShowCreateUser(false);
@@ -4446,6 +4448,33 @@ export default function AdminEnhanced() {
                           </div>
                         </div>
                       )}
+                      <div className="border rounded-lg p-3 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Label htmlFor="canSubmitCases" className="text-sm font-medium cursor-pointer">
+                              Allow Case Submissions
+                            </Label>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              Permit this user to submit new cases via the portal
+                            </p>
+                          </div>
+                          <Checkbox
+                            id="canSubmitCases"
+                            checked={userFormData.canSubmitCases ?? false}
+                            onCheckedChange={(checked) => setUserFormData({ ...userFormData, canSubmitCases: checked as boolean })}
+                          />
+                        </div>
+                        {userFormData.canSubmitCases && (
+                          <p className="text-xs text-teal-700 bg-teal-50 rounded px-2 py-1">
+                            ✓ This user will be able to submit new cases
+                          </p>
+                        )}
+                        {!userFormData.canSubmitCases && (
+                          <p className="text-xs text-gray-500 bg-gray-50 rounded px-2 py-1">
+                            Case submissions will be disabled for this user
+                          </p>
+                        )}
+                      </div>
                     </div>
                     <div className="flex flex-col sm:flex-row justify-end gap-2 sm:space-x-2">
                       <Button variant="outline" onClick={() => setShowCreateUser(false)} className="order-2 sm:order-1">
