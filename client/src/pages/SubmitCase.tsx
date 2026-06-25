@@ -60,7 +60,7 @@ const baseSubmitCaseSchema = z.object({
   
   // Debt details
   debtDetails: z.string().min(1, "Debt details are required"),
-  totalDebtAmount: z.number().min(0.01, "Debt amount must be greater than 0"),
+  totalDebtAmount: z.number({ invalid_type_error: "Debt amount must be greater than 0", required_error: "Debt amount must be greater than 0" }).min(0.01, "Debt amount must be greater than 0"),
   currency: z.string().default("GBP"),
   
   // Payment terms
@@ -212,7 +212,7 @@ export default function SubmitCase() {
       mainEmail: "",
       altEmail: "",
       debtDetails: "",
-      totalDebtAmount: 0,
+      totalDebtAmount: undefined as any,
       currency: "GBP",
       paymentTermsType: undefined as any,
       paymentTermsDays: 30,
@@ -1058,7 +1058,12 @@ export default function SubmitCase() {
                           type="number" 
                           step="0.01"
                           placeholder="0.00"
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          value={field.value ?? ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            const num = parseFloat(val);
+                            field.onChange(val === '' || isNaN(num) ? undefined : num);
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
@@ -1136,7 +1141,12 @@ export default function SubmitCase() {
                           {...field} 
                           type="number" 
                           placeholder="30"
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                          value={field.value ?? ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            const num = parseInt(val, 10);
+                            field.onChange(val === '' || isNaN(num) ? undefined : num);
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
