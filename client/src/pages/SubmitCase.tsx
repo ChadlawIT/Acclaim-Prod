@@ -215,7 +215,7 @@ export default function SubmitCase() {
       totalDebtAmount: undefined as any,
       currency: "GBP",
       paymentTermsType: undefined as any,
-      paymentTermsDays: 30,
+      paymentTermsDays: undefined as any,
       paymentTermsOther: "",
       singleInvoice: undefined as any,
       firstOverdueDate: "",
