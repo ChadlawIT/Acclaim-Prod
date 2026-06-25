@@ -761,27 +761,11 @@ export default function SubmitCase() {
                       </FormItem>
                     )}
                   />
-                  
-                  {individualType === "business" && (
-                    <FormField
-                      control={form.control}
-                      name="tradingName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Trading Name <span className="text-red-500">*</span></FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="Enter the business trading name" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
                 </div>
               )}
 
-              {/* Principal of Business Details - Only show for Individual/Sole Trader */}
-              {debtorType === "individual" && (
+              {/* Principal of Business Details - Only show once an individual/business type is selected */}
+              {debtorType === "individual" && (individualType === "individual" || individualType === "business") && (
                 <div className="border-t pt-4">
                   <div className="mb-4">
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">Principal of Business Details</h3>
@@ -842,6 +826,22 @@ export default function SubmitCase() {
                         </FormItem>
                       )}
                     />
+
+                    {individualType === "business" && (
+                      <FormField
+                        control={form.control}
+                        name="tradingName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Trading Name <span className="text-red-500">*</span></FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="Enter the business trading name" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
                   </div>
                 </div>
               )}

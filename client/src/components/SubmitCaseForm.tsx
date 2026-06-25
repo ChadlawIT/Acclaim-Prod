@@ -126,7 +126,7 @@ export function SubmitCaseForm({ isOpen, onClose }: SubmitCaseFormProps) {
       clientEmail: user?.email || "",
       clientPhone: user?.phone || "",
       debtorType: "individual",
-      individualType: undefined,
+      individualType: "individual",
       tradingName: "",
       organisationName: "",
       organisationTradingName: "",
@@ -393,75 +393,74 @@ export function SubmitCaseForm({ isOpen, onClose }: SubmitCaseFormProps) {
                     )}
                   />
 
-                  {(individualType === "individual" || individualType === "business" || form.watch("individualType") === "individual" || form.watch("individualType") === "business") && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="principalSalutation"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Salutation *</FormLabel>
-                            <FormControl>
-                              <Select onValueChange={field.onChange} value={field.value}>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="Mr">Mr</SelectItem>
-                                  <SelectItem value="Mrs">Mrs</SelectItem>
-                                  <SelectItem value="Miss">Miss</SelectItem>
-                                  <SelectItem value="Ms">Ms</SelectItem>
-                                  <SelectItem value="Dr">Dr</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="principalFirstName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>First Name *</FormLabel>
-                            <FormControl>
-                              <Input placeholder="First name" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="principalLastName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Last Name *</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Last name" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      {(individualType === "business" || form.watch("individualType") === "business") && (
-                        <FormField
-                          control={form.control}
-                          name="tradingName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Trading Name *</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Business trading name" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                  {(individualType === "business" || form.watch("individualType") === "business") && (
+                    <FormField
+                      control={form.control}
+                      name="tradingName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Trading Name *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Business trading name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
                       )}
-                    </div>
+                    />
                   )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="principalSalutation"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Salutation *</FormLabel>
+                          <FormControl>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Mr">Mr</SelectItem>
+                                <SelectItem value="Mrs">Mrs</SelectItem>
+                                <SelectItem value="Miss">Miss</SelectItem>
+                                <SelectItem value="Ms">Ms</SelectItem>
+                                <SelectItem value="Dr">Dr</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="principalFirstName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>First Name *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="First name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="principalLastName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Last Name *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Last name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </CardContent>
               </Card>
             )}
