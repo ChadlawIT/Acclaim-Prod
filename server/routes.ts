@@ -8665,6 +8665,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/debug/client-error', (req, res) => {
+    const { message, filename, lineno, colno, errorStr, errorType, stack, type } = req.body || {};
+    console.error('[CLIENT ERROR]', JSON.stringify({ type, message, errorType, errorStr, filename, lineno, colno, stack }, null, 2));
+    res.json({ ok: true });
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
