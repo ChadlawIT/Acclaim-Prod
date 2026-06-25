@@ -764,12 +764,18 @@ export default function SubmitCase() {
                 </div>
               )}
 
-              {/* Principal of Business Details - Only show once an individual/business type is selected */}
-              {debtorType === "individual" && (individualType === "individual" || individualType === "business") && (
+              {/* Principal of Business Details - disabled until an individual/business type is selected */}
+              {debtorType === "individual" && (() => {
+                const detailsEnabled = individualType === "individual" || individualType === "business";
+                return (
                 <div className="border-t pt-4">
                   <div className="mb-4">
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">Principal of Business Details</h3>
-                    <p className="text-sm text-gray-600">Please provide details of the principal/owner of the business</p>
+                    <p className="text-sm text-gray-600">
+                      {detailsEnabled
+                        ? "Please provide details of the principal/owner of the business"
+                        : "Please select whether the debtor is an individual or business above to complete these details"}
+                    </p>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -779,7 +785,7 @@ export default function SubmitCase() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Salutation <span className="text-red-500">*</span></FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                          <Select onValueChange={field.onChange} value={field.value} disabled={!detailsEnabled}>
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Select title" />
@@ -806,7 +812,7 @@ export default function SubmitCase() {
                         <FormItem>
                           <FormLabel>First Name <span className="text-red-500">*</span></FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="Enter first name" />
+                            <Input {...field} placeholder="Enter first name" disabled={!detailsEnabled} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -820,7 +826,7 @@ export default function SubmitCase() {
                         <FormItem>
                           <FormLabel>Last Name <span className="text-red-500">*</span></FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="Enter last name" />
+                            <Input {...field} placeholder="Enter last name" disabled={!detailsEnabled} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -844,7 +850,8 @@ export default function SubmitCase() {
                     )}
                   </div>
                 </div>
-              )}
+                );
+              })()}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
