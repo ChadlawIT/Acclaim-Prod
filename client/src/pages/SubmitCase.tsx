@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
@@ -224,8 +224,6 @@ export default function SubmitCase() {
     },
   });
 
-  const watchedPaymentTermsType = useWatch({ control: form.control, name: "paymentTermsType" });
-
   // Update form schema and organisation selection based on organisations data
   useEffect(() => {
     if (!orgsLoading && organisations.length > 0) {
@@ -241,7 +239,7 @@ export default function SubmitCase() {
         form.setValue("organisationId", 0);
       }
     }
-  }, [organisations, orgsLoading]);
+  }, [organisations, orgsLoading, form]);
 
   const submitCaseMutation = useMutation({
     mutationFn: async (data: SubmitCaseForm) => {
@@ -542,7 +540,7 @@ export default function SubmitCase() {
                       <FormLabel>Submitting on behalf of claimant <span className="text-red-500">*</span></FormLabel>
                       <Select 
                         onValueChange={(value) => field.onChange(parseInt(value))} 
-                        value={field.value && field.value > 0 ? String(field.value) : undefined}
+                        value={field.value && field.value > 0 ? String(field.value) : ""}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -663,7 +661,7 @@ export default function SubmitCase() {
                             setIndividualType("");
                           }
                         }}
-                        value={field.value ?? ""}
+                        value={field.value}
                         className="flex flex-col space-y-2"
                       >
                         <div className="flex items-center space-x-2">
@@ -746,7 +744,7 @@ export default function SubmitCase() {
                               field.onChange(value);
                               setIndividualType(value);
                             }}
-                            value={field.value ?? ""}
+                            value={field.value}
                             className="flex flex-col space-y-2"
                           >
                             <div className="flex items-center space-x-2">
@@ -797,7 +795,7 @@ export default function SubmitCase() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Salutation <span className="text-red-500">*</span></FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value || undefined}>
+                          <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Select title" />
@@ -1066,7 +1064,7 @@ export default function SubmitCase() {
                           field.onChange(value);
                           handlePaymentTermsChange(value);
                         }}
-                        value={field.value ?? ""}
+                        value={field.value}
                         className="flex flex-col space-y-2"
                       >
                         <div className="flex items-center space-x-2">
@@ -1088,7 +1086,7 @@ export default function SubmitCase() {
                 )}
               />
 
-              {watchedPaymentTermsType !== "other" && (
+              {form.watch("paymentTermsType") !== "other" && (
                 <FormField
                   control={form.control}
                   name="paymentTermsDays"
@@ -1151,7 +1149,7 @@ export default function SubmitCase() {
                               form.setValue("firstOverdueDate", "");
                             }
                           }}
-                          value={field.value ?? ""}
+                          value={field.value}
                           className="flex flex-col space-y-2"
                         >
                           <div className="flex items-center space-x-2">

@@ -8665,13 +8665,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/debug/client-error', (req, res) => {
-    const data = req.body || {};
-    const line = new Date().toISOString() + ' ' + JSON.stringify(data) + '\n';
-    import('fs').then(fs => fs.appendFileSync('/tmp/client-errors.log', line)).catch(() => {});
-    res.json({ ok: true });
-  });
-
   const httpServer = createServer(app);
   return httpServer;
 }
