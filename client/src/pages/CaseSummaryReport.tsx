@@ -172,7 +172,7 @@ export default function CaseSummaryReport() {
     if (!msg) return '';
     const date = new Date(msg.createdAt).toLocaleDateString('en-GB');
     const subject = msg.subject || '(no subject)';
-    const body = msg.content.slice(0, 500);
+    const body = msg.content;
     return `${date} — From: ${msg.sender}${newline}Subject: ${subject}${newline}${body}`;
   };
 
@@ -181,7 +181,7 @@ export default function CaseSummaryReport() {
     const date = new Date(msg.createdAt).toLocaleDateString('en-GB');
     const subject = escapeHtml(msg.subject || '(no subject)');
     const sender = escapeHtml(msg.sender);
-    const body = escapeHtml(msg.content.slice(0, 500));
+    const body = escapeHtml(msg.content);
     return `${escapeHtml(date)} — From: ${sender}<br>Subject: ${subject}<br>${body}`;
   };
 
@@ -910,7 +910,7 @@ export default function CaseSummaryReport() {
                               <div className="text-xs space-y-0.5">
                                 <div className="font-medium text-gray-500">{new Date(msg.createdAt).toLocaleDateString('en-GB')} — {msg.sender}</div>
                                 <div className="text-gray-500 italic">{msg.subject || '(no subject)'}</div>
-                                <div className="whitespace-pre-wrap break-words">{msg.content.slice(0, 500)}</div>
+                                <div className="whitespace-pre-wrap break-words">{msg.content}</div>
                               </div>
                             ) : null}
                           </td>
