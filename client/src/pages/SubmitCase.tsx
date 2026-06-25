@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
@@ -224,6 +224,8 @@ export default function SubmitCase() {
     },
   });
 
+  const watchedPaymentTermsType = useWatch({ control: form.control, name: "paymentTermsType" });
+
   // Update form schema and organisation selection based on organisations data
   useEffect(() => {
     if (!orgsLoading && organisations.length > 0) {
@@ -239,7 +241,7 @@ export default function SubmitCase() {
         form.setValue("organisationId", 0);
       }
     }
-  }, [organisations, orgsLoading, form]);
+  }, [organisations, orgsLoading]);
 
   const submitCaseMutation = useMutation({
     mutationFn: async (data: SubmitCaseForm) => {
@@ -540,7 +542,7 @@ export default function SubmitCase() {
                       <FormLabel>Submitting on behalf of claimant <span className="text-red-500">*</span></FormLabel>
                       <Select 
                         onValueChange={(value) => field.onChange(parseInt(value))} 
-                        value={field.value && field.value > 0 ? String(field.value) : ""}
+                        value={field.value && field.value > 0 ? String(field.value) : undefined}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -661,7 +663,7 @@ export default function SubmitCase() {
                             setIndividualType("");
                           }
                         }}
-                        value={field.value}
+                        value={field.value ?? ""}
                         className="flex flex-col space-y-2"
                       >
                         <div className="flex items-center space-x-2">
@@ -744,7 +746,7 @@ export default function SubmitCase() {
                               field.onChange(value);
                               setIndividualType(value);
                             }}
-                            value={field.value}
+                            value={field.value ?? ""}
                             className="flex flex-col space-y-2"
                           >
                             <div className="flex items-center space-x-2">
@@ -1064,7 +1066,7 @@ export default function SubmitCase() {
                           field.onChange(value);
                           handlePaymentTermsChange(value);
                         }}
-                        value={field.value}
+                        value={field.value ?? ""}
                         className="flex flex-col space-y-2"
                       >
                         <div className="flex items-center space-x-2">
@@ -1086,7 +1088,7 @@ export default function SubmitCase() {
                 )}
               />
 
-              {form.watch("paymentTermsType") !== "other" && (
+              {watchedPaymentTermsType !== "other" && (
                 <FormField
                   control={form.control}
                   name="paymentTermsDays"
@@ -1149,7 +1151,7 @@ export default function SubmitCase() {
                               form.setValue("firstOverdueDate", "");
                             }
                           }}
-                          value={field.value}
+                          value={field.value ?? ""}
                           className="flex flex-col space-y-2"
                         >
                           <div className="flex items-center space-x-2">
