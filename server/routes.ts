@@ -8666,8 +8666,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post('/api/debug/client-error', (req, res) => {
-    const { message, filename, lineno, colno, errorStr, errorType, stack, type } = req.body || {};
-    console.error('[CLIENT ERROR]', JSON.stringify({ type, message, errorType, errorStr, filename, lineno, colno, stack }, null, 2));
+    const data = req.body || {};
+    const line = new Date().toISOString() + ' ' + JSON.stringify(data) + '\n';
+    import('fs').then(fs => fs.appendFileSync('/tmp/client-errors.log', line)).catch(() => {});
     res.json({ ok: true });
   });
 
