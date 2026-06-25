@@ -795,7 +795,7 @@ export default function SubmitCase() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Salutation <span className="text-red-500">*</span></FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                          <Select onValueChange={field.onChange} value={field.value || undefined}>
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Select title" />
