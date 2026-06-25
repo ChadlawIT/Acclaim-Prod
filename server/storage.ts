@@ -99,7 +99,7 @@ export interface IStorage {
     daysInactive: number;
   }[]>;
   getLatestCaseActivitiesBatch(caseIds: number[]): Promise<Map<number, { description: string; code: string; createdAt: Date }>>;
-  getLastMessagesBatch(caseIds: number[], limit?: number): Promise<Map<number, Array<{ sender: string; isAdmin: boolean; content: string; createdAt: Date }>>>;
+  getLastMessagesBatch(caseIds: number[], limit?: number): Promise<Map<number, Array<{ sender: string; isAdmin: boolean; subject: string | null; content: string; createdAt: Date }>>>;
 
   // Organisation operations
   getOrganisation(id: number): Promise<Organization | undefined>;
@@ -3489,13 +3489,14 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async getLastMessagesBatch(caseIds: number[], limit = 3): Promise<Map<number, Array<{ sender: string; isAdmin: boolean; content: string; createdAt: Date }>>> {
+  async getLastMessagesBatch(caseIds: number[], limit = 3): Promise<Map<number, Array<{ sender: string; isAdmin: boolean; subject: string | null; content: string; createdAt: Date }>>> {
     if (caseIds.length === 0) return new Map();
 
     const all = await db
       .select({
         caseId:    messages.caseId,
         content:   messages.content,
+        subject:   messages.subject,
         createdAt: messages.createdAt,
         firstName: users.firstName,
         lastName:  users.lastName,
@@ -3507,7 +3508,7 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(messages.createdAt));
 
     const countByCaseId = new Map<number, number>();
-    const result = new Map<number, Array<{ sender: string; isAdmin: boolean; content: string; createdAt: Date }>>();
+    const result = new Map<number, Array<{ sender: string; isAdmin: boolean; subject: string | null; content: string; createdAt: Date }>>();
     for (const r of all) {
       if (r.caseId === null) continue;
       const count = countByCaseId.get(r.caseId) ?? 0;
@@ -3517,6 +3518,7 @@ export class DatabaseStorage implements IStorage {
       result.get(r.caseId)!.unshift({
         sender:    `${r.firstName ?? ''} ${r.lastName ?? ''}`.trim() || 'Unknown',
         isAdmin:   r.isAdmin ?? false,
+        subject:   r.subject ?? null,
         content:   r.content,
         createdAt: r.createdAt ?? new Date(),
       });

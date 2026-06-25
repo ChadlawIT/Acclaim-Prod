@@ -1456,6 +1456,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Recent messages batch for Case Summary Report (client-side export)
+  app.get('/api/report/case-messages', isAuthenticated, async (req: any, res) => {
+    try {
+      const { caseIds: caseIdsParam, limit: limitParam } = req.query;
+
+      if (!caseIdsParam) {
+        return res.status(400).json({ message: "caseIds query parameter is required" });
+      }
+
+      const rawIds = String(caseIdsParam).split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
+      if (rawIds.length === 0) {
+        return res.json({});
+      }
+
+      const limit = Math.min(5, Math.max(1, parseInt(String(limitParam || '1'), 10) || 1));
+
+      let authorisedIds: number[];
+      if (req.user.isAdmin) {
+        authorisedIds = rawIds;
+      } else {
+        const userCases = await storage.getCasesForUser(req.user.id);
+        const allowed = new Set(userCases.map((c: any) => c.id));
+        authorisedIds = rawIds.filter(id => allowed.has(id));
+      }
+
+      if (authorisedIds.length === 0) {
+        return res.json({});
+      }
+
+      const batchMap = await storage.getLastMessagesBatch(authorisedIds, limit);
+      const result: Record<number, Array<{ sender: string; isAdmin: boolean; subject: string | null; content: string; createdAt: string }>> = {};
+      batchMap.forEach((msgs, caseId) => {
+        result[caseId] = msgs.map(m => ({
+          sender: m.sender,
+          isAdmin: m.isAdmin,
+          subject: m.subject,
+          content: m.content,
+          createdAt: m.createdAt.toISOString(),
+        }));
+      });
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching case messages batch:", error);
+      res.status(500).json({ message: "Failed to fetch case messages" });
+    }
+  });
+
   // Messages Report - all authenticated users, date range filtered, grouped by case
   app.get('/api/messages/report', isAuthenticated, async (req: any, res) => {
     try {

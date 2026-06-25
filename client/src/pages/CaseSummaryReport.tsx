@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { OrganisationFilterCombobox } from "@/components/OrganisationFilterCombobox";
-import { ArrowLeft, Download, User, Calendar, Banknote, TrendingUp, FileSpreadsheet, FileText, Filter, Building2 } from "lucide-react";
+import { ArrowLeft, Download, User, Calendar, Banknote, TrendingUp, FileSpreadsheet, FileText, Filter, Building2, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -20,6 +20,7 @@ export default function CaseSummaryReport() {
   const { user } = useAuth();
   const [statusFilter, setStatusFilter] = useState<string>("all"); // "all", "live", "closed"
   const [orgFilter, setOrgFilter] = useState<string>("all");
+  const [recentMessagesCount, setRecentMessagesCount] = useState<number>(0);
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["/api/dashboard/stats"],
@@ -104,6 +105,17 @@ export default function CaseSummaryReport() {
     return result;
   }, [cases, statusFilter, orgFilter]);
 
+  // Fetch recent messages for filtered cases when count > 0
+  const caseIdsParam = useMemo(() => filteredCases.map((c: any) => c.id).join(','), [filteredCases]);
+
+  const { data: recentMessages } = useQuery<Record<string, Array<{ sender: string; isAdmin: boolean; subject: string | null; content: string; createdAt: string }>>>({
+    queryKey: ['/api/report/case-messages', caseIdsParam, recentMessagesCount],
+    enabled: recentMessagesCount > 0 && filteredCases.length > 0,
+    queryFn: () =>
+      fetch(`/api/report/case-messages?caseIds=${caseIdsParam}&limit=${recentMessagesCount}`, { credentials: 'include' })
+        .then(r => r.json()),
+  });
+
   // Calculate filtered statistics
   const filteredStats = useMemo(() => {
     if (!filteredCases) return { activeCases: 0, closedCases: 0 };
@@ -145,6 +157,14 @@ export default function CaseSummaryReport() {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-GB');
+  };
+
+  const formatMessageCell = (msg: { sender: string; subject: string | null; content: string; createdAt: string } | undefined, newline: string) => {
+    if (!msg) return '';
+    const date = new Date(msg.createdAt).toLocaleDateString('en-GB');
+    const subject = msg.subject || '(no subject)';
+    const body = msg.content.slice(0, 500);
+    return `${date} — From: ${msg.sender}${newline}Subject: ${subject}${newline}${body}`;
   };
 
   const getStatusBadge = (status: string) => {
@@ -219,7 +239,52 @@ export default function CaseSummaryReport() {
       }
 
       const currentDate = formatDate(new Date().toISOString());
-      
+
+      // Build message column headers
+      const msgHeaders = recentMessagesCount > 0
+        ? Array.from({ length: recentMessagesCount }, (_, i) => `<th>Recent Message ${i + 1}</th>`).join('')
+        : '';
+
+      // Build rows
+      const rows = filteredCases.map((caseItem: any) => {
+        const totalDebt = parseFloat(caseItem.originalAmount || 0) +
+                         parseFloat(caseItem.costsAdded || 0) +
+                         parseFloat(caseItem.interestAdded || 0) +
+                         parseFloat(caseItem.feesAdded || 0);
+        const outstanding = parseFloat(caseItem.outstandingAmount || 0);
+        const payments = parseFloat(caseItem.totalPayments || 0);
+
+        const msgCells = recentMessagesCount > 0
+          ? Array.from({ length: recentMessagesCount }, (_, i) => {
+              const msgs = recentMessages?.[String(caseItem.id)] ?? [];
+              const msg = msgs[msgs.length - 1 - i] ?? msgs[msgs.length - 1 - i];
+              // msgs are stored oldest-first after unshift, so index 0 = oldest, last = newest
+              // The batch returns them so index 0 = oldest; we want newest first
+              const ordered = [...(recentMessages?.[String(caseItem.id)] ?? [])].reverse();
+              const m = ordered[i];
+              const text = m ? formatMessageCell(m, '<br>') : '';
+              return `<td style="white-space:pre-wrap;vertical-align:top;font-size:9px;">${text}</td>`;
+            }).join('')
+          : '';
+
+        return `
+          <tr>
+            <td>${caseItem.accountNumber || ''}</td>
+            <td>${caseItem.caseName || ''}${caseItem.organisationName ? ` <span style="font-size: 10px; color: #666;">(${caseItem.organisationName})</span>` : ''}</td>
+            <td><span class="status-${caseItem.status}">${caseItem.status === 'Closed' ? 'Closed' : (caseItem.status || '').charAt(0).toUpperCase() + (caseItem.status || '').slice(1)}</span></td>
+            <td>${caseItem.stage ? caseItem.stage.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 'Not specified'}</td>
+            <td class="currency">${formatCurrency(caseItem.originalAmount || 0)}</td>
+            <td class="currency">${formatCurrency(caseItem.costsAdded || 0)}</td>
+            <td class="currency">${formatCurrency(caseItem.interestAdded || 0)}</td>
+            <td class="currency">${formatCurrency(caseItem.feesAdded || 0)}</td>
+            <td class="currency">${formatCurrency(totalDebt)}</td>
+            <td class="currency">${formatCurrency(payments)}</td>
+            <td class="currency">${formatCurrency(outstanding)}</td>
+            ${msgCells}
+          </tr>
+        `;
+      }).join('');
+
       // Create HTML content for PDF
       const htmlContent = `
         <!DOCTYPE html>
@@ -302,33 +367,11 @@ export default function CaseSummaryReport() {
                   <th>Total Debt</th>
                   <th>Total Payments</th>
                   <th>Outstanding Amount</th>
+                  ${msgHeaders}
                 </tr>
               </thead>
               <tbody>
-                ${filteredCases.map((caseItem: any) => {
-                  const totalDebt = parseFloat(caseItem.originalAmount || 0) + 
-                                   parseFloat(caseItem.costsAdded || 0) + 
-                                   parseFloat(caseItem.interestAdded || 0) + 
-                                   parseFloat(caseItem.feesAdded || 0);
-                  const outstanding = parseFloat(caseItem.outstandingAmount || 0);
-                  const payments = parseFloat(caseItem.totalPayments || 0);
-                  
-                  return `
-                    <tr>
-                      <td>${caseItem.accountNumber || ''}</td>
-                      <td>${caseItem.caseName || ''}${caseItem.organisationName ? ` <span style="font-size: 10px; color: #666;">(${caseItem.organisationName})</span>` : ''}</td>
-                      <td><span class="status-${caseItem.status}">${caseItem.status === 'Closed' ? 'Closed' : (caseItem.status || '').charAt(0).toUpperCase() + (caseItem.status || '').slice(1)}</span></td>
-                      <td>${caseItem.stage ? caseItem.stage.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 'Not specified'}</td>
-                      <td class="currency">${formatCurrency(caseItem.originalAmount || 0)}</td>
-                      <td class="currency">${formatCurrency(caseItem.costsAdded || 0)}</td>
-                      <td class="currency">${formatCurrency(caseItem.interestAdded || 0)}</td>
-                      <td class="currency">${formatCurrency(caseItem.feesAdded || 0)}</td>
-                      <td class="currency">${formatCurrency(totalDebt)}</td>
-                      <td class="currency">${formatCurrency(payments)}</td>
-                      <td class="currency">${formatCurrency(outstanding)}</td>
-                    </tr>
-                  `;
-                }).join('')}
+                ${rows}
               </tbody>
             </table>
           </div>
@@ -379,6 +422,13 @@ export default function CaseSummaryReport() {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('Case Summary Report');
 
+      // Build message columns
+      const msgColumns = Array.from({ length: recentMessagesCount }, (_, i) => ({
+        header: `Recent Message ${i + 1}`,
+        key: `msg${i + 1}`,
+        width: 50,
+      }));
+
       // Define columns with proper widths
       worksheet.columns = [
         { header: 'Account Number', key: 'accountNumber', width: 15 },
@@ -392,7 +442,8 @@ export default function CaseSummaryReport() {
         { header: 'Total Additional Charges', key: 'totalAdditionalCharges', width: 18 },
         { header: 'Total Debt', key: 'totalDebt', width: 15 },
         { header: 'Total Payments', key: 'totalPayments', width: 15 },
-        { header: 'Outstanding Amount', key: 'outstandingAmount', width: 18 }
+        { header: 'Outstanding Amount', key: 'outstandingAmount', width: 18 },
+        ...msgColumns,
       ];
 
       // Style header row
@@ -409,6 +460,14 @@ export default function CaseSummaryReport() {
 
       // Add data rows
       filteredCases.forEach((caseItem: any) => {
+        // Build message values — newest first (index 0 = latest)
+        const caseMsgs = recentMessages?.[String(caseItem.id)] ?? [];
+        const orderedMsgs = [...caseMsgs].reverse();
+        const msgValues: Record<string, string> = {};
+        for (let i = 1; i <= recentMessagesCount; i++) {
+          msgValues[`msg${i}`] = formatMessageCell(orderedMsgs[i - 1], '\n');
+        }
+
         const row = worksheet.addRow({
           accountNumber: caseItem.accountNumber,
           caseName: caseItem.organisationName ? `${caseItem.caseName} (${caseItem.organisationName})` : caseItem.caseName,
@@ -421,7 +480,8 @@ export default function CaseSummaryReport() {
           totalAdditionalCharges: parseFloat(caseItem.costsAdded || 0) + parseFloat(caseItem.interestAdded || 0) + parseFloat(caseItem.feesAdded || 0),
           totalDebt: parseFloat(caseItem.originalAmount) + parseFloat(caseItem.costsAdded || 0) + parseFloat(caseItem.interestAdded || 0) + parseFloat(caseItem.feesAdded || 0),
           totalPayments: getTotalPayments(caseItem),
-          outstandingAmount: parseFloat(caseItem.outstandingAmount || 0)
+          outstandingAmount: parseFloat(caseItem.outstandingAmount || 0),
+          ...msgValues,
         });
 
         // Color code status column (column 3)
@@ -453,6 +513,13 @@ export default function CaseSummaryReport() {
           fgColor: { argb: stageColor }
         };
         stageCell.alignment = { horizontal: 'center' };
+
+        // Style message cells with wrap text
+        for (let i = 1; i <= recentMessagesCount; i++) {
+          const colIndex = 12 + i;
+          const msgCell = row.getCell(colIndex);
+          msgCell.alignment = { wrapText: true, vertical: 'top' };
+        }
       });
 
       // Add summary row
@@ -484,10 +551,11 @@ export default function CaseSummaryReport() {
         };
       });
 
-      // Add autofilter to header row
+      // Add autofilter — extend to cover message columns
+      const lastColLetter = String.fromCharCode('A'.charCodeAt(0) + 11 + recentMessagesCount);
       worksheet.autoFilter = {
         from: 'A1',
-        to: 'L1'
+        to: `${lastColLetter}1`
       };
 
       // Add Color Guide sheet
@@ -587,7 +655,7 @@ export default function CaseSummaryReport() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 flex-wrap">
             {showOrgFilter && (
               <div className="flex items-center gap-2 flex-1">
                 <Building2 className="h-4 w-4 text-gray-500" />
@@ -610,6 +678,26 @@ export default function CaseSummaryReport() {
                   <SelectItem value="all">All Cases (Live & Closed)</SelectItem>
                   <SelectItem value="live">Live Cases Only</SelectItem>
                   <SelectItem value="closed">Closed Cases Only</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2 flex-1">
+              <MessageSquare className="h-4 w-4 text-gray-500" />
+              <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Recent messages:</label>
+              <Select
+                value={String(recentMessagesCount)}
+                onValueChange={(v) => setRecentMessagesCount(parseInt(v, 10))}
+              >
+                <SelectTrigger className="w-full sm:w-36" data-testid="select-recent-messages">
+                  <SelectValue placeholder="None" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">None</SelectItem>
+                  <SelectItem value="1">1</SelectItem>
+                  <SelectItem value="2">2</SelectItem>
+                  <SelectItem value="3">3</SelectItem>
+                  <SelectItem value="4">4</SelectItem>
+                  <SelectItem value="5">5</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -728,56 +816,78 @@ export default function CaseSummaryReport() {
                   <th className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 text-left font-medium text-gray-900 whitespace-nowrap">
                     Outstanding
                   </th>
+                  {recentMessagesCount > 0 && Array.from({ length: recentMessagesCount }, (_, i) => (
+                    <th key={i} className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 text-left font-medium text-gray-900 whitespace-nowrap min-w-[200px]">
+                      Recent Message {i + 1}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {filteredCases?.map((caseItem: any) => (
-                  <tr key={caseItem.id} className="hover:bg-gray-50">
-                    <td className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 text-gray-900 whitespace-nowrap">
-                      {caseItem.accountNumber}
-                    </td>
-                    <td className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 text-gray-900">
-                      <div>
-                        {caseItem.caseName}
-                        {caseItem.organisationName && (
-                          <div className="text-xs text-gray-500">({caseItem.organisationName})</div>
+                {filteredCases?.map((caseItem: any) => {
+                  const orderedMsgs = [...(recentMessages?.[String(caseItem.id)] ?? [])].reverse();
+                  return (
+                    <tr key={caseItem.id} className="hover:bg-gray-50">
+                      <td className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 text-gray-900 whitespace-nowrap">
+                        {caseItem.accountNumber}
+                      </td>
+                      <td className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 text-gray-900">
+                        <div>
+                          {caseItem.caseName}
+                          {caseItem.organisationName && (
+                            <div className="text-xs text-gray-500">({caseItem.organisationName})</div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3">
+                        {getStatusBadge(caseItem.status)}
+                      </td>
+                      <td className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3">
+                        {getStageBadge(caseItem.stage)}
+                      </td>
+                      <td className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 font-medium text-gray-900 whitespace-nowrap">
+                        {formatCurrency(caseItem.originalAmount)}
+                      </td>
+                      <td className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 font-medium text-gray-900 whitespace-nowrap">
+                        {formatCurrency(caseItem.costsAdded || 0)}
+                      </td>
+                      <td className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 font-medium text-gray-900 whitespace-nowrap">
+                        {formatCurrency(caseItem.interestAdded || 0)}
+                      </td>
+                      <td className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 font-medium text-gray-900 whitespace-nowrap">
+                        {formatCurrency(caseItem.feesAdded || 0)}
+                      </td>
+                      <td className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 font-medium text-purple-600 whitespace-nowrap">
+                        {formatCurrency(
+                          parseFloat(caseItem.originalAmount) + 
+                          parseFloat(caseItem.costsAdded || 0) + 
+                          parseFloat(caseItem.interestAdded || 0) + 
+                          parseFloat(caseItem.feesAdded || 0)
                         )}
-                      </div>
-                    </td>
-                    <td className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3">
-                      {getStatusBadge(caseItem.status)}
-                    </td>
-                    <td className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3">
-                      {getStageBadge(caseItem.stage)}
-                    </td>
-                    <td className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 font-medium text-gray-900 whitespace-nowrap">
-                      {formatCurrency(caseItem.originalAmount)}
-                    </td>
-                    <td className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 font-medium text-gray-900 whitespace-nowrap">
-                      {formatCurrency(caseItem.costsAdded || 0)}
-                    </td>
-                    <td className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 font-medium text-gray-900 whitespace-nowrap">
-                      {formatCurrency(caseItem.interestAdded || 0)}
-                    </td>
-                    <td className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 font-medium text-gray-900 whitespace-nowrap">
-                      {formatCurrency(caseItem.feesAdded || 0)}
-                    </td>
-                    <td className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 font-medium text-purple-600 whitespace-nowrap">
-                      {formatCurrency(
-                        parseFloat(caseItem.originalAmount) + 
-                        parseFloat(caseItem.costsAdded || 0) + 
-                        parseFloat(caseItem.interestAdded || 0) + 
-                        parseFloat(caseItem.feesAdded || 0)
-                      )}
-                    </td>
-                    <td className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 font-medium text-green-600 whitespace-nowrap">
-                      {formatCurrency(getTotalPayments(caseItem))}
-                    </td>
-                    <td className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 font-medium text-orange-600 whitespace-nowrap">
-                      {formatCurrency(caseItem.outstandingAmount || 0)}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 font-medium text-green-600 whitespace-nowrap">
+                        {formatCurrency(getTotalPayments(caseItem))}
+                      </td>
+                      <td className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 font-medium text-orange-600 whitespace-nowrap">
+                        {formatCurrency(caseItem.outstandingAmount || 0)}
+                      </td>
+                      {recentMessagesCount > 0 && Array.from({ length: recentMessagesCount }, (_, i) => {
+                        const msg = orderedMsgs[i];
+                        return (
+                          <td key={i} className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 text-gray-700 align-top min-w-[200px]">
+                            {msg ? (
+                              <div className="text-xs space-y-0.5">
+                                <div className="font-medium text-gray-500">{new Date(msg.createdAt).toLocaleDateString('en-GB')} — {msg.sender}</div>
+                                <div className="text-gray-500 italic">{msg.subject || '(no subject)'}</div>
+                                <div className="whitespace-pre-wrap break-words">{msg.content.slice(0, 500)}</div>
+                              </div>
+                            ) : null}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
