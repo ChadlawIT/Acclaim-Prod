@@ -702,26 +702,6 @@ export default function CaseSummaryReport() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center gap-2 flex-1">
-              <MessageSquare className="h-4 w-4 text-gray-500" />
-              <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Recent messages:</label>
-              <Select
-                value={String(recentMessagesCount)}
-                onValueChange={(v) => setRecentMessagesCount(parseInt(v, 10))}
-              >
-                <SelectTrigger className="w-full sm:w-36" data-testid="select-recent-messages">
-                  <SelectValue placeholder="None" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="0">None</SelectItem>
-                  <SelectItem value="1">1</SelectItem>
-                  <SelectItem value="2">2</SelectItem>
-                  <SelectItem value="3">3</SelectItem>
-                  <SelectItem value="4">4</SelectItem>
-                  <SelectItem value="5">5</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
             <div className="text-xs sm:text-sm text-gray-600">
               Showing {filteredCases?.length || 0} of {cases?.length || 0} cases
             </div>
@@ -789,6 +769,42 @@ export default function CaseSummaryReport() {
                 </div>
                 <Banknote className="h-5 w-5 sm:h-8 sm:w-8 text-orange-600 hidden sm:block" />
               </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Recent Updates Selector */}
+      <Card className="mb-4 sm:mb-6">
+        <CardHeader className="pb-2 sm:pb-4">
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5" />
+            Recent Updates
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <p className="text-sm text-gray-600 flex-1">
+              Optionally include the most recent updates from Acclaim on each case — notes or messages sent by the team, including updates pushed through from SOS. These appear as extra columns in the Excel and PDF exports, and in the table below. Select how many updates to show per case (1–5), with the most recent first.
+            </p>
+            <div className="flex items-center gap-2 shrink-0">
+              <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Updates per case:</label>
+              <Select
+                value={String(recentMessagesCount)}
+                onValueChange={(v) => setRecentMessagesCount(parseInt(v, 10))}
+              >
+                <SelectTrigger className="w-32" data-testid="select-recent-messages">
+                  <SelectValue placeholder="None" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">None</SelectItem>
+                  <SelectItem value="1">1</SelectItem>
+                  <SelectItem value="2">2</SelectItem>
+                  <SelectItem value="3">3</SelectItem>
+                  <SelectItem value="4">4</SelectItem>
+                  <SelectItem value="5">5</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardContent>

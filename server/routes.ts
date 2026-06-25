@@ -1485,7 +1485,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({});
       }
 
-      const batchMap = await storage.getLastMessagesBatch(authorisedIds, limit);
+      const batchMap = await storage.getLastMessagesBatch(authorisedIds, limit, true);
       const result: Record<number, Array<{ sender: string; isAdmin: boolean; subject: string | null; content: string; createdAt: string }>> = {};
       batchMap.forEach((msgs, caseId) => {
         result[caseId] = msgs.map(m => ({

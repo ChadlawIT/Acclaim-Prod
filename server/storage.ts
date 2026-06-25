@@ -99,7 +99,7 @@ export interface IStorage {
     daysInactive: number;
   }[]>;
   getLatestCaseActivitiesBatch(caseIds: number[]): Promise<Map<number, { description: string; code: string; createdAt: Date }>>;
-  getLastMessagesBatch(caseIds: number[], limit?: number): Promise<Map<number, Array<{ sender: string; isAdmin: boolean; subject: string | null; content: string; createdAt: Date }>>>;
+  getLastMessagesBatch(caseIds: number[], limit?: number, adminOnly?: boolean): Promise<Map<number, Array<{ sender: string; isAdmin: boolean; subject: string | null; content: string; createdAt: Date }>>>;
 
   // Organisation operations
   getOrganisation(id: number): Promise<Organization | undefined>;
@@ -3489,8 +3489,13 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async getLastMessagesBatch(caseIds: number[], limit = 3): Promise<Map<number, Array<{ sender: string; isAdmin: boolean; subject: string | null; content: string; createdAt: Date }>>> {
+  async getLastMessagesBatch(caseIds: number[], limit = 3, adminOnly = false): Promise<Map<number, Array<{ sender: string; isAdmin: boolean; subject: string | null; content: string; createdAt: Date }>>> {
     if (caseIds.length === 0) return new Map();
+
+    const baseWhere = inArray(messages.caseId, caseIds);
+    const whereClause = adminOnly
+      ? and(baseWhere, or(eq(users.isAdmin, true), eq(users.email, ACCLAIM_SYSTEM_EMAIL)))
+      : baseWhere;
 
     const all = await db
       .select({
@@ -3504,7 +3509,7 @@ export class DatabaseStorage implements IStorage {
       })
       .from(messages)
       .innerJoin(users, eq(messages.senderId, users.id))
-      .where(inArray(messages.caseId, caseIds))
+      .where(whereClause)
       .orderBy(desc(messages.createdAt));
 
     const countByCaseId = new Map<number, number>();
