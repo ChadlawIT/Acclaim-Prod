@@ -46,3 +46,7 @@ waitForPort = 5000
 [agent]
 integrations = ["javascript_sendgrid:1.0.0", "javascript_log_in_with_replit:1.0.0"]
 expertMode = true
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 20000
