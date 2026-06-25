@@ -3,6 +3,7 @@ import { storage } from "./storage";
 import { sendScheduledReportEmailWithAttachments } from "./email-service-sendgrid";
 import type { InsertAuditLog } from "@shared/schema";
 import { processEscalationReport } from "./escalation-reports";
+import { processPendingSubmissionsReport } from "./pending-submissions-report";
 import { processInactiveCasesReport } from "./inactive-cases-report";
 
 export interface ScheduledReportSettings {
@@ -998,6 +999,12 @@ export function scheduleReportProcessor(): void {
       await processEscalationReport();
     } catch (error) {
       console.error("Error processing escalation report:", error);
+    }
+    // Pending submissions escalation: daily at 12pm
+    try {
+      await processPendingSubmissionsReport();
+    } catch (error) {
+      console.error("Error processing pending submissions report:", error);
     }
     // Inactive cases report: Thursdays at 8am only
     try {

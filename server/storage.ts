@@ -149,6 +149,35 @@ export interface IStorage {
   createCaseSubmission(submission: InsertCaseSubmission): Promise<CaseSubmission>;
   getCaseSubmissions(): Promise<CaseSubmission[]>; // Admin only - get all pending submissions
   getCaseSubmissionsByStatus(status: string): Promise<CaseSubmission[]>; // Admin only - get submissions by status
+  getPendingSubmissionsOlderThan(days: number): Promise<Array<{
+    id: number;
+    caseName: string;
+    debtorType: string;
+    individualType: string | null;
+    organisationName: string | null;
+    organisationTradingName: string | null;
+    tradingName: string | null;
+    principalSalutation: string | null;
+    principalFirstName: string | null;
+    principalLastName: string | null;
+    clientOrganisationName: string | null;
+    submittedByName: string | null;
+    totalDebtAmount: string;
+    currency: string | null;
+    addressLine1: string | null;
+    addressLine2: string | null;
+    city: string | null;
+    county: string | null;
+    postcode: string | null;
+    mainPhone: string | null;
+    mainEmail: string | null;
+    debtDetails: string | null;
+    firstOverdueDate: string | null;
+    lastOverdueDate: string | null;
+    singleInvoice: string | null;
+    submittedAt: Date;
+    daysPending: number;
+  }>>;
   updateCaseSubmissionStatus(id: number, status: string, processedBy: string): Promise<CaseSubmission>;
   deleteCaseSubmission(id: number): Promise<void>; // Admin only - delete submission
 
@@ -1321,6 +1350,51 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(caseSubmissions.submittedAt));
 
     return submissions;
+  }
+
+  async getPendingSubmissionsOlderThan(days: number) {
+    const rows = await db
+      .select({
+        id: caseSubmissions.id,
+        caseName: caseSubmissions.caseName,
+        debtorType: caseSubmissions.debtorType,
+        individualType: caseSubmissions.individualType,
+        organisationName: caseSubmissions.organisationName,
+        organisationTradingName: caseSubmissions.organisationTradingName,
+        tradingName: caseSubmissions.tradingName,
+        principalSalutation: caseSubmissions.principalSalutation,
+        principalFirstName: caseSubmissions.principalFirstName,
+        principalLastName: caseSubmissions.principalLastName,
+        clientOrganisationName: organisations.name,
+        submittedByName: sql<string>`${users.firstName} || ' ' || ${users.lastName}`.as('submittedByName'),
+        totalDebtAmount: caseSubmissions.totalDebtAmount,
+        currency: caseSubmissions.currency,
+        addressLine1: caseSubmissions.addressLine1,
+        addressLine2: caseSubmissions.addressLine2,
+        city: caseSubmissions.city,
+        county: caseSubmissions.county,
+        postcode: caseSubmissions.postcode,
+        mainPhone: caseSubmissions.mainPhone,
+        mainEmail: caseSubmissions.mainEmail,
+        debtDetails: caseSubmissions.debtDetails,
+        firstOverdueDate: caseSubmissions.firstOverdueDate,
+        lastOverdueDate: caseSubmissions.lastOverdueDate,
+        singleInvoice: caseSubmissions.singleInvoice,
+        submittedAt: caseSubmissions.submittedAt,
+        daysPending: sql<number>`EXTRACT(EPOCH FROM (NOW() - ${caseSubmissions.submittedAt})) / 86400`.as('daysPending'),
+      })
+      .from(caseSubmissions)
+      .leftJoin(users, eq(caseSubmissions.submittedBy, users.id))
+      .leftJoin(organisations, eq(caseSubmissions.organisationId, organisations.id))
+      .where(
+        and(
+          eq(caseSubmissions.status, 'pending'),
+          lt(caseSubmissions.submittedAt, sql`NOW() - (${days} || ' days')::INTERVAL`)
+        )
+      )
+      .orderBy(desc(sql`EXTRACT(EPOCH FROM (NOW() - ${caseSubmissions.submittedAt}))`));
+
+    return rows.map(r => ({ ...r, daysPending: Math.floor(Number(r.daysPending)) }));
   }
 
   async updateCaseSubmissionStatus(id: number, status: string, processedBy: string): Promise<CaseSubmission> {

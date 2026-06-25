@@ -3920,3 +3920,203 @@ export async function sendInactiveCasesReportEmail(
     return false;
   }
 }
+
+// ── Pending submissions escalation report email ───────────────────────────────
+
+export async function sendPendingSubmissionsReportEmail(
+  submissions: Array<{
+    id: number; caseName: string; debtorType: string; individualType: string | null;
+    organisationName: string | null; organisationTradingName: string | null;
+    tradingName: string | null; principalSalutation: string | null;
+    principalFirstName: string | null; principalLastName: string | null;
+    clientOrganisationName: string | null; submittedByName: string | null;
+    totalDebtAmount: string; currency: string | null;
+    mainEmail: string | null; mainPhone: string | null;
+    submittedAt: Date; daysPending: number;
+  }>,
+  excelBuffer: Buffer,
+  htmlContent: string,
+  dateStr: string,
+): Promise<boolean> {
+  const APIM_KEY = process.env.APIM_SUBSCRIPTION_KEY;
+  const RECIPIENT = 'email@acclaim.law';
+
+  if (!APIM_KEY && !process.env.SENDGRID_API_KEY) {
+    console.error('[PendingSubmissions] No email transport configured');
+    return false;
+  }
+
+  try {
+    const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    const totalCases = submissions.length;
+    const totalDebt = submissions.reduce((acc, s) => acc + Number(s.totalDebtAmount), 0)
+      .toLocaleString('en-GB', { style: 'currency', currency: 'GBP' });
+    const longestPending = submissions.length > 0 ? submissions[0].daysPending : 0;
+
+    const subject = `⚠️ Pending Submissions — ${totalCases} case${totalCases !== 1 ? 's' : ''} awaiting action — ${today}`;
+
+    const caseListHtml = submissions.map(s => {
+      const debtorName = s.debtorType === 'organisation'
+        ? (s.organisationTradingName || s.organisationName || '—')
+        : [[s.principalSalutation, s.principalFirstName, s.principalLastName].filter(Boolean).join(' ') || '—', s.tradingName].filter(Boolean).join(' / ');
+      const ageBg = s.daysPending >= 14 ? '#FEE2E2' : s.daysPending >= 7 ? '#FEF9C3' : '#F0FDF4';
+      const ageColor = s.daysPending >= 14 ? '#B91C1C' : s.daysPending >= 7 ? '#92400E' : '#166534';
+      const amount = (() => {
+        const sym = (s.currency || 'GBP') === 'GBP' ? '£' : (s.currency || '');
+        try { return sym + Number(s.totalDebtAmount).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+        catch { return `${sym}${s.totalDebtAmount}`; }
+      })();
+      return `
+        <tr style="border-bottom:1px solid #e2e8f0;">
+          <td style="padding:10px 8px;font-size:13px;font-weight:600;color:#1e293b;">${s.caseName}</td>
+          <td style="padding:10px 8px;font-size:13px;color:#475569;">${debtorName}</td>
+          <td style="padding:10px 8px;font-size:13px;color:#1e293b;font-weight:600;">${amount}</td>
+          <td style="padding:10px 8px;font-size:13px;color:#475569;">${s.submittedAt.toLocaleDateString('en-GB')}</td>
+          <td style="padding:10px 8px;text-align:center;">
+            <span style="display:inline-block;background:${ageBg};color:${ageColor};font-weight:700;font-size:13px;padding:3px 10px;border-radius:99px;">${s.daysPending}d</span>
+          </td>
+          <td style="padding:10px 8px;font-size:12px;color:#475569;">${s.clientOrganisationName || '—'}</td>
+        </tr>`;
+    }).join('');
+
+    const emailHtml = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f0f4f8;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f0f4f8;">
+  <tr><td align="center" style="padding:40px 20px;">
+    <table role="presentation" width="640" cellspacing="0" cellpadding="0" style="max-width:640px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+
+      <!-- Header -->
+      <tr><td style="background:linear-gradient(135deg,#008b8b 0%,#006666 100%);padding:40px 40px 30px;text-align:center;">
+        <img src="cid:logo" alt="Acclaim" style="height:36px;width:auto;margin-bottom:16px;" />
+        <h1 style="margin:0;color:#fff;font-size:24px;font-weight:700;">⚠️ Pending Submissions Escalation</h1>
+        <p style="margin:8px 0 0;color:rgba(255,255,255,0.85);font-size:14px;">${today}</p>
+      </td></tr>
+
+      <!-- Body -->
+      <tr><td style="padding:40px;">
+
+        <!-- Summary cards -->
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:28px;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
+          <tr>
+            <td style="padding:18px;text-align:center;border-right:1px solid #e2e8f0;width:33%;">
+              <p style="margin:0 0 4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#64748b;">Cases Pending</p>
+              <p style="margin:0;font-size:30px;font-weight:800;color:#008b8b;">${totalCases}</p>
+            </td>
+            <td style="padding:18px;text-align:center;border-right:1px solid #e2e8f0;width:33%;">
+              <p style="margin:0 0 4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#64748b;">Total Debt</p>
+              <p style="margin:0;font-size:22px;font-weight:800;color:#1e293b;">${totalDebt}</p>
+            </td>
+            <td style="padding:18px;text-align:center;width:33%;">
+              <p style="margin:0 0 4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#64748b;">Longest Pending</p>
+              <p style="margin:0;font-size:30px;font-weight:800;color:#B91C1C;">${longestPending}d</p>
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin:0 0 20px;color:#374151;font-size:14px;line-height:1.6;">
+          The following ${totalCases} case${totalCases !== 1 ? 's have' : ' has'} been submitted and remain${totalCases === 1 ? 's' : ''} in <strong>Pending</strong> status for more than 3 days. These cases require attention — please review and action accordingly.
+        </p>
+
+        <!-- Case table -->
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:24px;">
+          <thead>
+            <tr style="background:#f1f5f9;">
+              <th style="padding:9px 8px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#475569;text-align:left;">Case</th>
+              <th style="padding:9px 8px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#475569;text-align:left;">Debtor</th>
+              <th style="padding:9px 8px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#475569;text-align:left;">Amount</th>
+              <th style="padding:9px 8px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#475569;text-align:left;">Submitted</th>
+              <th style="padding:9px 8px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#475569;text-align:center;">Age</th>
+              <th style="padding:9px 8px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#475569;text-align:left;">Client Org</th>
+            </tr>
+          </thead>
+          <tbody>${caseListHtml}</tbody>
+        </table>
+
+        <!-- Attachments note -->
+        <div style="background:#e0f7f6;border-radius:12px;padding:18px;">
+          <p style="color:#00695c;margin:0 0 8px;font-size:14px;font-weight:600;">Attachments included:</p>
+          <ul style="color:#00695c;margin:0;padding-left:20px;font-size:14px;line-height:1.8;">
+            <li><strong>Excel workbook</strong> — all cases with full details, age banding, and summary tab</li>
+            <li><strong>HTML report</strong> — styled printable version, open in any browser</li>
+          </ul>
+        </div>
+
+      </td></tr>
+
+      <!-- Footer -->
+      <tr><td style="background:#1f2937;padding:24px 40px;text-align:center;border-radius:0 0 16px 16px;">
+        <p style="margin:0;color:#9ca3af;font-size:12px;">Automated daily escalation — Acclaim Client Portal · Cases remain in this report until their status is changed</p>
+      </td></tr>
+
+    </table>
+  </td></tr>
+</table>
+</body></html>`;
+
+    const textContent = `Pending Submissions Escalation — ${today}\n\n${totalCases} case${totalCases !== 1 ? 's' : ''} pending for more than 3 days.\nTotal debt value: ${totalDebt}\nLongest pending: ${longestPending} days\n\nFull breakdown in attached Excel and HTML report.`;
+
+    const logoBase64 = getLogoBase64();
+    const attachments: Array<{ content: string; filename: string; type: string; disposition?: string; content_id?: string }> = [];
+    if (logoBase64) attachments.push(logoBase64);
+
+    attachments.push({
+      content: excelBuffer.toString('base64'),
+      filename: `Acclaim_Pending_Submissions_${dateStr}.xlsx`,
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      disposition: 'attachment',
+    });
+
+    attachments.push({
+      content: Buffer.from(htmlContent.trim()).toString('base64'),
+      filename: `Acclaim_Pending_Submissions_${dateStr}.html`,
+      type: 'text/html',
+      disposition: 'attachment',
+    });
+
+    const emailPayload = {
+      to: RECIPIENT,
+      subject,
+      textContent,
+      htmlContent: emailHtml,
+      attachments,
+    };
+
+    if (APIM_KEY) {
+      try {
+        const resp = await fetch(APIM_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Ocp-Apim-Subscription-Key': APIM_KEY },
+          body: JSON.stringify(emailPayload),
+        });
+        if (resp.ok || resp.status === 202) {
+          console.log(`[PendingSubmissions] Report sent via APIM to ${RECIPIENT}`);
+          return true;
+        }
+        console.warn(`[PendingSubmissions] APIM returned ${resp.status}`);
+      } catch (e) {
+        console.warn(`[PendingSubmissions] APIM unreachable — ${e}`);
+      }
+    }
+
+    if (process.env.SENDGRID_API_KEY) {
+      const resp = await fetch('https://api.sendgrid.com/v3/mail/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.SENDGRID_API_KEY}` },
+        body: JSON.stringify(emailPayload),
+      });
+      if (resp.ok || resp.status === 202) {
+        console.log(`[PendingSubmissions] Report sent via SendGrid to ${RECIPIENT}`);
+        return true;
+      }
+      console.error(`[PendingSubmissions] SendGrid failed: ${resp.status}`);
+      return false;
+    }
+
+    console.error('[PendingSubmissions] No working email transport');
+    return false;
+  } catch (error) {
+    console.error('[PendingSubmissions] Error sending pending submissions report email:', error);
+    return false;
+  }
+}
