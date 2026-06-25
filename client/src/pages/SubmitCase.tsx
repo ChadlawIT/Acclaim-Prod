@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { ArrowLeft, FileText, User, Building } from "lucide-react";
+import { ArrowLeft, FileText, User, Building, UploadCloud, FileImage, FileSpreadsheet, FileVideo, FileBadge, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
@@ -438,6 +438,17 @@ export default function SubmitCase() {
     }
   };
 
+  // Outlook-style file-type icon based on the file extension
+  const getFileIcon = (fileName: string) => {
+    const ext = fileName.split('.').pop()?.toLowerCase() || '';
+    if (ext === 'pdf') return <FileText className="h-6 w-6 text-red-500" />;
+    if (['doc', 'docx', 'txt'].includes(ext)) return <FileText className="h-6 w-6 text-blue-500" />;
+    if (['xls', 'xlsx', 'csv'].includes(ext)) return <FileSpreadsheet className="h-6 w-6 text-green-600" />;
+    if (['jpg', 'jpeg', 'png', 'gif', 'heic', 'heif'].includes(ext)) return <FileImage className="h-6 w-6 text-purple-500" />;
+    if (['mp4', 'mov', 'avi', 'webm', 'mkv', 'm4v', '3gp', '3gpp'].includes(ext)) return <FileVideo className="h-6 w-6 text-amber-500" />;
+    return <FileBadge className="h-6 w-6 text-gray-400" />;
+  };
+
   // Show success screen after submission
   if (isSubmitted) {
     return (
@@ -522,12 +533,16 @@ export default function SubmitCase() {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           {/* Client Details */}
-          <Card>
+          <Card className="overflow-hidden">
+            <div className="h-1 w-full bg-acclaim-teal" />
             <CardHeader>
               <CardTitle className="flex items-center">
                 <User className="h-5 w-5 mr-2 text-acclaim-teal" />
                 Your Details
               </CardTitle>
+              <CardDescription>
+                Details of the person submitting this case.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Organisation Selection */}
@@ -615,12 +630,16 @@ export default function SubmitCase() {
           </Card>
 
           {/* Debtor Details */}
-          <Card>
+          <Card className="overflow-hidden">
+            <div className="h-1 w-full bg-acclaim-teal" />
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Building className="h-5 w-5 mr-2 text-acclaim-teal" />
                 Debtor Details
               </CardTitle>
+              <CardDescription>
+                Information about the individual or organisation that owes the debt.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <FormField
@@ -987,12 +1006,16 @@ export default function SubmitCase() {
           </Card>
 
           {/* Debt Details */}
-          <Card>
+          <Card className="overflow-hidden">
+            <div className="h-1 w-full bg-acclaim-teal" />
             <CardHeader>
               <CardTitle className="flex items-center">
                 <FileText className="h-5 w-5 mr-2 text-acclaim-teal" />
                 Debt Details
               </CardTitle>
+              <CardDescription>
+                Particulars of the outstanding amount, payment terms and invoices.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <FormField
@@ -1251,20 +1274,42 @@ export default function SubmitCase() {
           </Card>
 
           {/* Supporting Documents */}
-          <Card>
+          <Card className="overflow-hidden">
+            <div className="h-1 w-full bg-acclaim-teal" />
             <CardHeader>
-              <CardTitle>Supporting Documents</CardTitle>
-              <CardDescription>
-                Upload any documents that support your case (invoices, contracts, correspondence, etc.)
-              </CardDescription>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <CardTitle className="flex items-center">
+                    <FileBadge className="h-5 w-5 mr-2 text-acclaim-teal" />
+                    Supporting Documents
+                  </CardTitle>
+                  <CardDescription className="mt-1.5">
+                    Upload any documents that support your case (invoices, contracts, correspondence, etc.)
+                  </CardDescription>
+                </div>
+                <span className="hidden sm:inline-flex items-center whitespace-nowrap rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
+                  Max {MAX_FILE_SIZE_MB}MB per file
+                </span>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Upload Files (Max {MAX_FILE_SIZE_MB}MB each)
-                  </label>
+                {/* Drag-and-drop style upload area */}
+                <label
+                  htmlFor="document-upload"
+                  className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50/50 px-6 py-8 text-center transition-colors hover:border-[#008b8b] hover:bg-[#008b8b]/5"
+                >
+                  <div className="rounded-full bg-[#008b8b]/10 p-3">
+                    <UploadCloud className="h-6 w-6 text-acclaim-teal" />
+                  </div>
+                  <div className="text-sm">
+                    <span className="font-semibold text-acclaim-teal">Click to browse</span>
+                    <span className="text-gray-500"> or drag and drop your files here</span>
+                  </div>
+                  <p className="text-xs text-gray-500">Maximum {MAX_FILE_SIZE_MB}MB per file</p>
                   <input
+                    id="document-upload"
+                    data-testid="input-document-upload"
                     type="file"
                     multiple
                     accept={ACCEPTED_FILE_TYPES_STRING}
@@ -1289,41 +1334,56 @@ export default function SubmitCase() {
                       }
                       e.target.value = '';
                     }}
-                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#008a8a59] file:text-[#0f766e] hover:file:bg-[#008a8a80]"
+                    className="sr-only"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Supported formats: {ACCEPTED_FILE_TYPES_DISPLAY}
+                </label>
+                <p className="text-xs text-gray-500">
+                  Supported formats: {ACCEPTED_FILE_TYPES_DISPLAY}
+                </p>
+                {fileValidationError && (
+                  <p className="text-sm text-red-600 bg-red-50 dark:bg-red-900/20 p-2 rounded">
+                    {fileValidationError}
                   </p>
-                  {fileValidationError && (
-                    <p className="text-sm text-red-600 mt-2 bg-red-50 dark:bg-red-900/20 p-2 rounded">
-                      {fileValidationError}
-                    </p>
-                  )}
-                </div>
+                )}
 
-                {/* Display uploaded files */}
+                {/* Outlook-style attached files */}
                 {uploadedFiles.length > 0 && (
                   <div className="space-y-2">
-                    <h4 className="font-medium">Uploaded Files:</h4>
-                    {uploadedFiles.map((file, index) => (
-                      <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                        <span className="text-sm">{file.name}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-500">
-                            {(file.size / 1024 / 1024).toFixed(2)} MB
-                          </span>
+                    <h4 className="text-sm font-medium text-gray-700">
+                      Attached files ({uploadedFiles.length})
+                    </h4>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      {uploadedFiles.map((file, index) => (
+                        <div
+                          key={index}
+                          data-testid={`attachment-tile-${index}`}
+                          className="group flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-3 transition-all hover:border-[#008b8b]/50 hover:shadow-sm"
+                        >
+                          <div className="flex-shrink-0 rounded-md bg-gray-50 p-2">
+                            {getFileIcon(file.name)}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium text-gray-900" title={file.name}>
+                              {file.name}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {(file.size / 1024 / 1024).toFixed(2)} MB
+                            </p>
+                          </div>
                           <button
                             type="button"
+                            data-testid={`button-remove-file-${index}`}
+                            aria-label={`Remove ${file.name}`}
                             onClick={() => {
                               setUploadedFiles(prev => prev.filter((_, i) => i !== index));
                             }}
-                            className="text-red-500 hover:text-red-700"
+                            className="flex-shrink-0 rounded-md p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
                           >
-                            Remove
+                            <X className="h-4 w-4" />
                           </button>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
