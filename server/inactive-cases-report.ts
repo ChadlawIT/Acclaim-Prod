@@ -367,6 +367,41 @@ export function generateInactiveCasesHtml(
 
 // ── Main processor ────────────────────────────────────────────────────────────
 
+export async function runInactiveCasesReportNow(): Promise<{ sent: boolean; count: number }> {
+  console.log("[InactiveCases] Running on-demand inactive cases report...");
+
+  const now = new Date();
+  const inactiveCases = await storage.getInactiveCases(INACTIVE_DAYS_THRESHOLD, INACTIVE_CASES_ACTIVE_FROM);
+
+  if (inactiveCases.length === 0) {
+    console.log("[InactiveCases] No inactive cases found — skipping report");
+    return { sent: false, count: 0 };
+  }
+
+  const caseIds = inactiveCases.map(c => c.caseId);
+  const [activityMap, messageMap] = await Promise.all([
+    storage.getLatestCaseActivitiesBatch(caseIds),
+    storage.getLastMessagesBatch(caseIds, 3),
+  ]);
+
+  const [excelBuffer, htmlContent] = await Promise.all([
+    generateInactiveCasesExcel(inactiveCases),
+    Promise.resolve(generateInactiveCasesHtml(inactiveCases, activityMap, messageMap)),
+  ]);
+
+  const dateStr = now.toISOString().split("T")[0];
+  const excelFileName = `Acclaim_Inactive_Cases_${dateStr}.xlsx`;
+  const htmlFileName = `Acclaim_Inactive_Cases_${dateStr}.html`;
+
+  const sent = await sendInactiveCasesReportEmail(inactiveCases, excelBuffer, excelFileName, htmlContent, htmlFileName);
+  if (sent) {
+    console.log(`[InactiveCases] On-demand report sent — ${inactiveCases.length} inactive case${inactiveCases.length !== 1 ? "s" : ""}`);
+  } else {
+    console.error("[InactiveCases] Failed to send on-demand inactive cases report email");
+  }
+  return { sent, count: inactiveCases.length };
+}
+
 export async function processInactiveCasesReport(): Promise<void> {
   const now = new Date();
   const dayOfWeek = now.getDay(); // 0 = Sunday, 4 = Thursday

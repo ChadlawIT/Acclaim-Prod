@@ -5485,6 +5485,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/admin/reports/inactive-cases", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { runInactiveCasesReportNow } = await import("./inactive-cases-report");
+      const result = await runInactiveCasesReportNow();
+      if (result.count === 0) {
+        return res.json({ sent: false, count: 0, message: "No inactive cases found — report not sent" });
+      }
+      if (!result.sent) {
+        return res.status(500).json({ message: "Failed to send inactive cases report email" });
+      }
+      res.json({ sent: true, count: result.count, message: `Report sent — ${result.count} inactive case${result.count !== 1 ? "s" : ""}` });
+    } catch (error) {
+      console.error("Error running on-demand inactive cases report:", error);
+      res.status(500).json({ message: "Failed to run inactive cases report" });
+    }
+  });
+
   // External API endpoints for case management system integration
 
   // Check whether a case exists by external reference (read-only, no side effects)
