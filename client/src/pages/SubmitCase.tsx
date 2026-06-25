@@ -771,12 +771,14 @@ export default function SubmitCase() {
                 <div className="border-t pt-4">
                   <div className="mb-4">
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">Principal of Business Details</h3>
-                    <p className="text-sm text-gray-600">
-                      {detailsEnabled
-                        ? "Please provide details of the principal/owner of the business"
-                        : "Please select whether the debtor is an individual or business above to complete these details"}
-                    </p>
+                    <p className="text-sm text-gray-600">Please provide details of the principal/owner of the business</p>
                   </div>
+
+                  {!detailsEnabled && (
+                    <p className="text-sm font-medium text-red-500 mb-4">
+                      Please select whether this debtor is an individual or business above before completing these details.
+                    </p>
+                  )}
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <FormField
