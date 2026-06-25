@@ -1296,7 +1296,7 @@ export class DatabaseStorage implements IStorage {
       .select({
         ...caseSubmissions,
         submittedByName: sql<string>`${users.firstName} || ' ' || ${users.lastName}`.as('submittedByName'),
-        organisationName: organisations.name,
+        clientOrganisationName: organisations.name,
       })
       .from(caseSubmissions)
       .leftJoin(users, eq(caseSubmissions.submittedBy, users.id))
@@ -1312,7 +1312,7 @@ export class DatabaseStorage implements IStorage {
       .select({
         ...caseSubmissions,
         submittedByName: sql<string>`${users.firstName} || ' ' || ${users.lastName}`.as('submittedByName'),
-        organisationName: organisations.name,
+        clientOrganisationName: organisations.name,
       })
       .from(caseSubmissions)
       .leftJoin(users, eq(caseSubmissions.submittedBy, users.id))

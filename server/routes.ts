@@ -1214,8 +1214,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Document not found" });
       }
 
-      // Serve the file
-      res.download(documentInfo.filePath, documentInfo.fileName);
+      // Serve the file — ?inline=true opens in browser, otherwise force download
+      const inline = req.query.inline === 'true';
+      if (inline) {
+        res.setHeader('Content-Disposition', `inline; filename="${documentInfo.fileName}"`);
+        res.sendFile(require('path').resolve(documentInfo.filePath));
+      } else {
+        res.download(documentInfo.filePath, documentInfo.fileName);
+      }
     } catch (error) {
       console.error("Error serving document:", error);
       res.status(500).json({ message: "Failed to serve document" });

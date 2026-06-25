@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import ExcelJS from "exceljs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useAuth } from "@/hooks/use-auth";
-import { Users, Building, Plus, Edit, Trash2, Shield, UserPlus, AlertTriangle, ShieldCheck, ShieldAlert, ArrowLeft, Activity, FileText, CreditCard, Archive, ArchiveRestore, Download, Check, Eye, EyeOff, Mail, Bell, BellOff, FilePlus, FileX, BarChart3, Search, Crown, Calendar, CalendarOff, Pencil, LogOut, RefreshCw, ChevronDown, ChevronUp, ChevronRight, Clock, Send, History, KeyRound, Copy, HelpCircle, X, ClipboardList, ClipboardX } from "lucide-react";
+import { Users, Building, Plus, Edit, Trash2, Shield, UserPlus, AlertTriangle, ShieldCheck, ShieldAlert, ArrowLeft, Activity, FileText, CreditCard, Archive, ArchiveRestore, Download, Check, Eye, EyeOff, Mail, Bell, BellOff, FilePlus, FileX, BarChart3, Search, Crown, Calendar, CalendarOff, Pencil, LogOut, RefreshCw, ChevronDown, ChevronUp, ChevronRight, Clock, Send, History, KeyRound, Copy, HelpCircle, X, ClipboardList, ClipboardX, MapPin, Phone, Banknote, User, FileImage, FileSpreadsheet, FileVideo, Receipt } from "lucide-react";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { createUserSchema, updateUserSchema, createOrganisationSchema, updateOrganisationSchema } from "@shared/schema";
@@ -40,56 +40,75 @@ function DocumentsList({ submissionId }: { submissionId: number }) {
     },
   });
 
-  if (isLoading) {
-    return <div className="text-sm text-gray-500">Loading documents...</div>;
-  }
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
 
-  if (error) {
-    return <div className="text-sm text-red-500">Error loading documents</div>;
-  }
+  const getFileStyle = (fileName: string): { icon: React.ElementType; cls: string; label: string } => {
+    const ext = (fileName.split('.').pop() || '').toLowerCase();
+    if (ext === 'pdf') return { icon: FileText, cls: 'text-red-500 bg-red-50 border-red-100', label: 'PDF' };
+    if (['doc', 'docx'].includes(ext)) return { icon: FileText, cls: 'text-blue-500 bg-blue-50 border-blue-100', label: 'Word' };
+    if (['xls', 'xlsx', 'csv'].includes(ext)) return { icon: FileSpreadsheet, cls: 'text-green-600 bg-green-50 border-green-100', label: ext.toUpperCase() };
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) return { icon: FileImage, cls: 'text-purple-500 bg-purple-50 border-purple-100', label: 'Image' };
+    if (['mp4', 'mov', 'avi', 'mkv'].includes(ext)) return { icon: FileVideo, cls: 'text-amber-500 bg-amber-50 border-amber-100', label: 'Video' };
+    return { icon: FileText, cls: 'text-gray-500 bg-gray-50 border-gray-200', label: ext.toUpperCase() || 'File' };
+  };
+
+  if (isLoading) return <div className="text-sm text-gray-500 py-6 text-center">Loading documents…</div>;
+  if (error) return <div className="text-sm text-red-500 py-6 text-center">Error loading documents</div>;
 
   if (!documents || documents.length === 0) {
     return (
-      <div className="text-center py-4">
-        <FileText className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+      <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg">
+        <FileText className="h-8 w-8 text-gray-300 mx-auto mb-2" />
         <p className="text-sm text-gray-500">No documents uploaded with this submission</p>
       </div>
     );
   }
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
   return (
-    <div className="space-y-3">
-      {documents.map((doc: any) => (
-        <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg">
-          <div className="flex items-center gap-3">
-            <FileText className="h-5 w-5 text-blue-500" />
-            <div>
-              <p className="font-medium text-sm">{doc.fileName}</p>
-              <p className="text-xs text-gray-500">
-                {formatFileSize(doc.fileSize)} • {doc.fileType} • Uploaded {new Date(doc.uploadedAt).toLocaleDateString('en-GB')}
-              </p>
+    <div className="space-y-2">
+      {documents.map((doc: any) => {
+        const { icon: Icon, cls, label } = getFileStyle(doc.fileName);
+        const baseUrl = `/api/admin/case-submissions/documents/${doc.id}`;
+        return (
+          <div key={doc.id} className="flex items-center gap-3 p-3 rounded-lg border bg-white hover:bg-gray-50 transition-colors group">
+            <div className={`flex-shrink-0 w-10 h-10 rounded-lg border flex items-center justify-center ${cls}`}>
+              <Icon className="h-5 w-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900 truncate">{doc.fileName}</p>
+              <p className="text-xs text-gray-500">{label} · {formatFileSize(doc.fileSize)} · Uploaded {new Date(doc.uploadedAt).toLocaleDateString('en-GB')}</p>
+            </div>
+            <div className="flex gap-2 flex-shrink-0">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 px-3 text-xs"
+                onClick={() => window.open(`${baseUrl}?inline=true`, '_blank')}
+                title="Open in browser"
+              >
+                <Eye className="h-3 w-3 mr-1" />
+                View
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 px-3 text-xs"
+                onClick={() => window.open(baseUrl, '_blank')}
+                title="Download file"
+              >
+                <Download className="h-3 w-3 mr-1" />
+                Download
+              </Button>
             </div>
           </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              window.open(`/api/admin/case-submissions/documents/${doc.id}`, '_blank');
-            }}
-          >
-            <Download className="h-3 w-3 mr-1" />
-            Download
-          </Button>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -245,6 +264,10 @@ interface CaseSubmission {
   submittedAt: string;
   processedAt?: string;
   processedBy?: string;
+
+  // Joined fields from API
+  submittedByName?: string;
+  clientOrganisationName?: string;
 }
 
 const DEFAULT_PAGE_SIZE = 21;
@@ -1838,157 +1861,313 @@ function CaseSubmissionsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
           </DialogHeader>
 
           {selectedSubmission && (
-            <div className="space-y-6">
-              {/* Basic Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Basic Information</CardTitle>
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label className="font-semibold">Account Number</Label>
-                    <p className="text-sm">{selectedSubmission.accountNumber}</p>
-                  </div>
-                  <div>
-                    <Label className="font-semibold">Case Name</Label>
-                    <p className="text-sm">{selectedSubmission.caseName}</p>
-                  </div>
-                  <div>
-                    <Label className="font-semibold">Status</Label>
-                    <Badge className={getStatusBadgeColor(selectedSubmission.status)}>
+            <div className="space-y-5">
+
+              {/* ── 1. Overview ── */}
+              <Card className="overflow-hidden">
+                <div className="h-1 w-full bg-acclaim-teal" />
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <CardTitle className="text-xl">{selectedSubmission.caseName}</CardTitle>
+                      <CardDescription className="mt-1">
+                        {selectedSubmission.clientOrganisationName} · Submitted {new Date(selectedSubmission.submittedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      </CardDescription>
+                    </div>
+                    <Badge className={`${getStatusBadgeColor(selectedSubmission.status)} shrink-0 text-xs py-1 px-2 capitalize`}>
                       {selectedSubmission.status}
                     </Badge>
                   </div>
-                  <div>
-                    <Label className="font-semibold">Organisation</Label>
-                    <p className="text-sm">{selectedSubmission.organisationName}</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Comprehensive Form Data */}
-              {selectedSubmission.notes && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Comprehensive Form Data</CardTitle>
-                    <CardDescription>All details captured from the submission form</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {selectedSubmission.notes.split('\n').map((line, index) => {
-                        if (!line.trim() || !line.includes(':')) return null;
-                        const [label, ...valueParts] = line.split(':');
-                        const value = valueParts.join(':').trim();
-                        
-                        return (
-                          <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-2 border-b pb-2">
-                            <Label className="font-semibold text-sm">{label.trim()}</Label>
-                            <p className="text-sm md:col-span-2">{value}</p>
-                          </div>
-                        );
-                      })}
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="space-y-0.5">
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Submitted By</p>
+                      <p className="text-sm text-gray-900">{selectedSubmission.submittedByName || selectedSubmission.submittedBy}</p>
                     </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Contact and Address Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Contact & Address</CardTitle>
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label className="font-semibold">Debtor Email</Label>
-                    <p className="text-sm">{selectedSubmission.debtorEmail || 'Not provided'}</p>
-                  </div>
-                  <div>
-                    <Label className="font-semibold">Debtor Phone</Label>
-                    <p className="text-sm">{selectedSubmission.debtorPhone || 'Not provided'}</p>
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label className="font-semibold">Debtor Address</Label>
-                    <p className="text-sm">{selectedSubmission.debtorAddress || 'Not provided'}</p>
+                    <div className="space-y-0.5">
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Client Name</p>
+                      <p className="text-sm text-gray-900">{selectedSubmission.clientName}</p>
+                    </div>
+                    <div className="space-y-0.5">
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Client Email</p>
+                      <p className="text-sm text-gray-900 break-all">{selectedSubmission.clientEmail}</p>
+                    </div>
+                    {selectedSubmission.clientPhone && (
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Client Phone</p>
+                        <p className="text-sm text-gray-900">{selectedSubmission.clientPhone}</p>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Financial Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Financial Details</CardTitle>
+              {/* ── 2. Debtor Details ── */}
+              <Card className="overflow-hidden">
+                <div className="h-1 w-full bg-acclaim-teal" />
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    {selectedSubmission.debtorType === 'organisation'
+                      ? <Building className="h-4 w-4 text-acclaim-teal" />
+                      : <User className="h-4 w-4 text-acclaim-teal" />}
+                    Debtor Details
+                  </CardTitle>
+                  <CardDescription>
+                    {selectedSubmission.debtorType === 'organisation' ? 'Organisation / Limited company' : 'Individual / Sole Trader'}
+                  </CardDescription>
                 </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label className="font-semibold">Original Amount</Label>
-                    <p className="text-sm">{formatCurrency(selectedSubmission.originalAmount)}</p>
-                  </div>
-                  <div>
-                    <Label className="font-semibold">Outstanding Amount</Label>
-                    <p className="text-sm">{formatCurrency(selectedSubmission.outstandingAmount)}</p>
-                  </div>
-                  <div>
-                    <Label className="font-semibold">Debtor Type</Label>
-                    <p className="text-sm">{selectedSubmission.debtorType}</p>
-                  </div>
-                  <div>
-                    <Label className="font-semibold">Stage</Label>
-                    <p className="text-sm">{selectedSubmission.stage}</p>
-                  </div>
+                <CardContent className="space-y-5">
+
+                  {/* Organisation-specific fields */}
+                  {selectedSubmission.debtorType === 'organisation' && (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      {selectedSubmission.organisationName && (
+                        <div className="space-y-0.5">
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Organisation Name</p>
+                          <p className="text-sm text-gray-900">{selectedSubmission.organisationName}</p>
+                        </div>
+                      )}
+                      {selectedSubmission.organisationTradingName && (
+                        <div className="space-y-0.5">
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Trading Name</p>
+                          <p className="text-sm text-gray-900">{selectedSubmission.organisationTradingName}</p>
+                        </div>
+                      )}
+                      {selectedSubmission.companyNumber && (
+                        <div className="space-y-0.5">
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Company Number</p>
+                          <p className="text-sm text-gray-900">{selectedSubmission.companyNumber}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Individual-specific fields */}
+                  {selectedSubmission.debtorType === 'individual' && (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Type</p>
+                        <p className="text-sm text-gray-900">
+                          {selectedSubmission.individualType === 'business' ? 'Sole Trader / Business' : 'Individual'}
+                        </p>
+                      </div>
+                      {(selectedSubmission.principalFirstName || selectedSubmission.principalLastName) && (
+                        <div className="space-y-0.5">
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Full Name</p>
+                          <p className="text-sm text-gray-900">
+                            {[selectedSubmission.principalSalutation, selectedSubmission.principalFirstName, selectedSubmission.principalLastName].filter(Boolean).join(' ')}
+                          </p>
+                        </div>
+                      )}
+                      {selectedSubmission.tradingName && (
+                        <div className="space-y-0.5">
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Trading Name</p>
+                          <p className="text-sm text-gray-900">{selectedSubmission.tradingName}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Address */}
+                  {(selectedSubmission.addressLine1 || selectedSubmission.city || selectedSubmission.postcode) && (
+                    <div className="border-t pt-4">
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                        <MapPin className="h-3.5 w-3.5" />Address
+                      </p>
+                      <div className="text-sm text-gray-900 space-y-0.5">
+                        {selectedSubmission.addressLine1 && <p>{selectedSubmission.addressLine1}</p>}
+                        {selectedSubmission.addressLine2 && <p>{selectedSubmission.addressLine2}</p>}
+                        <p>{[selectedSubmission.city, selectedSubmission.county, selectedSubmission.postcode].filter(Boolean).join(', ')}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Contact */}
+                  {(selectedSubmission.mainPhone || selectedSubmission.altPhone || selectedSubmission.mainEmail || selectedSubmission.altEmail) && (
+                    <div className="border-t pt-4">
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                        <Phone className="h-3.5 w-3.5" />Contact Details
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {selectedSubmission.mainPhone && (
+                          <div className="space-y-0.5">
+                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Main Telephone</p>
+                            <p className="text-sm text-gray-900">{selectedSubmission.mainPhone}</p>
+                          </div>
+                        )}
+                        {selectedSubmission.altPhone && (
+                          <div className="space-y-0.5">
+                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Alternative Telephone</p>
+                            <p className="text-sm text-gray-900">{selectedSubmission.altPhone}</p>
+                          </div>
+                        )}
+                        {selectedSubmission.mainEmail && (
+                          <div className="space-y-0.5">
+                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Main Email</p>
+                            <p className="text-sm text-gray-900 break-all">{selectedSubmission.mainEmail}</p>
+                          </div>
+                        )}
+                        {selectedSubmission.altEmail && (
+                          <div className="space-y-0.5">
+                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Alternative Email</p>
+                            <p className="text-sm text-gray-900 break-all">{selectedSubmission.altEmail}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
-              {/* Documents Section */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
+              {/* ── 3. Debt & Payment Details ── */}
+              <Card className="overflow-hidden">
+                <div className="h-1 w-full bg-acclaim-teal" />
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Banknote className="h-4 w-4 text-acclaim-teal" />
+                    Debt & Payment Details
+                  </CardTitle>
+                  <CardDescription>Outstanding debt information and payment terms</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-5">
+
+                  {/* Amount */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="space-y-0.5 sm:col-span-2">
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Debt Amount</p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {selectedSubmission.totalDebtAmount != null
+                          ? new Intl.NumberFormat('en-GB', { style: 'currency', currency: selectedSubmission.currency || 'GBP' }).format(Number(selectedSubmission.totalDebtAmount))
+                          : '—'}
+                      </p>
+                    </div>
+                    <div className="space-y-0.5">
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Currency</p>
+                      <p className="text-sm text-gray-900">{selectedSubmission.currency || 'GBP'}</p>
+                    </div>
+                  </div>
+
+                  {/* Debt details */}
+                  {selectedSubmission.debtDetails && (
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Debt Details</p>
+                      <p className="text-sm text-gray-900 whitespace-pre-wrap bg-gray-50 rounded-md p-3 border">{selectedSubmission.debtDetails}</p>
+                    </div>
+                  )}
+
+                  {/* Payment terms */}
+                  <div className="border-t pt-4">
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                      <Receipt className="h-3.5 w-3.5" />Payment Terms
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Terms Type</p>
+                        <p className="text-sm text-gray-900">
+                          {selectedSubmission.paymentTermsType === 'days_from_invoice' ? 'Days from invoice date'
+                            : selectedSubmission.paymentTermsType === 'days_from_month_end' ? 'Days from end of month'
+                            : selectedSubmission.paymentTermsType === 'other' ? 'Other'
+                            : '—'}
+                        </p>
+                      </div>
+                      {selectedSubmission.paymentTermsDays != null && selectedSubmission.paymentTermsType !== 'other' && (
+                        <div className="space-y-0.5">
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Number of Days</p>
+                          <p className="text-sm text-gray-900">{selectedSubmission.paymentTermsDays}</p>
+                        </div>
+                      )}
+                      {selectedSubmission.paymentTermsOther && (
+                        <div className="space-y-0.5 sm:col-span-2">
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Terms Description</p>
+                          <p className="text-sm text-gray-900">{selectedSubmission.paymentTermsOther}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Invoice details */}
+                  <div className="border-t pt-4">
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                      <Calendar className="h-3.5 w-3.5" />Invoice Details
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      {selectedSubmission.singleInvoice && (
+                        <div className="space-y-0.5">
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Single Invoice?</p>
+                          <p className="text-sm text-gray-900">
+                            {selectedSubmission.singleInvoice === 'yes' ? 'Yes — single invoice' : 'No — multiple invoices'}
+                          </p>
+                        </div>
+                      )}
+                      {selectedSubmission.firstOverdueDate && (
+                        <div className="space-y-0.5">
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">First Overdue Date</p>
+                          <p className="text-sm text-gray-900">{selectedSubmission.firstOverdueDate}</p>
+                        </div>
+                      )}
+                      {selectedSubmission.lastOverdueDate && (
+                        <div className="space-y-0.5">
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Last Overdue Date</p>
+                          <p className="text-sm text-gray-900">{selectedSubmission.lastOverdueDate}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Additional info */}
+                  {selectedSubmission.additionalInfo && (
+                    <div className="border-t pt-4 space-y-1">
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Additional Information</p>
+                      <p className="text-sm text-gray-900 whitespace-pre-wrap bg-gray-50 rounded-md p-3 border">{selectedSubmission.additionalInfo}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* ── 4. Supporting Documents ── */}
+              <Card className="overflow-hidden">
+                <div className="h-1 w-full bg-acclaim-teal" />
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <FileText className="h-4 w-4 text-acclaim-teal" />
                     Supporting Documents
                   </CardTitle>
-                  <CardDescription>Files uploaded with this case submission</CardDescription>
+                  <CardDescription>Files uploaded with this case submission — click View to open in browser or Download to save</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <DocumentsList submissionId={selectedSubmission.id} />
                 </CardContent>
               </Card>
 
-              {/* Submission Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Submission Information</CardTitle>
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* ── 5. Submission meta ── */}
+              <div className="rounded-lg border bg-gray-50/60 p-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
                   <div>
-                    <Label className="font-semibold">Submitted By</Label>
-                    <p className="text-sm">{selectedSubmission.submittedBy}</p>
+                    <p className="text-xs text-gray-500 mb-0.5">Submission ID</p>
+                    <p className="font-medium text-gray-900">#{selectedSubmission.id}</p>
                   </div>
                   <div>
-                    <Label className="font-semibold">Submitted Date</Label>
-                    <p className="text-sm">{new Date(selectedSubmission.submittedAt).toLocaleDateString('en-GB')}</p>
+                    <p className="text-xs text-gray-500 mb-0.5">Date Submitted</p>
+                    <p className="font-medium text-gray-900">{new Date(selectedSubmission.submittedAt).toLocaleDateString('en-GB')}</p>
                   </div>
                   {selectedSubmission.processedBy && (
                     <>
                       <div>
-                        <Label className="font-semibold">Processed By</Label>
-                        <p className="text-sm">{selectedSubmission.processedBy}</p>
+                        <p className="text-xs text-gray-500 mb-0.5">Processed By</p>
+                        <p className="font-medium text-gray-900">{selectedSubmission.processedBy}</p>
                       </div>
                       <div>
-                        <Label className="font-semibold">Processed Date</Label>
-                        <p className="text-sm">{selectedSubmission.processedAt ? new Date(selectedSubmission.processedAt).toLocaleDateString('en-GB') : 'N/A'}</p>
+                        <p className="text-xs text-gray-500 mb-0.5">Date Processed</p>
+                        <p className="font-medium text-gray-900">{selectedSubmission.processedAt ? new Date(selectedSubmission.processedAt).toLocaleDateString('en-GB') : '—'}</p>
                       </div>
                     </>
                   )}
-                  {selectedSubmission.externalRef && (
-                    <div className="md:col-span-2">
-                      <Label className="font-semibold">External Reference</Label>
-                      <p className="text-sm">{selectedSubmission.externalRef}</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
-              {/* Actions */}
-              <div className="flex justify-end gap-3 pt-4 border-t">
+              {/* ── Actions ── */}
+              <div className="flex justify-end gap-3 pt-2 border-t">
                 {selectedSubmission.status === 'pending' && (
                   <>
                     <Button
@@ -1998,7 +2177,7 @@ function CaseSubmissionsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
                         setShowDetailsDialog(false);
                       }}
                       disabled={updateStatusMutation.isPending}
-                      className="text-green-600 hover:text-green-700"
+                      className="text-green-600 hover:text-green-700 border-green-200 hover:border-green-300"
                     >
                       <Check className="h-4 w-4 mr-2" />
                       Mark as Processed
@@ -2010,7 +2189,7 @@ function CaseSubmissionsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
                         setShowDetailsDialog(false);
                       }}
                       disabled={updateStatusMutation.isPending}
-                      className="text-red-600 hover:text-red-700"
+                      className="text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
                     >
                       <AlertTriangle className="h-4 w-4 mr-2" />
                       Mark as Rejected
