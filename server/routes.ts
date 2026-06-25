@@ -5485,6 +5485,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/admin/reports/inactive-cases/count", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { INACTIVE_DAYS_THRESHOLD, INACTIVE_CASES_ACTIVE_FROM } = await import("./inactive-cases-report");
+      const cases = await storage.getInactiveCases(INACTIVE_DAYS_THRESHOLD, INACTIVE_CASES_ACTIVE_FROM);
+      res.json({ count: cases.length });
+    } catch (error) {
+      console.error("Error counting inactive cases:", error);
+      res.status(500).json({ message: "Failed to count inactive cases" });
+    }
+  });
+
   app.post("/api/admin/reports/inactive-cases", isAuthenticated, isAdmin, async (req, res) => {
     try {
       const { runInactiveCasesReportNow } = await import("./inactive-cases-report");

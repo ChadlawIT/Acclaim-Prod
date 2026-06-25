@@ -2897,12 +2897,17 @@ export default function AdminEnhanced() {
     },
   });
 
+  const { data: inactiveCasesCountData, refetch: refetchInactiveCasesCount } = useQuery<{ count: number }>({
+    queryKey: ["/api/admin/reports/inactive-cases/count"],
+  });
+
   const sendInactiveCasesMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/admin/reports/inactive-cases");
       return await response.json();
     },
     onSuccess: (data) => {
+      refetchInactiveCasesCount();
       toast({
         title: data.sent ? "Report Sent" : "Nothing to Send",
         description: data.message,
@@ -5212,6 +5217,14 @@ export default function AdminEnhanced() {
                   <p className="text-xs text-muted-foreground mt-0.5">
                     Sends the inactive cases report email now, bypassing the Thursday 8 am schedule. Cases inactive for 30+ days are included.
                   </p>
+                  {inactiveCasesCountData !== undefined && (
+                    <p
+                      data-testid="text-inactive-cases-count"
+                      className="text-xs font-medium mt-1.5 text-amber-700 dark:text-amber-400"
+                    >
+                      {inactiveCasesCountData.count} inactive {inactiveCasesCountData.count === 1 ? "case" : "cases"} currently
+                    </p>
+                  )}
                 </div>
                 <Button
                   data-testid="button-send-inactive-cases-report"
