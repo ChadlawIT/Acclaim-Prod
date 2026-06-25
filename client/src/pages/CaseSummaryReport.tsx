@@ -666,7 +666,6 @@ export default function CaseSummaryReport() {
           </Button>
         </div>
       </div>
-
       {/* Filter Control */}
       <Card className="mb-4 sm:mb-6">
         <CardHeader className="pb-2 sm:pb-4">
@@ -708,7 +707,6 @@ export default function CaseSummaryReport() {
           </div>
         </CardContent>
       </Card>
-
       {/* Summary Statistics */}
       <Card className="mb-4 sm:mb-8">
         <CardHeader className="pb-2 sm:pb-4">
@@ -773,7 +771,6 @@ export default function CaseSummaryReport() {
           </div>
         </CardContent>
       </Card>
-
       {/* Recent Updates Selector */}
       <Card className="mb-4 sm:mb-6">
         <CardHeader className="pb-2 sm:pb-4">
@@ -784,9 +781,7 @@ export default function CaseSummaryReport() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-            <p className="text-sm text-gray-600 flex-1">
-              Optionally include the most recent updates from Acclaim on each case — notes or messages sent by the team, including updates pushed through from SOS. These appear as extra columns in the Excel and PDF exports, and in the table below. Select how many updates to show per case (1–5), with the most recent first.
-            </p>
+            <p className="text-sm text-gray-600 flex-1">Optionally include the most recent updates from Acclaim on each case — notes or messages sent by the team. These appear as extra columns in the Excel and PDF exports, and in the table below. Select how many updates to show per case (1–5), with the most recent first.</p>
             <div className="flex items-center gap-2 shrink-0">
               <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Updates per case:</label>
               <Select
@@ -809,7 +804,6 @@ export default function CaseSummaryReport() {
           </div>
         </CardContent>
       </Card>
-
       {/* Cases Table */}
       <Card>
         <CardHeader className="pb-2 sm:pb-4">
@@ -936,7 +930,6 @@ export default function CaseSummaryReport() {
           )}
         </CardContent>
       </Card>
-
       {/* Footer */}
       <div className="mt-8 text-center text-sm text-gray-500">
         <p>All amounts are in GBP. Outstanding amounts may include interest and recovery costs.</p>
