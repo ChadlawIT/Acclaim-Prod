@@ -1878,54 +1878,46 @@ function CaseSubmissionsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
                     </div>
                   )}
 
-                  {/* Address */}
-                  {(selectedSubmission.addressLine1 || selectedSubmission.city || selectedSubmission.postcode) && (
-                    <div className="border-t pt-4">
-                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-1.5">
-                        <MapPin className="h-3.5 w-3.5" />Address
-                      </p>
-                      <div className="text-sm text-gray-900 space-y-0.5">
-                        {selectedSubmission.addressLine1 && <p>{selectedSubmission.addressLine1}</p>}
-                        {selectedSubmission.addressLine2 && <p>{selectedSubmission.addressLine2}</p>}
-                        <p>{[selectedSubmission.city, selectedSubmission.county, selectedSubmission.postcode].filter(Boolean).join(', ')}</p>
-                      </div>
+                  {/* Address — always shown */}
+                  <div className="border-t pt-4">
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                      <MapPin className="h-3.5 w-3.5" />Address
+                    </p>
+                    <div className="text-sm text-gray-900 space-y-0.5">
+                      <p>{selectedSubmission.addressLine1 || <span className="text-gray-400 italic">No address provided</span>}</p>
+                      {selectedSubmission.addressLine2 && <p>{selectedSubmission.addressLine2}</p>}
+                      <p>{[selectedSubmission.city, selectedSubmission.county, selectedSubmission.postcode].filter(Boolean).join(', ') || <span className="text-gray-400 italic">—</span>}</p>
                     </div>
-                  )}
+                  </div>
 
-                  {/* Contact */}
-                  {(selectedSubmission.mainPhone || selectedSubmission.altPhone || selectedSubmission.mainEmail || selectedSubmission.altEmail) && (
-                    <div className="border-t pt-4">
-                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-1.5">
-                        <Phone className="h-3.5 w-3.5" />Contact Details
-                      </p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {selectedSubmission.mainPhone && (
-                          <div className="space-y-0.5">
-                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Main Telephone</p>
-                            <p className="text-sm text-gray-900">{selectedSubmission.mainPhone}</p>
-                          </div>
-                        )}
-                        {selectedSubmission.altPhone && (
-                          <div className="space-y-0.5">
-                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Alternative Telephone</p>
-                            <p className="text-sm text-gray-900">{selectedSubmission.altPhone}</p>
-                          </div>
-                        )}
-                        {selectedSubmission.mainEmail && (
-                          <div className="space-y-0.5">
-                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Main Email</p>
-                            <p className="text-sm text-gray-900 break-all">{selectedSubmission.mainEmail}</p>
-                          </div>
-                        )}
-                        {selectedSubmission.altEmail && (
-                          <div className="space-y-0.5">
-                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Alternative Email</p>
-                            <p className="text-sm text-gray-900 break-all">{selectedSubmission.altEmail}</p>
-                          </div>
-                        )}
+                  {/* Contact — always shown */}
+                  <div className="border-t pt-4">
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                      <Phone className="h-3.5 w-3.5" />Contact Details
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Main Telephone</p>
+                        <p className="text-sm text-gray-900">{selectedSubmission.mainPhone || <span className="text-gray-400 italic">Not provided</span>}</p>
                       </div>
+                      {selectedSubmission.altPhone && (
+                        <div className="space-y-0.5">
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Alternative Telephone</p>
+                          <p className="text-sm text-gray-900">{selectedSubmission.altPhone}</p>
+                        </div>
+                      )}
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Main Email</p>
+                        <p className="text-sm text-gray-900 break-all">{selectedSubmission.mainEmail || <span className="text-gray-400 italic">Not provided</span>}</p>
+                      </div>
+                      {selectedSubmission.altEmail && (
+                        <div className="space-y-0.5">
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Alternative Email</p>
+                          <p className="text-sm text-gray-900 break-all">{selectedSubmission.altEmail}</p>
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </CardContent>
               </Card>
 
@@ -2001,24 +1993,28 @@ function CaseSubmissionsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
                       <Calendar className="h-3.5 w-3.5" />Invoice Details
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      {selectedSubmission.singleInvoice && (
-                        <div className="space-y-0.5">
-                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Single Invoice?</p>
-                          <p className="text-sm text-gray-900">
-                            {selectedSubmission.singleInvoice === 'yes' ? 'Yes — single invoice' : 'No — multiple invoices'}
-                          </p>
-                        </div>
-                      )}
-                      {selectedSubmission.firstOverdueDate && (
-                        <div className="space-y-0.5">
-                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">First Overdue Date</p>
-                          <p className="text-sm text-gray-900">{selectedSubmission.firstOverdueDate}</p>
-                        </div>
-                      )}
-                      {selectedSubmission.lastOverdueDate && (
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Single Invoice?</p>
+                        <p className="text-sm text-gray-900">
+                          {selectedSubmission.singleInvoice === 'yes' ? 'Yes — single invoice'
+                            : selectedSubmission.singleInvoice === 'no' ? 'No — multiple invoices'
+                            : <span className="text-gray-400 italic">Not specified</span>}
+                        </p>
+                      </div>
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                          {selectedSubmission.singleInvoice === 'no' ? 'First Overdue Date' : 'Overdue Date'}
+                        </p>
+                        <p className="text-sm text-gray-900">
+                          {selectedSubmission.firstOverdueDate || <span className="text-gray-400 italic">Not provided</span>}
+                        </p>
+                      </div>
+                      {selectedSubmission.singleInvoice === 'no' && (
                         <div className="space-y-0.5">
                           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Last Overdue Date</p>
-                          <p className="text-sm text-gray-900">{selectedSubmission.lastOverdueDate}</p>
+                          <p className="text-sm text-gray-900">
+                            {selectedSubmission.lastOverdueDate || <span className="text-gray-400 italic">Not provided</span>}
+                          </p>
                         </div>
                       )}
                     </div>
