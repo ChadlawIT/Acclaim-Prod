@@ -144,11 +144,6 @@ function DocumentsCell({ submissionId }: { submissionId: number }) {
           {documentCount} {documentCount === 1 ? 'document' : 'documents'}
         </span>
       </div>
-      {documentCount > 0 && (
-        <div className="text-xs text-blue-500 mt-1">
-          View in details
-        </div>
-      )}
     </div>
   );
 }
@@ -1574,24 +1569,32 @@ function CaseSubmissionsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
           <Badge variant="outline" className="text-sm">
             {submissions.length} submission{submissions.length !== 1 ? 's' : ''}
           </Badge>
-          {selectedSubmissions.size > 0 && (
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="text-sm">
-                {selectedSubmissions.size} selected
-              </Badge>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => {
-                  setSelectedSubmissions(new Set());
-                  setSelectAll(false);
-                }}
-                className="text-xs"
-              >
-                Clear
-              </Button>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={selectAll}
+                onChange={(e) => handleSelectAll(e.target.checked)}
+                className="rounded border-gray-300"
+              />
+              Select all
+            </label>
+            {selectedSubmissions.size > 0 && (
+              <>
+                <Badge variant="secondary" className="text-sm">
+                  {selectedSubmissions.size} selected
+                </Badge>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => { setSelectedSubmissions(new Set()); setSelectAll(false); }}
+                  className="text-xs"
+                >
+                  Clear
+                </Button>
+              </>
+            )}
+          </div>
         </div>
         <Button 
           onClick={exportSubmissionsToCSV} 
@@ -1612,228 +1615,134 @@ function CaseSubmissionsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
 
       {/* Scroll anchor for pagination */}
       <div ref={submissionsTableTopRef} className="scroll-mt-4" />
-      {/* Submissions Table */}
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[50px]">
-                <input
-                  type="checkbox"
-                  checked={selectAll}
-                  onChange={(e) => handleSelectAll(e.target.checked)}
-                  className="rounded"
-                />
-              </TableHead>
-              <TableHead>Case Name</TableHead>
-              <TableHead>Client</TableHead>
-              <TableHead>Organisation</TableHead>
-              <TableHead>Debtor Type</TableHead>
-              <TableHead>Debtor Details</TableHead>
-              <TableHead>Address</TableHead>
-              <TableHead>Contact</TableHead>
-              <TableHead>Debt Amount</TableHead>
-              <TableHead>Payment Terms</TableHead>
-              <TableHead>Documents</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Submitted</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedSubmissions.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={13} className="text-center py-8">
-                  <div className="flex flex-col items-center gap-2">
-                    <FileText className="h-8 w-8 text-gray-400" />
-                    <p className="text-gray-500">No case submissions found</p>
+
+      {/* Submissions Card Grid */}
+      {paginatedSubmissions.length === 0 ? (
+        <div className="text-center py-16 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl">
+          <FileText className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500 font-medium">No case submissions found</p>
+          <p className="text-sm text-gray-400 mt-1">Try adjusting your filter</p>
+        </div>
+      ) : (
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          {paginatedSubmissions.map((submission: CaseSubmission) => {
+            const debtorName = submission.debtorType === 'organisation'
+              ? (submission.organisationName || submission.organisationTradingName || 'Unnamed Organisation')
+              : ([submission.principalSalutation, submission.principalFirstName, submission.principalLastName].filter(Boolean).join(' ') || submission.tradingName || 'Unnamed Individual');
+            const isSelected = selectedSubmissions.has(submission.id);
+            return (
+              <div
+                key={submission.id}
+                data-testid={`card-submission-${submission.id}`}
+                className={`relative rounded-xl border bg-white dark:bg-gray-900 shadow-sm hover:shadow-md transition-all duration-150 flex flex-col overflow-hidden ${isSelected ? 'ring-2 ring-acclaim-teal border-acclaim-teal/40' : 'border-gray-200 dark:border-gray-700'}`}
+              >
+                {/* Checkbox — top-left corner */}
+                <div className="absolute top-3.5 left-3.5 z-10">
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={(e) => { e.stopPropagation(); handleRowSelect(submission.id, e.target.checked); }}
+                    className="rounded border-gray-300 cursor-pointer"
+                    title="Select for export"
+                  />
+                </div>
+
+                {/* Main body — clickable to open details */}
+                <button
+                  className="flex-1 text-left px-4 pt-3 pb-3 pl-9 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-acclaim-teal/30"
+                  onClick={() => { setSelectedSubmission(submission); setShowDetailsDialog(true); }}
+                >
+                  {/* Case name + status badge */}
+                  <div className="flex items-start justify-between gap-2 mb-1.5">
+                    <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm leading-snug truncate flex-1 min-w-0">{submission.caseName}</p>
+                    <Badge className={`${getStatusBadgeColor(submission.status)} shrink-0 text-xs capitalize`}>{submission.status}</Badge>
                   </div>
-                </TableCell>
-              </TableRow>
-            ) : (
-              paginatedSubmissions.map((submission: CaseSubmission) => (
-                <TableRow key={submission.id}>
-                  <TableCell className="w-[50px]">
-                    <input
-                      type="checkbox"
-                      checked={selectedSubmissions.has(submission.id)}
-                      onChange={(e) => handleRowSelect(submission.id, e.target.checked)}
-                      className="rounded"
-                    />
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    <div className="max-w-[150px]">
-                      <div className="font-medium truncate">{submission.caseName}</div>
-                      <div className="text-xs text-gray-500">ID: {submission.id}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm max-w-[120px]">
-                      <div className="font-medium truncate">{submission.clientName}</div>
-                      <div className="text-gray-500 truncate">{submission.clientEmail}</div>
-                      {submission.clientPhone && <div className="text-gray-500 truncate">{submission.clientPhone}</div>}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm max-w-[120px]">
-                      <div className="font-medium truncate">{(submission as any).organisationName || 'Unknown'}</div>
-                      <div className="text-xs text-gray-500">ID: {submission.organisationId}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      <Badge variant="outline" className="text-xs">
-                        {submission.debtorType === 'individual' ? 'Individual' : 'Organisation'}
-                      </Badge>
-                      {submission.individualType && (
-                        <div className="text-xs text-gray-500 mt-1">{submission.individualType}</div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm max-w-[150px]">
-                      {submission.debtorType === 'organisation' ? (
-                        <div>
-                          <div className="font-medium truncate">{submission.organisationName}</div>
-                          {submission.organisationTradingName && (
-                            <div className="text-gray-500 truncate">Trading: {submission.organisationTradingName}</div>
-                          )}
-                          {submission.companyNumber && (
-                            <div className="text-gray-500 truncate">Co: {submission.companyNumber}</div>
-                          )}
-                        </div>
-                      ) : (
-                        <div>
-                          {submission.tradingName ? (
-                            <div className="font-medium truncate">{submission.tradingName}</div>
-                          ) : (
-                            <div className="font-medium truncate">
-                              {submission.principalSalutation} {submission.principalFirstName} {submission.principalLastName}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm max-w-[120px]">
-                      <div className="truncate">{submission.addressLine1}</div>
-                      {submission.addressLine2 && <div className="truncate text-gray-500">{submission.addressLine2}</div>}
-                      <div className="truncate">{submission.city}, {submission.county}</div>
-                      <div className="truncate font-medium">{submission.postcode}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm max-w-[120px]">
-                      {submission.mainPhone && <div className="truncate">{submission.mainPhone}</div>}
-                      {submission.altPhone && <div className="truncate text-gray-500">{submission.altPhone}</div>}
-                      {submission.mainEmail && <div className="truncate">{submission.mainEmail}</div>}
-                      {submission.altEmail && <div className="truncate text-gray-500">{submission.altEmail}</div>}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      <div className="font-medium">£{submission.totalDebtAmount?.toLocaleString()}</div>
-                      <div className="text-gray-500">{submission.currency || 'GBP'}</div>
-                      {submission.singleInvoice && (
-                        <div className="text-xs text-gray-500">Single: {submission.singleInvoice}</div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm max-w-[100px]">
-                      {submission.paymentTermsType && (
-                        <div className="truncate">
-                          {submission.paymentTermsDays && `${submission.paymentTermsDays} days`}
-                          {submission.paymentTermsType === 'days_from_invoice' && ' from invoice'}
-                          {submission.paymentTermsType === 'days_from_month_end' && ' from month end'}
-                          {submission.paymentTermsType === 'other' && submission.paymentTermsOther}
-                        </div>
-                      )}
-                      {submission.firstOverdueDate && (
-                        <div className="text-xs text-gray-500">First: {submission.firstOverdueDate}</div>
-                      )}
-                      {submission.lastOverdueDate && (
-                        <div className="text-xs text-gray-500">Last: {submission.lastOverdueDate}</div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <DocumentsCell submissionId={submission.id} />
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={getStatusBadgeColor(submission.status)}>
-                      {submission.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      <div>{new Date(submission.submittedAt).toLocaleDateString('en-GB')}</div>
-                      <div className="text-gray-500">by {submission.submittedBy}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setSelectedSubmission(submission);
-                          setShowDetailsDialog(true);
-                        }}
-                        className="text-blue-600 hover:text-blue-700"
-                        title="View submission details"
-                      >
-                        <Eye className="h-3 w-3" />
-                      </Button>
-                      {submission.status === 'pending' && (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => updateStatusMutation.mutate({ id: submission.id, status: 'processed' })}
-                            disabled={updateStatusMutation.isPending}
-                            className="text-green-600 hover:text-green-700"
-                            title="Mark as processed"
-                          >
-                            <Check className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => updateStatusMutation.mutate({ id: submission.id, status: 'rejected' })}
-                            disabled={updateStatusMutation.isPending}
-                            className="text-red-600 hover:text-red-700"
-                            title="Reject submission"
-                          >
-                            <AlertTriangle className="h-3 w-3" />
-                          </Button>
-                        </>
-                      )}
-                      {isSuperAdmin && (
+
+                  {/* Debtor name */}
+                  <p className="text-sm text-gray-700 dark:text-gray-300 font-medium truncate mb-0.5">{debtorName}</p>
+
+                  {/* Org + date */}
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate mb-3">
+                    {submission.clientOrganisationName || 'Unknown organisation'} · {new Date(submission.submittedAt).toLocaleDateString('en-GB')}
+                  </p>
+
+                  {/* Chips */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {submission.totalDebtAmount != null && (
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-gray-800 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">
+                        <Banknote className="h-3 w-3 text-acclaim-teal" />
+                        {new Intl.NumberFormat('en-GB', { style: 'currency', currency: submission.currency || 'GBP', maximumFractionDigits: 0 }).format(Number(submission.totalDebtAmount))}
+                      </span>
+                    )}
+                    <span className="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 px-2 py-0.5 rounded-full">
+                      {submission.debtorType === 'organisation' ? <Building className="h-3 w-3" /> : <User className="h-3 w-3" />}
+                      {submission.debtorType === 'organisation' ? 'Organisation' : 'Individual'}
+                    </span>
+                  </div>
+                </button>
+
+                {/* Footer strip — doc count + actions */}
+                <div className="flex items-center justify-between gap-1 px-3 py-2 border-t border-gray-100 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-800/30">
+                  <DocumentsCell submissionId={submission.id} />
+                  <div className="flex items-center gap-0.5">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => { setSelectedSubmission(submission); setShowDetailsDialog(true); }}
+                      className="h-7 px-2 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                      title="View full details"
+                    >
+                      <Eye className="h-3.5 w-3.5 mr-1" />
+                      View
+                    </Button>
+                    {submission.status === 'pending' && (
+                      <>
                         <Button
                           size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            if (confirm('Are you sure you want to delete this submission?')) {
-                              deleteSubmissionMutation.mutate(submission.id);
-                            }
-                          }}
-                          disabled={deleteSubmissionMutation.isPending}
-                          className="text-red-600 hover:text-red-700"
-                          title="Delete submission permanently"
+                          variant="ghost"
+                          onClick={(e) => { e.stopPropagation(); updateStatusMutation.mutate({ id: submission.id, status: 'processed' }); }}
+                          disabled={updateStatusMutation.isPending}
+                          className="h-7 px-2 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
+                          title="Mark as processed"
                         >
-                          <Trash2 className="h-3 w-3" />
+                          <Check className="h-3.5 w-3.5" />
                         </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => { e.stopPropagation(); updateStatusMutation.mutate({ id: submission.id, status: 'rejected' }); }}
+                          disabled={updateStatusMutation.isPending}
+                          className="h-7 px-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                          title="Reject submission"
+                        >
+                          <AlertTriangle className="h-3.5 w-3.5" />
+                        </Button>
+                      </>
+                    )}
+                    {isSuperAdmin && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm('Are you sure you want to delete this submission?')) {
+                            deleteSubmissionMutation.mutate(submission.id);
+                          }
+                        }}
+                        disabled={deleteSubmissionMutation.isPending}
+                        className="h-7 px-2 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                        title="Delete submission permanently"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Pagination */}
       <Pagination 
