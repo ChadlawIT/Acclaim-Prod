@@ -749,7 +749,7 @@ export default function SubmitCase() {
                     )}
                   />
                 </div>
-              ) : (
+              ) : debtorType === "individual" ? (
                 <div className="space-y-4">
                   <FormField
                     control={form.control}
@@ -781,7 +781,7 @@ export default function SubmitCase() {
                     )}
                   />
                 </div>
-              )}
+              ) : null}
 
               {/* Principal of Business Details - disabled until an individual/business type is selected */}
               {debtorType === "individual" && (() => {
@@ -874,6 +874,12 @@ export default function SubmitCase() {
                 );
               })()}
 
+              {!debtorType && (
+                <p className="text-sm font-medium text-red-500">
+                  Please select the type of debtor above before completing these details.
+                </p>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -882,7 +888,7 @@ export default function SubmitCase() {
                     <FormItem>
                       <FormLabel>Address Line 1 <span className="text-red-500">*</span></FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Enter address line 1" />
+                        <Input {...field} placeholder="Enter address line 1" disabled={!debtorType} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -895,7 +901,7 @@ export default function SubmitCase() {
                     <FormItem>
                       <FormLabel>Address Line 2 (Optional)</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Enter address line 2" />
+                        <Input {...field} placeholder="Enter address line 2" disabled={!debtorType} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -911,7 +917,7 @@ export default function SubmitCase() {
                     <FormItem>
                       <FormLabel>City <span className="text-red-500">*</span></FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Enter city" />
+                        <Input {...field} placeholder="Enter city" disabled={!debtorType} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -924,7 +930,7 @@ export default function SubmitCase() {
                     <FormItem>
                       <FormLabel>County (Optional)</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Enter county" />
+                        <Input {...field} placeholder="Enter county" disabled={!debtorType} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -937,7 +943,7 @@ export default function SubmitCase() {
                     <FormItem>
                       <FormLabel>Postcode <span className="text-red-500">*</span></FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Enter postcode" />
+                        <Input {...field} placeholder="Enter postcode" disabled={!debtorType} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -953,7 +959,7 @@ export default function SubmitCase() {
                     <FormItem>
                       <FormLabel>Main Telephone</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Enter main phone number" />
+                        <Input {...field} placeholder="Enter main phone number" disabled={!debtorType} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -966,7 +972,7 @@ export default function SubmitCase() {
                     <FormItem>
                       <FormLabel>Alternative Telephone (Optional)</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Enter alternative phone number" />
+                        <Input {...field} placeholder="Enter alternative phone number" disabled={!debtorType} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -982,7 +988,7 @@ export default function SubmitCase() {
                     <FormItem>
                       <FormLabel>Main Email</FormLabel>
                       <FormControl>
-                        <Input {...field} type="email" placeholder="Enter main email address" />
+                        <Input {...field} type="email" placeholder="Enter main email address" disabled={!debtorType} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -995,7 +1001,7 @@ export default function SubmitCase() {
                     <FormItem>
                       <FormLabel>Alternative Email (Optional)</FormLabel>
                       <FormControl>
-                        <Input {...field} type="email" placeholder="Enter alternative email address" />
+                        <Input {...field} type="email" placeholder="Enter alternative email address" disabled={!debtorType} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
