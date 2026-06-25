@@ -176,6 +176,8 @@ export default function SubmitCase() {
   const [organisationNameValue, setOrganisationNameValue] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [fileValidationError, setFileValidationError] = useState<string | null>(null);
+  const [debtAmountRaw, setDebtAmountRaw] = useState('');
+  const [paymentDaysRaw, setPaymentDaysRaw] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submissionId, setSubmissionId] = useState<number | null>(null);
 
@@ -392,6 +394,8 @@ export default function SubmitCase() {
       // Set success state and submission ID instead of immediate redirect
       setIsSubmitted(true);
       setSubmissionId(response.id);
+      setDebtAmountRaw('');
+      setPaymentDaysRaw('');
       // Clear uploaded files
       setUploadedFiles([]);
     },
@@ -1055,14 +1059,17 @@ export default function SubmitCase() {
                       <FormControl>
                         <Input 
                           {...field} 
-                          type="number" 
-                          step="0.01"
+                          type="text"
+                          inputMode="decimal"
                           placeholder="0.00"
-                          value={field.value ?? ''}
+                          value={debtAmountRaw}
                           onChange={(e) => {
-                            const val = e.target.value;
-                            const num = parseFloat(val);
-                            field.onChange(val === '' || isNaN(num) ? undefined : num);
+                            const raw = e.target.value;
+                            if (raw === '' || /^[0-9]*\.?[0-9]*$/.test(raw)) {
+                              setDebtAmountRaw(raw);
+                              const num = parseFloat(raw);
+                              field.onChange(!raw || isNaN(num) ? undefined : num);
+                            }
                           }}
                         />
                       </FormControl>
@@ -1139,13 +1146,15 @@ export default function SubmitCase() {
                       <FormControl>
                         <Input 
                           {...field} 
-                          type="number" 
+                          type="text"
+                          inputMode="numeric"
                           placeholder="30"
-                          value={field.value ?? ''}
+                          value={paymentDaysRaw}
                           onChange={(e) => {
-                            const val = e.target.value;
-                            const num = parseInt(val, 10);
-                            field.onChange(val === '' || isNaN(num) ? undefined : num);
+                            const raw = e.target.value.replace(/[^0-9]/g, '');
+                            setPaymentDaysRaw(raw);
+                            const num = parseInt(raw, 10);
+                            field.onChange(!raw || isNaN(num) ? undefined : num);
                           }}
                         />
                       </FormControl>
