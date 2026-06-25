@@ -772,7 +772,7 @@ export default function CaseSummaryReport() {
         </CardContent>
       </Card>
       {/* Recent Updates Selector */}
-      <Card className="mb-4 sm:mb-6">
+      <Card className="mb-4 sm:mb-6 bg-[#f0fdf4]">
         <CardHeader className="pb-2 sm:pb-4">
           <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
             <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5" />
