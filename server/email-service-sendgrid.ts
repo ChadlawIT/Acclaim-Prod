@@ -2277,11 +2277,14 @@ Need help? Contact us at email@acclaim.law
                         <p style="color: #64748b; font-size: 13px; margin: 16px 0 0 0;">All uploaded files are attached to this email.</p>
                       </div>` : ''}
 
-                      <!-- Excel Note -->
+                      <!-- Attachments Note -->
                       <div style="background: #e0f7f6; border-radius: 12px; padding: 20px;">
-                        <p style="color: #00695c; margin: 0; font-size: 14px; line-height: 1.6;">
-                          <strong>Excel Summary:</strong> A detailed spreadsheet with all case submission information is attached for your records.
-                        </p>
+                        <p style="color: #00695c; margin: 0 0 8px 0; font-size: 14px; font-weight: 600;">Attachments included with this email:</p>
+                        <ul style="color: #00695c; margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.8;">
+                          <li><strong>Excel spreadsheet</strong> — all case fields in a structured workbook</li>
+                          <li><strong>HTML summary</strong> — a printable, styled case details page you can open in any browser</li>
+                          ${data.uploadedFiles && data.uploadedFiles.length > 0 ? `<li><strong>Uploaded documents</strong> — ${data.uploadedFiles.length} file${data.uploadedFiles.length !== 1 ? 's' : ''} submitted with the case</li>` : ''}
+                        </ul>
                       </div>
                       
                     </td>
@@ -2346,6 +2349,18 @@ A detailed Excel spreadsheet and all uploaded files are attached to this email.
         });
       } catch (error) {
         console.error('Failed to read Excel file:', error);
+      }
+
+      // Add HTML summary attachment (printable case details view)
+      try {
+        attachments.push({
+          content: Buffer.from(htmlContent.trim()).toString('base64'),
+          filename: `case-submission-${data.submissionId}-details.html`,
+          type: 'text/html',
+          disposition: 'attachment'
+        });
+      } catch (error) {
+        console.error('Failed to attach HTML summary:', error);
       }
 
       // Add uploaded files to attachments - skip video files
