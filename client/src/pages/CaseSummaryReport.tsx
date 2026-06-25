@@ -159,12 +159,30 @@ export default function CaseSummaryReport() {
     return new Date(dateString).toLocaleDateString('en-GB');
   };
 
+  const escapeHtml = (text: string): string => {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  };
+
   const formatMessageCell = (msg: { sender: string; subject: string | null; content: string; createdAt: string } | undefined, newline: string) => {
     if (!msg) return '';
     const date = new Date(msg.createdAt).toLocaleDateString('en-GB');
     const subject = msg.subject || '(no subject)';
     const body = msg.content.slice(0, 500);
     return `${date} — From: ${msg.sender}${newline}Subject: ${subject}${newline}${body}`;
+  };
+
+  const formatMessageCellHtml = (msg: { sender: string; subject: string | null; content: string; createdAt: string } | undefined): string => {
+    if (!msg) return '';
+    const date = new Date(msg.createdAt).toLocaleDateString('en-GB');
+    const subject = escapeHtml(msg.subject || '(no subject)');
+    const sender = escapeHtml(msg.sender);
+    const body = escapeHtml(msg.content.slice(0, 500));
+    return `${escapeHtml(date)} — From: ${sender}<br>Subject: ${subject}<br>${body}`;
   };
 
   const getStatusBadge = (status: string) => {
@@ -254,25 +272,28 @@ export default function CaseSummaryReport() {
         const outstanding = parseFloat(caseItem.outstandingAmount || 0);
         const payments = parseFloat(caseItem.totalPayments || 0);
 
+        const orderedMsgs = [...(recentMessages?.[String(caseItem.id)] ?? [])].reverse();
         const msgCells = recentMessagesCount > 0
           ? Array.from({ length: recentMessagesCount }, (_, i) => {
-              const msgs = recentMessages?.[String(caseItem.id)] ?? [];
-              const msg = msgs[msgs.length - 1 - i] ?? msgs[msgs.length - 1 - i];
-              // msgs are stored oldest-first after unshift, so index 0 = oldest, last = newest
-              // The batch returns them so index 0 = oldest; we want newest first
-              const ordered = [...(recentMessages?.[String(caseItem.id)] ?? [])].reverse();
-              const m = ordered[i];
-              const text = m ? formatMessageCell(m, '<br>') : '';
+              const text = formatMessageCellHtml(orderedMsgs[i]);
               return `<td style="white-space:pre-wrap;vertical-align:top;font-size:9px;">${text}</td>`;
             }).join('')
           : '';
 
+        const stageDisplay = caseItem.stage
+          ? escapeHtml(caseItem.stage.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()))
+          : 'Not specified';
+        const statusDisplay = caseItem.status === 'Closed'
+          ? 'Closed'
+          : escapeHtml((caseItem.status || '').charAt(0).toUpperCase() + (caseItem.status || '').slice(1));
+        const statusClass = escapeHtml(caseItem.status || '');
+
         return `
           <tr>
-            <td>${caseItem.accountNumber || ''}</td>
-            <td>${caseItem.caseName || ''}${caseItem.organisationName ? ` <span style="font-size: 10px; color: #666;">(${caseItem.organisationName})</span>` : ''}</td>
-            <td><span class="status-${caseItem.status}">${caseItem.status === 'Closed' ? 'Closed' : (caseItem.status || '').charAt(0).toUpperCase() + (caseItem.status || '').slice(1)}</span></td>
-            <td>${caseItem.stage ? caseItem.stage.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 'Not specified'}</td>
+            <td>${escapeHtml(caseItem.accountNumber || '')}</td>
+            <td>${escapeHtml(caseItem.caseName || '')}${caseItem.organisationName ? ` <span style="font-size: 10px; color: #666;">(${escapeHtml(caseItem.organisationName)})</span>` : ''}</td>
+            <td><span class="status-${statusClass}">${statusDisplay}</span></td>
+            <td>${stageDisplay}</td>
             <td class="currency">${formatCurrency(caseItem.originalAmount || 0)}</td>
             <td class="currency">${formatCurrency(caseItem.costsAdded || 0)}</td>
             <td class="currency">${formatCurrency(caseItem.interestAdded || 0)}</td>
