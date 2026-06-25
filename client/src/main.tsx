@@ -11,6 +11,23 @@ function sendClientError(payload: object) {
   }).catch(() => {});
 }
 
+const origConsoleError = console.error.bind(console);
+console.error = (...args: any[]) => {
+  try {
+    const parts = args.map((a) => {
+      if (a instanceof Error) {
+        return { kind: 'Error', name: a.name, message: a.message, stack: a.stack };
+      }
+      if (typeof a === 'object' && a !== null) {
+        try { return JSON.stringify(a); } catch { return String(a); }
+      }
+      return String(a);
+    });
+    sendClientError({ type: 'console.error', parts });
+  } catch {}
+  origConsoleError(...args);
+};
+
 window.addEventListener('error', (evt) => {
   const err = evt.error;
   sendClientError({
