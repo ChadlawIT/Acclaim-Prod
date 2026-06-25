@@ -2006,14 +2006,18 @@ function CaseSubmissionsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
                           {selectedSubmission.singleInvoice === 'no' ? 'First Overdue Date' : 'Overdue Date'}
                         </p>
                         <p className="text-sm text-gray-900">
-                          {selectedSubmission.firstOverdueDate || <span className="text-gray-400 italic">Not provided</span>}
+                          {selectedSubmission.firstOverdueDate
+                            ? selectedSubmission.firstOverdueDate.split('-').reverse().join('/')
+                            : <span className="text-gray-400 italic">Not provided</span>}
                         </p>
                       </div>
                       {selectedSubmission.singleInvoice === 'no' && (
                         <div className="space-y-0.5">
                           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Last Overdue Date</p>
                           <p className="text-sm text-gray-900">
-                            {selectedSubmission.lastOverdueDate || <span className="text-gray-400 italic">Not provided</span>}
+                            {selectedSubmission.lastOverdueDate
+                              ? selectedSubmission.lastOverdueDate.split('-').reverse().join('/')
+                              : <span className="text-gray-400 italic">Not provided</span>}
                           </p>
                         </div>
                       )}
