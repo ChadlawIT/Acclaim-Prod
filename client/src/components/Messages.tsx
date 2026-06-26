@@ -951,70 +951,74 @@ const handleReply = (message: any) => {
           {isLoading ? (
             <div className="space-y-3">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="animate-pulse">
-                  <div className="h-16 sm:h-20 bg-gray-200 rounded-lg"></div>
+                <div key={i} className="animate-pulse flex items-start gap-3 p-3">
+                  <div className="w-9 h-9 rounded-full bg-gray-200 dark:bg-gray-700 shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3.5 bg-gray-200 dark:bg-gray-700 rounded w-2/3" />
+                    <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded w-full" />
+                    <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded w-3/4" />
+                  </div>
                 </div>
               ))}
             </div>
           ) : paginatedMessages && paginatedMessages.length > 0 ? (
-            <div className="space-y-3">
-              {paginatedMessages.map((message: any) => (
-                <div
-                  key={message.id}
-                  className="p-3 sm:p-4 rounded-lg border transition-colors cursor-pointer hover:shadow-md bg-gray-50 border-gray-200 hover:bg-gray-100"
-                  onClick={() => handleMessageClick(message)}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-start gap-2 sm:gap-3 min-w-0 flex-1">
-                      <div className="relative flex-shrink-0">
-                        <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center overflow-hidden ${message.senderIsAdmin ? 'bg-white border-2 border-acclaim-teal' : 'bg-white border-2 border-blue-300'}`}>
-                          {message.senderIsAdmin ? (
-                            <img src={acclaimRoseLogo} alt="Acclaim" className="w-6 h-6 sm:w-8 sm:h-8 object-contain" />
-                          ) : (
-                            <User className="h-4 w-4 sm:h-5 sm:w-5 text-acclaim-teal" />
+            <div className="divide-y divide-gray-100 dark:divide-gray-800">
+              {paginatedMessages.map((message: any) => {
+                const senderLabel = message.senderName || message.senderEmail || 'Unknown';
+                const caseData = message.caseId ? cases?.find((c: any) => c.id === message.caseId) : null;
+                return (
+                  <div
+                    key={message.id}
+                    className="flex items-start gap-3 py-3 first:pt-0 last:pb-0 cursor-pointer group"
+                    onClick={() => handleMessageClick(message)}
+                  >
+                    {/* avatar */}
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 overflow-hidden ${message.senderIsAdmin ? 'bg-white border-2 border-acclaim-teal' : 'bg-white border-2 border-blue-300'}`}>
+                      {message.senderIsAdmin ? (
+                        <img src={acclaimRoseLogo} alt="Acclaim" className="w-7 h-7 object-contain" />
+                      ) : (
+                        <User className="text-acclaim-teal h-4 w-4" />
+                      )}
+                    </div>
+                    {/* body */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline justify-between gap-2 mb-0.5">
+                        <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate">
+                          {senderLabel}
+                          {message.senderIsAdmin && (
+                            <span className="ml-1.5 text-[10px] font-medium text-teal-600 dark:text-teal-400 uppercase tracking-wide">· Acclaim</span>
                           )}
-                        </div>
+                        </p>
+                        <p className="text-[10px] text-gray-400 shrink-0">{formatDate(message.createdAt)}</p>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 text-sm sm:text-base truncate mb-1">{message.subject}</p>
-                        <div className="mb-2">
-                          <div className="flex flex-wrap items-center gap-1 sm:gap-2 mb-1">
-                            <p className="text-xs text-gray-500 truncate">
-                              <span className="hidden sm:inline">From: </span>
-                              <span className="font-medium">{message.senderName || message.senderEmail || 'Unknown'}</span>
-                            </p>
-                            <Badge variant="secondary" className="text-[10px] sm:text-xs bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 px-1.5 py-0">
-                              {message.senderIsAdmin ? "Acclaim" : (message.senderOrganisationName || "User")}
-                            </Badge>
-                            {message.attachmentFileName && (
-                              <Paperclip className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                      {message.subject && (
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors mb-0.5">
+                          {message.subject}
+                          {message.attachmentFileName && (
+                            <Paperclip className="inline h-3 w-3 text-gray-400 ml-1.5 shrink-0" />
+                          )}
+                        </p>
+                      )}
+                      <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">
+                        {message.content}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                        {caseData && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-teal-700 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/30 px-2 py-0.5 rounded-full">
+                            <MessageSquare className="h-2.5 w-2.5" />
+                            {caseData.caseName}
+                            {caseData.organisationName && (
+                              <span className="text-gray-400 font-normal"> · {caseData.organisationName}</span>
                             )}
-                          </div>
-                          <p className="text-xs sm:text-sm text-gray-600 line-clamp-2">{message.content}</p>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-1 sm:gap-2 text-[10px] sm:text-xs text-gray-500">
-                          <span>{formatDate(message.createdAt)}</span>
-                          {message.caseId && (() => {
-                            const caseData = cases?.find((c: any) => c.id === message.caseId);
-                            return (
-                              <>
-                                <span className="text-gray-400">•</span>
-                                <span className="text-acclaim-teal font-medium truncate max-w-[150px] sm:max-w-[250px]">
-                                  {caseData?.caseName || getCaseAccountNumber(message.caseId)}
-                                  {caseData?.organisationName && (
-                                    <span className="text-gray-500 font-normal"> ({caseData.organisationName})</span>
-                                  )}
-                                </span>
-                              </>
-                            );
-                          })()}
-                        </div>
+                          </span>
+                        )}
                       </div>
                     </div>
+                    {/* reply button */}
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-acclaim-teal hover:text-acclaim-teal flex-shrink-0 h-8 w-8 p-0"
+                      className="text-gray-400 hover:text-acclaim-teal shrink-0 h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleReply(message);
@@ -1024,8 +1028,8 @@ const handleReply = (message: any) => {
                       <MessageSquare className="h-4 w-4" />
                     </Button>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="text-center py-8 sm:py-12">
