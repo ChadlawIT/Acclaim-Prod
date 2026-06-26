@@ -26,6 +26,12 @@ export default function Sidebar({ activeSection, setActiveSection, collapsed, on
     retry: false,
   });
 
+  const { data: seminars } = useQuery<Array<unknown>>({
+    queryKey: ["/api/cl-seminars"],
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: Home },
     { id: "cases", label: "Cases", icon: FolderOpen },
@@ -118,6 +124,11 @@ export default function Sidebar({ activeSection, setActiveSection, collapsed, on
             <Scale className={`w-5 h-5 flex-shrink-0 ${collapsed ? '' : 'mr-3'}`} />
             {!collapsed && <span className="truncate">Chadwick Lawrence</span>}
           </button>
+          {!collapsed && seminars && seminars.length > 0 && (
+            <p className="px-3 pt-1 pb-0.5 text-teal-300 dark:text-teal-400 text-xs">
+              {seminars.length} seminar{seminars.length !== 1 ? 's' : ''} available
+            </p>
+          )}
         </div>
 
         {/* Collapse toggle */}
