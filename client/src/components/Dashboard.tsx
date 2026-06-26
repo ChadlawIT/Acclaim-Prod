@@ -388,13 +388,13 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">Active Cases</p>
-                  <p className="text-2xl font-bold text-gray-800 dark:text-gray-100 mt-1 leading-none">
+                  <p className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1 leading-none">
                     {statsLoading ? "—" : stats?.activeCases || 0}
                   </p>
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">currently open</p>
                 </div>
-                <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg flex-shrink-0 mt-0.5">
-                  <FolderOpen className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                <div className="p-2 bg-amber-100 dark:bg-amber-900/40 rounded-lg flex-shrink-0 mt-0.5">
+                  <FolderOpen className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                 </div>
               </div>
             </CardContent>
@@ -406,13 +406,13 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">Total Outstanding</p>
-                  <p className="text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-100 mt-1 leading-none break-all">
+                  <p className="text-lg sm:text-xl font-bold text-blue-600 dark:text-blue-400 mt-1 leading-none break-all">
                     {statsLoading ? "—" : formatCurrency(stats?.totalOutstanding || 0)}
                   </p>
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">active cases only</p>
                 </div>
-                <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg flex-shrink-0 mt-0.5">
-                  <PoundSterling className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg flex-shrink-0 mt-0.5">
+                  <PoundSterling className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 </div>
               </div>
             </CardContent>
@@ -424,13 +424,13 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">Total Recovery</p>
-                  <p className="text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-100 mt-1 leading-none break-all">
+                  <p className="text-lg sm:text-xl font-bold text-purple-600 dark:text-purple-400 mt-1 leading-none break-all">
                     {statsLoading ? "—" : formatCurrency(parseFloat(stats?.totalRecovery || '0'))}
                   </p>
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">active cases only</p>
                 </div>
-                <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg flex-shrink-0 mt-0.5">
-                  <PoundSterling className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                <div className="p-2 bg-purple-100 dark:bg-purple-900/40 rounded-lg flex-shrink-0 mt-0.5">
+                  <PoundSterling className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                 </div>
               </div>
             </CardContent>
@@ -442,13 +442,13 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">Closed Cases</p>
-                  <p className="text-2xl font-bold text-gray-800 dark:text-gray-100 mt-1 leading-none">
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1 leading-none">
                     {statsLoading ? "—" : stats?.closedCases || 0}
                   </p>
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">successfully resolved</p>
                 </div>
-                <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg flex-shrink-0 mt-0.5">
-                  <CheckCircle className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                <div className="p-2 bg-green-100 dark:bg-green-900/40 rounded-lg flex-shrink-0 mt-0.5">
+                  <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
                 </div>
               </div>
             </CardContent>
