@@ -23,7 +23,8 @@ import {
   RefreshCw,
   Search,
   Bell,
-  Building2
+  Building2,
+  X
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -46,6 +47,9 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileValidationError, setFileValidationError] = useState<string | null>(null);
   const [customFileName, setCustomFileName] = useState("");
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [fileQueueErrors, setFileQueueErrors] = useState<Record<string, string>>({});
+  const [isDragOver, setIsDragOver] = useState(false);
   const [messageAttachment, setMessageAttachment] = useState<File | null>(null);
   const [messageAttachmentError, setMessageAttachmentError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("timeline");
@@ -586,6 +590,40 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
     const ext = selectedFile.name.split('.').pop();
     const finalFileName = customFileName.trim() ? `${customFileName.trim()}.${ext}` : selectedFile.name;
     uploadDocumentMutation.mutate({ file: selectedFile, notify: notifyOnUpload, fileName: finalFileName });
+  };
+
+  const addFilesToQueue = (incoming: FileList | File[]) => {
+    const files = Array.from(incoming);
+    const errors: Record<string, string> = {};
+    const valid: File[] = [];
+    files.forEach(f => {
+      const v = validateFile(f);
+      if (!v.isValid) errors[f.name] = v.error || "Invalid file";
+      else valid.push(f);
+    });
+    setFileQueueErrors(prev => ({ ...prev, ...errors }));
+    setSelectedFiles(prev => {
+      const existing = new Set(prev.map(f => f.name));
+      return [...prev, ...valid.filter(f => !existing.has(f.name))];
+    });
+  };
+
+  const removeFromQueue = (name: string) => {
+    setSelectedFiles(prev => prev.filter(f => f.name !== name));
+    setFileQueueErrors(prev => { const n = { ...prev }; delete n[name]; return n; });
+  };
+
+  const uploadQueue = async () => {
+    for (const file of selectedFiles) {
+      await new Promise<void>((resolve, reject) => {
+        uploadDocumentMutation.mutate(
+          { file, notify: notifyOnUpload, fileName: file.name },
+          { onSuccess: () => resolve(), onError: (e) => reject(e) }
+        );
+      });
+    }
+    setSelectedFiles([]);
+    setFileQueueErrors({});
   };
 
   const getStageBadge = (status: string, stage: string) => {
@@ -1523,146 +1561,162 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
-              {/* Upload Document Section - At Top */}
-              <div className="mb-6 pb-6 border-b">
-                <Label htmlFor="file-upload" className="text-sm font-medium">
-                  Upload Document
-                </Label>
-                <p className="text-xs text-gray-500 mt-1">
-                  Max {MAX_FILE_SIZE_MB}MB. Formats: {ACCEPTED_FILE_TYPES_DISPLAY}
-                </p>
-                <div className="mt-2 space-y-3">
-                  <input
-                    id="file-upload"
-                    type="file"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0] || null;
-                      if (file) {
-                        const validation = validateFile(file);
-                        if (!validation.isValid) {
-                          setFileValidationError(validation.error);
-                          setSelectedFile(null);
-                          setCustomFileName("");
-                          e.target.value = '';
-                          return;
-                        }
-                      }
-                      setFileValidationError(null);
-                      setSelectedFile(file);
-                      setCustomFileName("");
-                    }}
-                    accept={ACCEPTED_FILE_TYPES_STRING}
-                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-teal-600 file:text-white hover:file:bg-teal-700 file:cursor-pointer cursor-pointer"
-                  />
-                  {fileValidationError && (
-                    <p className="text-sm text-red-600 bg-red-50 dark:bg-red-900/20 p-2 rounded">
-                      {fileValidationError}
+            <CardContent className="space-y-6">
+
+              {/* ── Drag-drop upload zone ── */}
+              <div>
+                <input
+                  id="file-upload"
+                  type="file"
+                  multiple
+                  accept={ACCEPTED_FILE_TYPES_STRING}
+                  className="sr-only"
+                  onChange={(e) => { if (e.target.files) addFilesToQueue(e.target.files); e.target.value = ''; }}
+                />
+                <label
+                  htmlFor="file-upload"
+                  onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+                  onDragLeave={() => setIsDragOver(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDragOver(false);
+                    if (e.dataTransfer.files) addFilesToQueue(e.dataTransfer.files);
+                  }}
+                  className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl p-8 cursor-pointer transition-all ${
+                    isDragOver
+                      ? "border-teal-400 bg-teal-50"
+                      : "border-gray-200 bg-gray-50 hover:border-teal-300 hover:bg-teal-50/50"
+                  }`}
+                >
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${isDragOver ? "bg-teal-100" : "bg-white border border-gray-200"}`}>
+                    <Upload className={`h-5 w-5 transition-colors ${isDragOver ? "text-teal-600" : "text-gray-400"}`} />
+                  </div>
+                  <div className="text-center">
+                    <p className={`text-sm font-medium transition-colors ${isDragOver ? "text-teal-700" : "text-gray-600"}`}>
+                      {isDragOver ? "Drop files here" : "Click to browse or drag and drop"}
                     </p>
-                  )}
-                  {selectedFile && (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          <FileText className="h-5 w-5 text-acclaim-teal" />
-                          <div>
-                            <p className="font-medium text-sm">{selectedFile.name}</p>
-                            <p className="text-xs text-gray-500">
-                              {Math.round(selectedFile.size / 1024)}KB
-                            </p>
-                          </div>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {ACCEPTED_FILE_TYPES_DISPLAY} · max {MAX_FILE_SIZE_MB}MB each
+                    </p>
+                  </div>
+                </label>
+
+                {/* Errors for invalid files */}
+                {Object.entries(fileQueueErrors).map(([name, err]) => (
+                  <p key={name} className="text-xs text-red-600 mt-2 flex items-center gap-1">
+                    <span className="font-medium">{name}:</span> {err}
+                  </p>
+                ))}
+
+                {/* File queue */}
+                {selectedFiles.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {selectedFiles.map((f) => (
+                      <div key={f.name} className="flex items-center gap-3 px-3 py-2.5 bg-white border border-gray-200 rounded-lg">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${
+                          f.name.match(/\.pdf$/i) ? "bg-red-50 text-red-500 border border-red-100"
+                          : f.name.match(/\.docx?$/i) ? "bg-blue-50 text-blue-500 border border-blue-100"
+                          : f.name.match(/\.xlsx?$/i) ? "bg-green-50 text-green-600 border border-green-100"
+                          : "bg-gray-50 text-gray-500 border border-gray-100"
+                        }`}>
+                          {f.name.split('.').pop()?.toUpperCase().slice(0, 4)}
                         </div>
-                        <Button
-                          onClick={handleFileUpload}
-                          disabled={uploadDocumentMutation.isPending}
-                          className="bg-acclaim-teal hover:bg-acclaim-teal/90"
-                          size="sm"
-                        >
-                          <Upload className="h-4 w-4 mr-2" />
-                          {uploadDocumentMutation.isPending ? "Uploading..." : "Upload"}
-                        </Button>
-                      </div>
-                      <div>
-                        <Label htmlFor="case-custom-filename" className="text-sm text-acclaim-teal font-medium">Rename file (optional)</Label>
-                        <div className="flex items-center gap-1 mt-1">
-                          <Input
-                            id="case-custom-filename"
-                            type="text"
-                            value={customFileName}
-                            onChange={(e) => setCustomFileName(e.target.value)}
-                            placeholder="Enter new filename"
-                            className="flex-1 h-8 text-sm"
-                          />
-                          <span className="text-sm text-gray-500">.{selectedFile.name.split('.').pop()}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-800 truncate">{f.name}</p>
+                          <p className="text-xs text-gray-400">{Math.round(f.size / 1024)} KB</p>
                         </div>
+                        <button onClick={() => removeFromQueue(f.name)} className="text-gray-300 hover:text-red-400 transition-colors flex-shrink-0">
+                          <X className="h-4 w-4" />
+                        </button>
                       </div>
-                    </div>
-                  )}
-                </div>
+                    ))}
+                    <Button
+                      onClick={uploadQueue}
+                      disabled={uploadDocumentMutation.isPending}
+                      className="w-full bg-acclaim-teal hover:bg-acclaim-teal/90 mt-1"
+                      size="sm"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      {uploadDocumentMutation.isPending
+                        ? "Uploading…"
+                        : `Upload ${selectedFiles.length} file${selectedFiles.length > 1 ? "s" : ""}`}
+                    </Button>
+                  </div>
+                )}
               </div>
 
+              {/* ── Document list ── */}
               {documentsLoading ? (
-                <div className="space-y-4">
+                <div className="space-y-2">
                   {[1, 2, 3].map((i) => (
-                    <div key={i} className="animate-pulse">
-                      <div className="h-12 bg-gray-200 rounded-lg"></div>
-                    </div>
+                    <div key={i} className="animate-pulse h-16 bg-gray-100 rounded-xl" />
                   ))}
                 </div>
-              ) : documents && documents.length > 0 ? (
-                <div className="space-y-3">
+              ) : documents && documents.filter((doc: any) => {
+                if (!documentSearch.trim()) return true;
+                return doc.fileName?.toLowerCase().includes(documentSearch.toLowerCase());
+              }).length > 0 ? (
+                <div className="divide-y divide-gray-100 border border-gray-100 rounded-xl overflow-hidden">
                   {documents
                     .filter((doc: any) => {
                       if (!documentSearch.trim()) return true;
-                      const searchLower = documentSearch.toLowerCase();
-                      return doc.fileName?.toLowerCase().includes(searchLower);
+                      return doc.fileName?.toLowerCase().includes(documentSearch.toLowerCase());
                     })
-                    .map((doc: any) => (
-                    <div key={doc.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <FileText className="h-5 w-5 text-acclaim-teal" />
-                        <div>
-                          <p className="font-medium text-sm">{doc.fileName}</p>
-                          <p className="text-xs text-gray-500">
-                            {formatDate(doc.createdAt)} • {doc.fileSize ? `${Math.round(doc.fileSize / 1024)}KB` : 'Unknown size'}
-                          </p>
+                    .map((doc: any) => {
+                      const ext = doc.fileName?.split('.').pop()?.toUpperCase() || "—";
+                      const extColor =
+                        ext === "PDF" ? "bg-red-50 text-red-500 border-red-100"
+                        : ["DOC","DOCX"].includes(ext) ? "bg-blue-50 text-blue-500 border-blue-100"
+                        : ["XLS","XLSX"].includes(ext) ? "bg-green-50 text-green-600 border-green-100"
+                        : ["JPG","JPEG","PNG"].includes(ext) ? "bg-purple-50 text-purple-500 border-purple-100"
+                        : "bg-gray-50 text-gray-500 border-gray-100";
+                      return (
+                        <div key={doc.id} className="flex items-center gap-4 px-4 py-3.5 bg-white hover:bg-gray-50 transition-colors group">
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-[10px] font-bold flex-shrink-0 border ${extColor}`}>
+                            {ext.slice(0, 4)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-800 truncate">{doc.fileName}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">
+                              {formatDate(doc.createdAt)}{doc.fileSize ? ` · ${Math.round(doc.fileSize / 1024)} KB` : ""}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDownload(doc.id)}
+                              className="h-8 w-8 p-0 text-gray-400 hover:text-teal-600 hover:bg-teal-50"
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                            {user?.isAdmin && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  if (confirm("Are you sure you want to delete this document?")) {
+                                    deleteDocumentMutation.mutate(doc.id);
+                                  }
+                                }}
+                                className="h-8 w-8 p-0 text-gray-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                                disabled={deleteDocumentMutation.isPending}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDownload(doc.id)}
-                          className="text-acclaim-teal hover:text-acclaim-teal"
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                        {user?.isAdmin && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              if (confirm("Are you sure you want to delete this document?")) {
-                                deleteDocumentMutation.mutate(doc.id);
-                              }
-                            }}
-                            className="text-red-600 hover:text-red-700"
-                            disabled={deleteDocumentMutation.isPending}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                      );
+                    })}
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">No documents found</p>
+                <div className="text-center py-10 text-gray-400">
+                  <FileText className="h-10 w-10 mx-auto mb-3 text-gray-200" />
+                  <p className="text-sm">No documents yet</p>
                 </div>
               )}
-              
+
             </CardContent>
           </Card>
         </TabsContent>
