@@ -222,6 +222,12 @@ interface Seminar {
   bookUrl: string;
 }
 
+interface EventBlock {
+  type: 'heading' | 'paragraph' | 'list';
+  text?: string;
+  items?: string[];
+}
+
 export default function ChadwickLawrence() {
   useEffect(() => {
     trackEvent("page_view");
@@ -236,7 +242,7 @@ export default function ChadwickLawrence() {
     refetchOnMount: "always",
   });
 
-  const { data: eventDetails = [], isLoading: eventLoading } = useQuery<string[]>({
+  const { data: eventDetails = [], isLoading: eventLoading } = useQuery<EventBlock[]>({
     queryKey: ["/api/cl-event", selectedSeminar?.infoUrl],
     enabled: !!selectedSeminar?.infoUrl,
     staleTime: 0,
@@ -544,25 +550,54 @@ export default function ChadwickLawrence() {
             {/* Divider */}
             <div className="border-t border-gray-100 dark:border-gray-800" />
 
-            {/* Description from list page (shown if present and not duplicated in fetched content) */}
-            {selectedSeminar?.description && (
+            {/* While loading: show the list-page description as a preview */}
+            {eventLoading && (
+              <>
+                {selectedSeminar?.description && (
+                  <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                    {selectedSeminar.description}
+                  </p>
+                )}
+                <div className="flex items-center gap-2 text-sm text-gray-400 py-1">
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  Loading full event details…
+                </div>
+              </>
+            )}
+
+            {/* Structured content fetched from the CL event page */}
+            {!eventLoading && eventDetails.map((block, idx) => {
+              if (block.type === 'heading') {
+                return (
+                  <h3 key={idx} className="text-sm font-semibold text-[#2e3192] dark:text-blue-300 pt-2 first:pt-0">
+                    {block.text}
+                  </h3>
+                );
+              }
+              if (block.type === 'list') {
+                return (
+                  <ul key={idx} className="list-disc pl-5 space-y-1.5">
+                    {block.items?.map((item, j) => (
+                      <li key={j} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                );
+              }
+              return (
+                <p key={idx} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                  {block.text}
+                </p>
+              );
+            })}
+
+            {/* Fallback if fetch returned nothing */}
+            {!eventLoading && eventDetails.length === 0 && selectedSeminar?.description && (
               <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
                 {selectedSeminar.description}
               </p>
             )}
-
-            {/* Additional content fetched from event page */}
-            {eventLoading && (
-              <div className="flex items-center gap-2 text-sm text-gray-400 py-2">
-                <RefreshCw className="h-4 w-4 animate-spin" />
-                Loading event details…
-              </div>
-            )}
-            {!eventLoading && eventDetails.filter(p => p !== selectedSeminar?.description).map((para, idx) => (
-              <p key={idx} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                {para}
-              </p>
-            ))}
           </div>
 
           {/* Footer */}
