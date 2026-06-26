@@ -176,6 +176,7 @@ export default function SubmitCase() {
   const [organisationNameValue, setOrganisationNameValue] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [fileValidationError, setFileValidationError] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [debtAmountRaw, setDebtAmountRaw] = useState('');
   const [paymentDaysRaw, setPaymentDaysRaw] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -1322,10 +1323,38 @@ export default function SubmitCase() {
                 {/* Drag-and-drop style upload area */}
                 <label
                   htmlFor="document-upload"
-                  className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50/50 px-6 py-8 text-center transition-colors hover:border-[#008b8b] hover:bg-[#008b8b]/5"
+                  className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-8 text-center transition-colors ${
+                    isDragging
+                      ? "border-[#008b8b] bg-[#008b8b]/10"
+                      : "border-gray-300 bg-gray-50/50 hover:border-[#008b8b] hover:bg-[#008b8b]/5"
+                  }`}
+                  onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}
+                  onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}
+                  onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsDragging(false);
+                    const files = Array.from(e.dataTransfer.files);
+                    const validFiles: File[] = [];
+                    let hasError = false;
+                    for (const file of files) {
+                      const validation = validateFile(file);
+                      if (!validation.isValid) {
+                        setFileValidationError(validation.error || null);
+                        hasError = true;
+                        break;
+                      }
+                      validFiles.push(file);
+                    }
+                    if (!hasError) {
+                      setFileValidationError(null);
+                      setUploadedFiles(prev => [...prev, ...validFiles]);
+                    }
+                  }}
                 >
                   <div className="rounded-full bg-[#008b8b]/10 p-3">
-                    <UploadCloud className="h-6 w-6 text-acclaim-teal" />
+                    <UploadCloud className={`h-6 w-6 ${isDragging ? "text-[#008b8b]" : "text-acclaim-teal"}`} />
                   </div>
                   <div className="text-sm">
                     <span className="font-semibold text-acclaim-teal">Click to browse</span>
@@ -1346,7 +1375,7 @@ export default function SubmitCase() {
                       for (const file of files) {
                         const validation = validateFile(file);
                         if (!validation.isValid) {
-                          setFileValidationError(validation.error);
+                          setFileValidationError(validation.error || null);
                           hasError = true;
                           break;
                         }
@@ -1418,6 +1447,53 @@ export default function SubmitCase() {
           {/* Submit Button */}
           <Card>
             <CardContent className="pt-6">
+              {/* Inline validation summary — appears after first submit attempt */}
+              {form.formState.isSubmitted && Object.keys(form.formState.errors).length > 0 && (() => {
+                const fieldLabels: Record<string, string> = {
+                  organisationId: "Organisation",
+                  clientName: "Your name",
+                  clientEmail: "Your email address",
+                  clientPhone: "Your phone number",
+                  debtorType: "Debtor type",
+                  individualType: "Individual or business",
+                  tradingName: "Trading name",
+                  organisationName: "Organisation name",
+                  principalSalutation: "Salutation",
+                  principalFirstName: "Debtor first name",
+                  principalLastName: "Debtor last name",
+                  addressLine1: "Address line 1",
+                  city: "City / town",
+                  county: "County",
+                  postcode: "Postcode",
+                  debtDetails: "Debt details",
+                  totalDebtAmount: "Total debt amount",
+                  paymentTermsType: "Payment terms",
+                  paymentTermsDays: "Payment terms (days)",
+                  paymentTermsOther: "Payment terms (other)",
+                  singleInvoice: "Single or multiple invoices",
+                  firstOverdueDate: "First overdue invoice date",
+                  lastOverdueDate: "Last overdue invoice date",
+                };
+                const errors = form.formState.errors;
+                return (
+                  <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4">
+                    <p className="mb-2 text-sm font-semibold text-red-700">
+                      Please complete the following before submitting:
+                    </p>
+                    <ul className="space-y-0.5">
+                      {Object.entries(errors).map(([field, error]) => (
+                        <li key={field} className="flex items-start gap-1.5 text-sm text-red-600">
+                          <span className="mt-0.5 shrink-0">•</span>
+                          <span>
+                            <span className="font-medium">{fieldLabels[field] || field}</span>
+                            {(error as any)?.message ? ` — ${(error as any).message}` : ""}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })()}
               <div className="flex justify-end space-x-4">
                 <Button
                   type="button"
@@ -1430,42 +1506,6 @@ export default function SubmitCase() {
                   type="submit"
                   className="bg-acclaim-teal hover:bg-acclaim-teal/90"
                   disabled={submitCaseMutation.isPending}
-                  onClick={(e) => {
-                    console.log("Submit button clicked!");
-                    console.log("Form state:", form.formState);
-                    console.log("Form errors:", form.formState.errors);
-                    console.log("Form is valid:", form.formState.isValid);
-                    
-                    // Check if form is invalid and show toast
-                    const errors = form.formState.errors;
-                    if (Object.keys(errors).length > 0) {
-                      console.log("Form validation errors found:", errors);
-                      
-                      // List specific missing fields
-                      const missingFields = Object.keys(errors).map(field => {
-                        const fieldLabels: Record<string, string> = {
-                          debtorType: "Debtor Type", 
-                          addressLine1: "Address Line 1",
-                          city: "City",
-                          county: "County", 
-                          postcode: "Postcode",
-                          debtDetails: "Debt Details",
-                          totalDebtAmount: "Total Debt Amount",
-                          paymentTermsType: "Payment Terms",
-                          singleInvoice: "Single Invoice",
-                          firstOverdueDate: "First Overdue Date",
-                          lastOverdueDate: "Last Overdue Date"
-                        };
-                        return fieldLabels[field] || field;
-                      });
-                      
-                      toast({
-                        title: "Missing Required Fields",
-                        description: `Please fill in: ${missingFields.join(", ")}`,
-                        variant: "destructive",
-                      });
-                    }
-                  }}
                 >
                   {submitCaseMutation.isPending ? "Submitting..." : "Submit Case"}
                 </Button>
