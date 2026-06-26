@@ -188,22 +188,22 @@ export default function Cases() {
 
   const getStageBadge = (status: string, stage: string) => {
     if (status === "resolved" || status?.toLowerCase() === "closed") {
-      return { label: "Closed", cls: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400" };
+      return { label: "Closed", cls: "text-gray-500 dark:text-gray-400" };
     }
     const n = stage?.toLowerCase().replace(/[_\-\s]/g, "") || "";
     switch (n) {
       case "initialcontact":
-      case "prelegal":   return { label: "Pre-Legal",   cls: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300" };
-      case "claim":      return { label: "Claim",       cls: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300" };
+      case "prelegal":   return { label: "Pre-Legal",   cls: "text-blue-700 dark:text-blue-300" };
+      case "claim":      return { label: "Claim",       cls: "text-yellow-700 dark:text-yellow-300" };
       case "judgment":
-      case "judgement":  return { label: "Judgment",    cls: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300" };
-      case "enforcement":return { label: "Enforcement", cls: "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300" };
-      case "paymentplan":return { label: "Payment Plan",cls: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300" };
-      case "paid":       return { label: "Paid",        cls: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300" };
-      case "legalaction":return { label: "Legal Action",cls: "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300" };
+      case "judgement":  return { label: "Judgment",    cls: "text-purple-700 dark:text-purple-300" };
+      case "enforcement":return { label: "Enforcement", cls: "text-orange-700 dark:text-orange-300" };
+      case "paymentplan":return { label: "Payment Plan",cls: "text-green-700 dark:text-green-300" };
+      case "paid":       return { label: "Paid",        cls: "text-green-700 dark:text-green-300" };
+      case "legalaction":return { label: "Legal Action",cls: "text-orange-700 dark:text-orange-300" };
       default: {
         const label = stage?.replace(/[_-]/g, " ").replace(/\b\w/g, c => c.toUpperCase()) || "Active";
-        return { label, cls: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300" };
+        return { label, cls: "text-gray-600 dark:text-gray-300" };
       }
     }
   };
@@ -368,7 +368,7 @@ export default function Cases() {
                           {formatCurrency(case_.outstandingAmount)}
                         </p>
                       </div>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${stageBadge.cls}`}>
+                      <span className={`text-xs font-semibold ${stageBadge.cls}`}>
                         {stageBadge.label}
                       </span>
                     </div>
