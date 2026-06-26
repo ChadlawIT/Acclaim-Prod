@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,7 @@ export default function Messages() {
 
   // Inline reply state (inside the message view dialog)
   const [showViewReply, setShowViewReply] = useState(false);
+  const viewReplyRef = useRef<HTMLDivElement>(null);
   const [viewReplyText, setViewReplyText] = useState("");
   const [viewReplyFile, setViewReplyFile] = useState<File | null>(null);
   const [viewReplyFileError, setViewReplyFileError] = useState<string | null>(null);
@@ -871,7 +872,14 @@ const handleReply = (message: any) => {
                   <Button
                     variant={showViewReply ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setShowViewReply(v => !v)}
+                    onClick={() => {
+                      setShowViewReply(v => {
+                        if (!v) {
+                          setTimeout(() => viewReplyRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+                        }
+                        return !v;
+                      });
+                    }}
                     className={showViewReply
                       ? "bg-acclaim-teal text-white hover:bg-acclaim-teal/90"
                       : "text-acclaim-teal border-acclaim-teal hover:bg-acclaim-teal hover:text-white"}
@@ -964,7 +972,7 @@ const handleReply = (message: any) => {
 
               {/* Inline reply panel */}
               {showViewReply && (
-                <div className="pt-4 border-t space-y-3">
+                <div ref={viewReplyRef} className="pt-4 border-t space-y-3">
                   <Label className="text-sm font-semibold">Reply</Label>
                   <Textarea
                     placeholder="Type your reply..."
