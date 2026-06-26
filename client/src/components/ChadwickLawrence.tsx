@@ -210,9 +210,11 @@ function ServiceCard({ service, accentColor }: { service: Service; accentColor: 
 }
 
 interface Seminar {
+  category: string;
   date: string;
   time: string;
   name: string;
+  description?: string;
   location: string;
   infoUrl: string | null;
   bookUrl: string;
@@ -362,12 +364,21 @@ export default function ChadwickLawrence() {
             ) : (
               <div className="divide-y divide-gray-100 dark:divide-gray-800">
                 {seminars.map((s, i) => (
-                  <div key={i} className="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
-                    {/* Date/time pill */}
-                    <div className="flex-shrink-0 min-w-[120px]">
-                      <div className="text-xs font-semibold text-[#2e3192] dark:text-blue-300">{s.date}</div>
+                  <div key={i} className="flex flex-col sm:flex-row gap-3 px-5 py-4 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
+                    {/* Date/time + category */}
+                    <div className="flex-shrink-0 min-w-[130px]">
+                      {s.date && s.date !== "TBC" ? (
+                        <div className="text-xs font-semibold text-[#2e3192] dark:text-blue-300">{s.date}</div>
+                      ) : (
+                        <span className="inline-block text-xs px-2 py-0.5 rounded-full font-medium"
+                          style={s.category === "social-housing"
+                            ? { background: "#e8f5e9", color: "#2e7d32" }
+                            : { background: "#e8eaf6", color: "#2e3192" }}>
+                          {s.category === "social-housing" ? "Social Housing" : "Employment"}
+                        </span>
+                      )}
                       {s.time && s.time !== "TBC" && (
-                        <div className="flex items-center gap-1 text-xs text-gray-400 mt-0.5">
+                        <div className="flex items-center gap-1 text-xs text-gray-400 mt-1">
                           <Clock className="h-3 w-3" />
                           {s.time}
                         </div>
@@ -375,23 +386,36 @@ export default function ChadwickLawrence() {
                     </div>
                     {/* Details */}
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm text-gray-900 dark:text-gray-100">{s.name}</div>
+                      <div className="flex items-start gap-2 flex-wrap">
+                        <span className="font-medium text-sm text-gray-900 dark:text-gray-100 leading-snug">{s.name}</span>
+                        {s.date && s.date !== "TBC" && (
+                          <span className="inline-block text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0"
+                            style={s.category === "social-housing"
+                              ? { background: "#e8f5e9", color: "#2e7d32" }
+                              : { background: "#e8eaf6", color: "#2e3192" }}>
+                            {s.category === "social-housing" ? "Social Housing" : "Employment"}
+                          </span>
+                        )}
+                      </div>
+                      {s.description && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed line-clamp-2">{s.description}</p>
+                      )}
                       {s.location && s.location !== "TBC" && (
-                        <div className="flex items-center gap-1 text-xs text-gray-400 mt-0.5">
+                        <div className="flex items-center gap-1 text-xs text-gray-400 mt-1">
                           <MapPin className="h-3 w-3" />
                           {s.location}
                         </div>
                       )}
                     </div>
                     {/* Actions */}
-                    <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="flex items-center gap-2 flex-shrink-0 self-start pt-0.5">
                       {s.infoUrl && (
                         <a
                           href={s.infoUrl}
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={() => trackEvent("link_click", `More info: ${s.name}`, s.infoUrl!, "events")}
-                          className="text-xs text-[#2e3192] hover:underline font-medium"
+                          className="text-xs text-[#2e3192] hover:underline font-medium whitespace-nowrap"
                         >
                           More info
                         </a>
@@ -401,7 +425,7 @@ export default function ChadwickLawrence() {
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={() => trackEvent("link_click", `Book: ${s.name}`, s.bookUrl, "events")}
-                        className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg text-white transition-colors"
+                        className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg text-white transition-colors whitespace-nowrap"
                         style={{ background: "#ba1b6e" }}
                       >
                         Book now

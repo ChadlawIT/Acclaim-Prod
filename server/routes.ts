@@ -8823,9 +8823,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // CL seminars scraper — cached 1 hour
+  // CL seminars scraper — cached 1 hour, scrapes both employment + social housing pages
   let seminarsCache: { data: any[]; fetchedAt: number } | null = null;
   const SEMINARS_TTL = 60 * 60 * 1000;
+
+  function stripHtml(raw: string): string {
+    return raw
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&amp;/g, '&').replace(/&#038;/g, '&')
+      .replace(/&quot;/g, '"').replace(/&#8217;/g, "'")
+      .replace(/&#8220;/g, '"').replace(/&#8221;/g, '"')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/\s+/g, ' ').trim();
+  }
+
+  function resolveBookUrl(raw: string): string {
+    if (!raw) return 'https://www.chadwicklawrence.co.uk/contact-us/';
+    if (raw.startsWith('mailto:') || raw.startsWith('http')) return raw;
+    return `https://www.chadwicklawrence.co.uk${raw.startsWith('/') ? raw : '/' + raw}`;
+  }
+
+  async function scrapeSeminarPage(url: string, category: string): Promise<any[]> {
+    const response = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AcclaimPortal/1.0)' },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!response.ok) return [];
+    const html = await response.text();
+
+    const tableMatch = html.match(/<table id="seminar-table">([\s\S]*?)<\/table>/);
+    if (!tableMatch) return [];
+
+    // Detect column headers to understand table shape
+    const headers = [...tableMatch[1].matchAll(/<th[^>]*>([\s\S]*?)<\/th>/g)]
+      .map(m => stripHtml(m[1]).toLowerCase());
+    const hasDate = headers.includes('date');
+
+    // Extract every <tr> block that contains at least one <td>
+    const rowPattern = /<tr>([\s\S]*?)<\/tr>/g;
+    const results: any[] = [];
+
+    for (const rowMatch of tableMatch[1].matchAll(rowPattern)) {
+      const rowHtml = rowMatch[1];
+      const cells = [...rowHtml.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map(c => stripHtml(c[1]));
+      if (cells.length < 3) continue;
+
+      const infoUrl = (rowHtml.match(/href="(https?:\/\/www\.chadwicklawrence\.co\.uk\/seminars-events\/[^"]+)"/) || [])[1] || null;
+      const bookRaw = (rowHtml.match(/href="([^"]+)"[^>]*>Book Now/i) || [])[1] || '';
+
+      if (hasDate) {
+        // Columns: Date | Time | Name | Location | More Info | Sign Up
+        const [date, time, name, location] = cells;
+        if (!name || name.toLowerCase() === 'name') continue;
+        results.push({ category, date: date || 'TBC', time: time || 'TBC', name, location: location || 'TBC', infoUrl, bookUrl: resolveBookUrl(bookRaw) });
+      } else {
+        // Columns: Name | Session Description | Location | More Info | Sign Up
+        const [name, description, location] = cells;
+        if (!name || name.toLowerCase() === 'name') continue;
+        results.push({ category, date: 'TBC', time: 'TBC', name, description, location: location || 'TBC', infoUrl, bookUrl: resolveBookUrl(bookRaw) });
+      }
+    }
+
+    return results;
+  }
 
   app.get('/api/cl-seminars', isAuthenticated, async (_req, res) => {
     try {
@@ -8833,54 +8893,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(seminarsCache.data);
       }
 
-      const response = await fetch('https://www.chadwicklawrence.co.uk/seminars/business-services-seminars/', {
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AcclaimPortal/1.0)' },
-        signal: AbortSignal.timeout(10000),
-      });
+      const [employment, socialHousing] = await Promise.allSettled([
+        scrapeSeminarPage('https://www.chadwicklawrence.co.uk/seminars/business-services-seminars/', 'employment'),
+        scrapeSeminarPage('https://www.chadwicklawrence.co.uk/seminars/free-training-sessions/', 'social-housing'),
+      ]);
 
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const html = await response.text();
-
-      // Extract #seminar-table rows
-      const tableMatch = html.match(/<table id="seminar-table">([\s\S]*?)<\/table>/);
-      if (!tableMatch) return res.json([]);
-
-      const rowMatches = tableMatch[1].matchAll(/<tr>([\s\S]*?)<\/tr>/g);
-      const seminars: any[] = [];
-
-      for (const row of rowMatches) {
-        const cells = [...row[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map(c => {
-          // Strip HTML tags, decode basic entities
-          return c[1]
-            .replace(/<[^>]+>/g, ' ')
-            .replace(/&amp;/g, '&').replace(/&#038;/g, '&')
-            .replace(/&quot;/g, '"').replace(/&#8217;/g, "'")
-            .replace(/\s+/g, ' ').trim();
-        });
-
-        if (cells.length < 3) continue; // skip header / empty rows
-
-        const [date, time, name, location] = cells;
-        if (!name) continue;
-
-        // Extract link from More Info cell
-        const linkMatch = row[1].match(/href="(https?:\/\/www\.chadwicklawrence\.co\.uk\/seminars-events\/[^"]+)"/);
-        const bookMatch = row[1].match(/href="([^"]+)"[^>]*class="button">Book Now/);
-
-        seminars.push({
-          date: date || 'TBC',
-          time: time || 'TBC',
-          name,
-          location: location || 'TBC',
-          infoUrl: linkMatch?.[1] || null,
-          bookUrl: bookMatch ? `https://www.chadwicklawrence.co.uk${bookMatch[1].startsWith('/') ? bookMatch[1] : '/' + bookMatch[1]}` : 'https://www.chadwicklawrence.co.uk/contact-us/',
-        });
-      }
+      const seminars = [
+        ...(employment.status === 'fulfilled' ? employment.value : []),
+        ...(socialHousing.status === 'fulfilled' ? socialHousing.value : []),
+      ];
 
       seminarsCache = { data: seminars, fetchedAt: Date.now() };
       res.json(seminars);
     } catch (err: any) {
-      // Return stale cache if available, otherwise empty
       res.json(seminarsCache?.data ?? []);
     }
   });
