@@ -1,4 +1,5 @@
 import path from 'path';
+import os from 'os';
 import { fileURLToPath } from 'url';
 import ExcelJS from 'exceljs';
 import fs from 'fs';
@@ -1956,9 +1957,9 @@ Need help? Contact us at email@acclaim.law
       });
     }
 
-    // Save to temporary file
+    // Save to OS temp directory — guaranteed writable on every platform (Azure, Replit, etc.)
     const fileName = `case-submission-${data.submissionId}-${Date.now()}.xlsx`;
-    const filePath = path.join(__dirname, '../uploads', fileName);
+    const filePath = path.join(os.tmpdir(), fileName);
     
     await workbook.xlsx.writeFile(filePath);
     return filePath;
@@ -2344,7 +2345,7 @@ A detailed Excel spreadsheet and all uploaded files are attached to this email.
         attachments.push(logoBase64);
       }
       
-      // Add Excel file
+      // Add Excel file then clean up the temp file
       try {
         const excelContent = fs.readFileSync(excelFilePath);
         attachments.push({
@@ -2353,6 +2354,7 @@ A detailed Excel spreadsheet and all uploaded files are attached to this email.
           type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
           disposition: 'attachment'
         });
+        try { fs.unlinkSync(excelFilePath); } catch { /* best-effort cleanup */ }
       } catch (error) {
         console.error('Failed to read Excel file:', error);
       }
