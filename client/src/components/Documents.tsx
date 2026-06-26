@@ -19,9 +19,10 @@ import CaseDetail from "./CaseDetail";
 export default function Documents() {
   const [searchTerm, setSearchTerm] = useState("");
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [fileValidationError, setFileValidationError] = useState<string | null>(null);
-  const [customFileName, setCustomFileName] = useState("");
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [fileErrors, setFileErrors] = useState<string[]>([]);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
   const [selectedCaseId, setSelectedCaseId] = useState<string>("");
   const [notifyOnUpload, setNotifyOnUpload] = useState(true);
   const [selectedCase, setSelectedCase] = useState<any>(null);
@@ -146,15 +147,6 @@ export default function Documents() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
-      setSelectedFile(null);
-      setCustomFileName("");
-      setSelectedCaseId("");
-      setNotifyOnUpload(true);
-      setUploadDialogOpen(false);
-      toast({
-        title: "Success",
-        description: "Document uploaded successfully",
-      });
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
@@ -248,34 +240,67 @@ export default function Documents() {
     window.open(`/api/documents/${documentId}/download`, '_blank');
   };
 
-  const handleFileSelect = (event: { target: { files: FileList | null } }) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      setCustomFileName("");
-    }
-  };
-
-  const handleUpload = () => {
-    if (!selectedFile || !selectedCaseId) {
+  const handleUploadAll = async () => {
+    if (!selectedFiles.length || !selectedCaseId) {
       toast({
         title: "Error",
-        description: "Please select a file and case before uploading",
+        description: "Please select a case and at least one file before uploading",
         variant: "destructive",
       });
       return;
     }
+    setUploadProgress({ done: 0, total: selectedFiles.length });
+    let successCount = 0;
+    for (let i = 0; i < selectedFiles.length; i++) {
+      try {
+        await uploadDocumentMutation.mutateAsync({
+          file: selectedFiles[i],
+          caseId: selectedCaseId,
+          notify: notifyOnUpload,
+          fileName: selectedFiles[i].name,
+        });
+        successCount++;
+        setUploadProgress({ done: i + 1, total: selectedFiles.length });
+      } catch {
+        // individual errors are handled by mutation onError
+      }
+    }
+    if (successCount > 0) {
+      toast({
+        title: "Upload complete",
+        description: `${successCount} of ${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''} uploaded successfully`,
+      });
+      handleCloseUploadDialog();
+    } else {
+      setUploadProgress(null);
+    }
+  };
 
-    // Build final filename with original extension
-    const ext = selectedFile.name.split('.').pop();
-    const finalFileName = customFileName.trim() ? `${customFileName.trim()}.${ext}` : selectedFile.name;
-    uploadDocumentMutation.mutate({ file: selectedFile, caseId: selectedCaseId, notify: notifyOnUpload, fileName: finalFileName });
+  const addFilesToQueue = (incoming: FileList | File[]) => {
+    const newFiles: File[] = [];
+    const newErrors: string[] = [];
+    Array.from(incoming).forEach((f) => {
+      const validation = validateFile(f);
+      if (!validation.isValid) {
+        newErrors.push(`${f.name}: ${validation.error}`);
+      } else if (!selectedFiles.find((e) => e.name === f.name && e.size === f.size)) {
+        newFiles.push(f);
+      }
+    });
+    setSelectedFiles((prev) => [...prev, ...newFiles]);
+    if (newErrors.length) setFileErrors((prev) => [...prev, ...newErrors]);
+  };
+
+  const removeFromQueue = (index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleCloseUploadDialog = () => {
     setUploadDialogOpen(false);
-    setSelectedFile(null);
-    setCustomFileName("");
+    setSelectedFiles([]);
+    setFileErrors([]);
+    setIsDragOver(false);
+    setUploadProgress(null);
     setSelectedCaseId("");
     setNotifyOnUpload(true);
   };
@@ -357,15 +382,16 @@ export default function Documents() {
                   Upload Document
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>Upload Document</DialogTitle>
+                  <DialogTitle>Upload Documents</DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4">
+                <div className="space-y-5">
+                  {/* Case selector */}
                   <div>
                     <Label htmlFor="case-select">Select Case</Label>
                     <Select value={selectedCaseId} onValueChange={setSelectedCaseId}>
-                      <SelectTrigger>
+                      <SelectTrigger className="mt-1">
                         <SelectValue placeholder="Select a case..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -397,78 +423,138 @@ export default function Documents() {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {/* Drag-drop zone */}
                   <div>
-                    <Label htmlFor="file-input">Select Document</Label>
-                    <p className="text-xs text-gray-500 mt-1 mb-2">
-                      Max {MAX_FILE_SIZE_MB}MB. Formats: {ACCEPTED_FILE_TYPES_DISPLAY}
+                    <Label>Files</Label>
+                    <p className="text-xs text-gray-500 mt-0.5 mb-2">
+                      Max {MAX_FILE_SIZE_MB}MB per file · {ACCEPTED_FILE_TYPES_DISPLAY}
                     </p>
-                    <Input
-                      id="file-input"
-                      type="file"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0] || null;
-                        if (file) {
-                          const validation = validateFile(file);
-                          if (!validation.isValid) {
-                            setFileValidationError(validation.error);
-                            setSelectedFile(null);
-                            setCustomFileName("");
-                            e.target.value = '';
-                            return;
-                          }
-                        }
-                        setFileValidationError(null);
-                        setSelectedFile(file);
-                        setCustomFileName("");
+                    <div
+                      className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer
+                        ${isDragOver
+                          ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20'
+                          : 'border-gray-300 dark:border-gray-600 hover:border-teal-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}
+                      onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+                      onDragLeave={() => setIsDragOver(false)}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setIsDragOver(false);
+                        if (e.dataTransfer.files.length) addFilesToQueue(e.dataTransfer.files);
                       }}
-                      accept={ACCEPTED_FILE_TYPES_STRING}
-                      className="mt-2"
-                    />
-                    {fileValidationError && (
-                      <p className="text-sm text-red-600 mt-2 bg-red-50 dark:bg-red-900/20 p-2 rounded">
-                        {fileValidationError}
+                      onClick={() => document.getElementById('doc-file-input')?.click()}
+                    >
+                      <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Drag &amp; drop files here, or <span className="text-teal-600">browse</span>
                       </p>
+                      <p className="text-xs text-gray-400 mt-1">Multiple files supported</p>
+                      <input
+                        id="doc-file-input"
+                        type="file"
+                        multiple
+                        accept={ACCEPTED_FILE_TYPES_STRING}
+                        className="hidden"
+                        onChange={(e) => {
+                          if (e.target.files?.length) addFilesToQueue(e.target.files);
+                          e.target.value = '';
+                        }}
+                      />
+                    </div>
+
+                    {/* Validation errors */}
+                    {fileErrors.length > 0 && (
+                      <div className="mt-2 space-y-1">
+                        {fileErrors.map((err, i) => (
+                          <p key={i} className="text-xs text-red-600 bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded flex items-start gap-2">
+                            <X className="h-3 w-3 mt-0.5 shrink-0" />
+                            {err}
+                          </p>
+                        ))}
+                        <button onClick={() => setFileErrors([])} className="text-xs text-gray-400 hover:text-gray-600 mt-1">Clear errors</button>
+                      </div>
                     )}
-                    {selectedFile && (
-                      <div className="mt-2 space-y-2">
-                        <div className="p-2 bg-gray-50 rounded flex items-center justify-between">
-                          <span className="text-sm text-gray-600">
-                            {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => { setSelectedFile(null); setCustomFileName(""); }}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        <div>
-                          <Label htmlFor="custom-filename" className="text-sm text-acclaim-teal font-medium">Rename file (optional)</Label>
-                          <div className="flex items-center gap-1 mt-1">
-                            <Input
-                              id="custom-filename"
-                              type="text"
-                              value={customFileName}
-                              onChange={(e) => setCustomFileName(e.target.value)}
-                              placeholder="Enter new filename"
-                              className="flex-1"
-                            />
-                            <span className="text-sm text-gray-500">.{selectedFile.name.split('.').pop()}</span>
-                          </div>
-                        </div>
+
+                    {/* File queue */}
+                    {selectedFiles.length > 0 && (
+                      <div className="mt-3 divide-y divide-gray-100 dark:divide-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                        {selectedFiles.map((file, idx) => {
+                          const ext = file.name.split('.').pop()?.toLowerCase() || '';
+                          const isPdf = file.type.includes('pdf') || ext === 'pdf';
+                          const isWord = file.type.includes('word') || ['doc','docx'].includes(ext);
+                          const isSheet = file.type.includes('sheet') || file.type.includes('excel') || ['xls','xlsx','csv'].includes(ext);
+                          const iconColour = isPdf ? 'text-red-500' : isWord ? 'text-blue-500' : isSheet ? 'text-emerald-600' : 'text-gray-400';
+                          const bgColour = isPdf ? 'bg-red-50' : isWord ? 'bg-blue-50' : isSheet ? 'bg-emerald-50' : 'bg-gray-100';
+                          const isDone = uploadProgress && idx < uploadProgress.done;
+                          return (
+                            <div key={idx} className={`flex items-center gap-3 px-3 py-2.5 ${isDone ? 'bg-teal-50/50 dark:bg-teal-900/10' : 'bg-white dark:bg-gray-900'}`}>
+                              <div className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 ${bgColour}`}>
+                                <FileText className={`h-3.5 w-3.5 ${iconColour}`} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{file.name}</p>
+                                <p className="text-[10px] text-gray-400">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                              </div>
+                              {isDone ? (
+                                <span className="text-[10px] font-medium text-teal-600">✓ Uploaded</span>
+                              ) : uploadProgress ? (
+                                <span className="text-[10px] text-gray-400">Queued…</span>
+                              ) : (
+                                <button
+                                  onClick={() => removeFromQueue(idx)}
+                                  className="text-gray-400 hover:text-red-500 transition-colors p-1"
+                                >
+                                  <X className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
-                  <div className="flex items-center space-x-2">
+
+                  {/* Notify toggle */}
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <Checkbox
+                      id="notify-upload"
+                      checked={notifyOnUpload}
+                      onCheckedChange={(v) => setNotifyOnUpload(!!v)}
+                    />
+                    <Label htmlFor="notify-upload" className="text-sm cursor-pointer">
+                      {user?.isAdmin ? 'Notify users by email when uploaded' : 'Notify Acclaim by email when uploaded'}
+                    </Label>
+                  </div>
+
+                  {/* Progress bar */}
+                  {uploadProgress && (
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-xs text-gray-500">
+                        <span>Uploading…</span>
+                        <span>{uploadProgress.done} / {uploadProgress.total}</span>
+                      </div>
+                      <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-teal-500 rounded-full transition-all duration-300"
+                          style={{ width: `${(uploadProgress.done / uploadProgress.total) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-3 pt-1">
                     <Button
-                      onClick={handleUpload}
-                      disabled={uploadDocumentMutation.isPending || !selectedFile || !selectedCaseId}
+                      onClick={handleUploadAll}
+                      disabled={uploadDocumentMutation.isPending || !selectedFiles.length || !selectedCaseId}
                       className="bg-acclaim-teal hover:bg-acclaim-teal/90"
                     >
-                      {uploadDocumentMutation.isPending ? "Uploading..." : "Upload Document"}
+                      <Upload className="h-4 w-4 mr-2" />
+                      {uploadDocumentMutation.isPending
+                        ? `Uploading ${uploadProgress?.done ?? 0} of ${uploadProgress?.total ?? selectedFiles.length}…`
+                        : `Upload ${selectedFiles.length > 0 ? `${selectedFiles.length} ` : ''}File${selectedFiles.length !== 1 ? 's' : ''}`}
                     </Button>
-                    <Button variant="outline" onClick={handleCloseUploadDialog}>
+                    <Button variant="outline" onClick={handleCloseUploadDialog} disabled={uploadDocumentMutation.isPending}>
                       Cancel
                     </Button>
                   </div>
