@@ -544,6 +544,14 @@ export default function ChadwickLawrence() {
                       >
                         Book now
                       </button>
+                      <button
+                        onClick={() => setSharingSeminar(s)}
+                        className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors whitespace-nowrap"
+                        data-testid={`button-seminar-share-${i}`}
+                      >
+                        <Share2 className="h-3 w-3" />
+                        Share
+                      </button>
                     </div>
                   </div>
                 ))}
