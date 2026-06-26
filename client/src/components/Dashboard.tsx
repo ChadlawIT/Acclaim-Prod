@@ -569,15 +569,13 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
                       onClick={() => handleMessageClick(message)}
                     >
                       {/* avatar */}
-                      {message.senderIsAdmin ? (
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-teal-600 ring-1 ring-teal-400 overflow-hidden">
-                          <img src={acclaimRoseLogo} alt="Acclaim" className="w-5 h-5 object-contain" />
-                        </div>
-                      ) : (
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-slate-600 text-white text-[10px] font-bold ring-1 ring-slate-400">
-                          {initials}
-                        </div>
-                      )}
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 overflow-hidden ${message.senderIsAdmin ? 'bg-white border-2 border-acclaim-teal' : 'bg-white border-2 border-blue-300'}`}>
+                        {message.senderIsAdmin ? (
+                          <img src={acclaimRoseLogo} alt="Acclaim" className="w-6 h-6 object-contain" />
+                        ) : (
+                          <User className="text-acclaim-teal h-4 w-4" />
+                        )}
+                      </div>
                       {/* body */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-baseline justify-between gap-2 mb-0.5">
