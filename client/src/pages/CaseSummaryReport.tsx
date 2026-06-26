@@ -191,19 +191,13 @@ export default function CaseSummaryReport() {
   };
 
   const getStatusBadge = (status: string) => {
-    const getStatusColor = (status: string) => {
-      switch (status) {
-        case 'new':    return 'text-blue-700 dark:text-blue-300';
-        case 'active': return 'text-blue-700 dark:text-blue-300';
-        case 'Closed': return 'text-red-600 dark:text-red-400';
-        default:       return 'text-gray-600 dark:text-gray-300';
-      }
-    };
-
+    const s = (status || '').toLowerCase();
+    const cls = s === 'closed'
+      ? 'text-red-600 dark:text-red-400'
+      : 'text-blue-700 dark:text-blue-300';
+    const label = s === 'closed' ? 'Closed' : status.charAt(0).toUpperCase() + status.slice(1);
     return (
-      <span className={`text-xs font-semibold ${getStatusColor(status)}`}>
-        {status === 'Closed' ? 'Closed' : status.charAt(0).toUpperCase() + status.slice(1)}
-      </span>
+      <span className={`text-xs font-semibold ${cls}`}>{label}</span>
     );
   };
 
