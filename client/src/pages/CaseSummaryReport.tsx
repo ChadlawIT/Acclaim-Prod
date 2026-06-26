@@ -193,52 +193,43 @@ export default function CaseSummaryReport() {
   const getStatusBadge = (status: string) => {
     const getStatusColor = (status: string) => {
       switch (status) {
-        case 'new':
-          return 'bg-blue-100 text-blue-800';
-        case 'active':
-          return 'bg-yellow-100 text-yellow-800';
-        case 'Closed':
-          return 'bg-green-100 text-green-800';
-        default:
-          return 'bg-gray-100 text-gray-800';
+        case 'new':    return 'text-blue-700 dark:text-blue-300';
+        case 'active': return 'text-yellow-700 dark:text-yellow-300';
+        case 'Closed': return 'text-green-700 dark:text-green-300';
+        default:       return 'text-gray-600 dark:text-gray-300';
       }
     };
 
     return (
-      <Badge className={getStatusColor(status)}>
+      <span className={`text-xs font-semibold ${getStatusColor(status)}`}>
         {status === 'Closed' ? 'Closed' : status.charAt(0).toUpperCase() + status.slice(1)}
-      </Badge>
+      </span>
     );
   };
 
   const getStageBadge = (stage: string) => {
     const getStageColor = (stage: string) => {
-      const normalizedStage = stage.toLowerCase().replace(/[_-]/g, '');
-      
+      const normalizedStage = stage?.toLowerCase().replace(/[_\-\s]/g, '') || '';
       switch (normalizedStage) {
-        case 'prelegal':
-          return 'bg-blue-100 text-blue-800';
+        case 'initialcontact':
+        case 'prelegal':    return 'text-blue-700 dark:text-blue-300';
         case 'paymentplan':
-        case 'paid':
-          return 'bg-green-100 text-green-800';
-        case 'claim':
-          return 'bg-yellow-100 text-yellow-800';
+        case 'paid':        return 'text-green-700 dark:text-green-300';
+        case 'claim':       return 'text-yellow-700 dark:text-yellow-300';
         case 'judgment':
-          return 'bg-orange-100 text-orange-800';
+        case 'judgement':   return 'text-purple-700 dark:text-purple-300';
         case 'enforcement':
-        case 'legalaction':
-          return 'bg-red-100 text-red-800';
-        default:
-          return 'bg-gray-100 text-gray-800';
+        case 'legalaction': return 'text-orange-700 dark:text-orange-300';
+        default:            return 'text-gray-600 dark:text-gray-300';
       }
     };
 
-    const displayText = stage ? stage.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 'Not specified';
-    
+    const displayText = stage ? stage.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 'Not specified';
+
     return (
-      <Badge className={getStageColor(stage)}>
+      <span className={`text-xs font-semibold ${getStageColor(stage)}`}>
         {displayText}
-      </Badge>
+      </span>
     );
   };
 
