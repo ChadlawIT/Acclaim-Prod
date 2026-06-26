@@ -643,7 +643,7 @@ export default function SubmitCase() {
                 Debtor Details
               </CardTitle>
               <CardDescription>
-                Information about the individual or organisation that owes the debt.
+                Information about the individual or organisation that owes the debt. If there is more than one individual debtor, please provide the primary debtor's details here and list the additional debtors' details (name, address, and contact details) in the Additional Information section below.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -1282,12 +1282,12 @@ export default function SubmitCase() {
                     <FormItem>
                       <FormLabel>Additional Information</FormLabel>
                       <FormDescription>
-                        Enter any relevant additional information
+                        Enter any relevant additional information. If there is more than one debtor, please list each additional debtor's details here, including their name, address, and contact details.
                       </FormDescription>
                       <FormControl>
                         <Textarea 
                           {...field} 
-                          placeholder="Any additional details that might be relevant to the debt recovery"
+                          placeholder="Any additional details that might be relevant to the debt recovery. If there is more than one debtor, please list their name, address, and contact details here."
                           rows={4}
                         />
                       </FormControl>
