@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiRequest } from "@/lib/queryClient";
@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { FolderOpen, CheckCircle, PoundSterling, TrendingUp, User, Building, Clock, FileText, Check, AlertTriangle, Store, UserCheck, Plus, Info, Send, Paperclip, X } from "lucide-react";
+import { FolderOpen, CheckCircle, PoundSterling, TrendingUp, User, Building, Clock, FileText, Check, AlertTriangle, Store, UserCheck, Plus, Info, Send, Paperclip, X, History } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { validateFile, ACCEPTED_FILE_TYPES_STRING, MAX_FILE_SIZE_MB, ACCEPTED_FILE_TYPES_DISPLAY } from "@/lib/fileValidation";
@@ -18,6 +18,7 @@ import { useLocation } from "wouter";
 import CaseDetail from "./CaseDetail";
 import RefreshIndicator from "./RefreshIndicator";
 import acclaimRoseLogo from "@assets/acclaim_rose_transparent_1768474381340.png";
+import { trackRecentlyViewed, getRecentlyViewedEntries } from "@/lib/recentlyViewed";
 
 
 interface DashboardProps {
@@ -298,10 +299,21 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
     .slice(0, 8) ?? [];
   const recentMessages = messages?.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5) || [];
 
+  const [recentlyViewedEntries, setRecentlyViewedEntries] = useState(getRecentlyViewedEntries);
+
   const handleCaseClick = (caseData: any) => {
     setSelectedCase(caseData);
     setDialogOpen(true);
+    trackRecentlyViewed(caseData.id);
+    setRecentlyViewedEntries(getRecentlyViewedEntries());
   };
+
+  const recentlyViewedCases = recentlyViewedEntries
+    .map((entry) => {
+      const found = cases?.find((c: any) => c.id === entry.id);
+      return found ? { ...found, viewedAt: entry.viewedAt } : null;
+    })
+    .filter(Boolean) as any[];
 
   const handleMessageClick = (messageData: any) => {
     setSelectedMessage(messageData);
@@ -629,6 +641,40 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Recently Viewed */}
+      {recentlyViewedCases.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <History className="h-4 w-4 text-gray-400" />
+              <CardTitle className="text-base font-semibold">Recently Viewed</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
+              {recentlyViewedCases.map((case_: any) => (
+                <button
+                  key={case_.id}
+                  onClick={() => handleCaseClick(case_)}
+                  className="group flex-shrink-0 w-52 text-left bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-xl p-3.5 hover:border-acclaim-teal hover:shadow-sm dark:hover:border-acclaim-teal transition-all duration-150"
+                >
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 line-clamp-2 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors leading-snug mb-1.5">
+                    {case_.caseName}
+                  </p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-2.5 truncate">
+                    Acc: {case_.accountNumber}
+                  </p>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-xs">{getStageBadge(case_.status, case_.stage)}</div>
+                    <span className="text-[10px] text-gray-400 dark:text-gray-500 shrink-0">{formatDate(case_.viewedAt)}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Case Detail Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
