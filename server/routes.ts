@@ -8704,6 +8704,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/cl-analytics', isAuthenticated, async (req: any, res) => {
     try {
+      // Admins are excluded from tracking
+      if (req.user.isAdmin) return res.json({ ok: true });
+
       const { eventType, linkTitle, linkHref, linkCategory } = req.body;
       if (!eventType || !['page_view', 'link_click'].includes(eventType)) {
         return res.status(400).json({ message: 'Invalid eventType' });
