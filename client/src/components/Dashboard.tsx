@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { FolderOpen, CheckCircle, PoundSterling, TrendingUp, User, Building, Clock, FileText, Check, AlertTriangle, Store, UserCheck, Plus, Info, Send, Paperclip } from "lucide-react";
+import { FolderOpen, CheckCircle, PoundSterling, TrendingUp, User, Building, Clock, FileText, Check, AlertTriangle, Store, UserCheck, Plus, Info, Send, Paperclip, X } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { validateFile, ACCEPTED_FILE_TYPES_STRING, MAX_FILE_SIZE_MB, ACCEPTED_FILE_TYPES_DISPLAY } from "@/lib/fileValidation";
@@ -36,6 +36,7 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
   const [replyFile, setReplyFile] = useState<File | null>(null);
   const [replyCustomFileName, setReplyCustomFileName] = useState<string>("");
   const [replyFileValidationError, setReplyFileValidationError] = useState<string | null>(null);
+  const [isDragOverAttachment, setIsDragOverAttachment] = useState(false);
   const [showAccessibleOnly, setShowAccessibleOnly] = useState(false);
 
   // Check if user has any case restrictions
@@ -714,64 +715,64 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
                     rows={3}
                   />
 
-                  <div className="mt-3">
-                    <Label htmlFor="reply-attachment" className="text-sm font-medium">Attachment (optional)</Label>
-                    <p className="text-xs text-gray-500 mt-1 mb-2">
-                      Max {MAX_FILE_SIZE_MB}MB. Formats: {ACCEPTED_FILE_TYPES_DISPLAY}
-                    </p>
+                  <div className="mt-3 space-y-2">
+                    <Label className="text-sm font-medium">Attachment <span className="text-gray-400 font-normal">(optional)</span></Label>
                     <input
                       id="reply-attachment"
                       type="file"
+                      accept={ACCEPTED_FILE_TYPES_STRING}
+                      className="sr-only"
+                      data-testid="input-reply-attachment"
                       onChange={(e) => {
                         const file = e.target.files?.[0] || null;
                         setReplyCustomFileName("");
                         if (file) {
                           const validation = validateFile(file);
-                          if (!validation.isValid) {
-                            setReplyFileValidationError(validation.error);
-                            setReplyFile(null);
-                            e.target.value = '';
-                            return;
-                          }
+                          if (!validation.isValid) { setReplyFileValidationError(validation.error); setReplyFile(null); e.target.value = ''; return; }
                         }
                         setReplyFileValidationError(null);
                         setReplyFile(file);
+                        e.target.value = '';
                       }}
-                      accept={ACCEPTED_FILE_TYPES_STRING}
-                      className="block w-full text-sm text-gray-500 mt-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-teal-600 file:text-white hover:file:bg-teal-700 file:cursor-pointer cursor-pointer"
-                      data-testid="input-reply-attachment"
                     />
-                    {replyFileValidationError && (
-                      <p className="text-sm text-red-600 mt-2 bg-red-50 dark:bg-red-900/20 p-2 rounded">
-                        {replyFileValidationError}
-                      </p>
-                    )}
-                    {replyFile && (
-                      <div className="mt-2 space-y-2">
-                        <p className="text-sm text-gray-600 flex items-center gap-1">
-                          <Paperclip className="h-3.5 w-3.5" />
-                          Selected: {replyFile.name} ({(replyFile.size / 1024 / 1024).toFixed(2)} MB)
-                        </p>
-                        <div>
-                          <Label htmlFor="reply-customFileName" className="text-sm font-bold text-acclaim-teal">
-                            Rename file (optional)
-                          </Label>
-                          <div className="flex items-center gap-1 mt-1">
-                            <Input
-                              id="reply-customFileName"
-                              type="text"
-                              placeholder="Enter new filename"
-                              value={replyCustomFileName}
-                              onChange={(e) => setReplyCustomFileName(e.target.value)}
-                              className="flex-1"
-                              data-testid="input-reply-custom-filename"
-                            />
-                            <span className="text-sm text-gray-500">
-                              .{replyFile.name.split('.').pop()}
-                            </span>
-                          </div>
+                    {!replyFile ? (
+                      <label
+                        htmlFor="reply-attachment"
+                        onDragOver={(e) => { e.preventDefault(); setIsDragOverAttachment(true); }}
+                        onDragLeave={() => setIsDragOverAttachment(false)}
+                        onDrop={(e) => {
+                          e.preventDefault(); setIsDragOverAttachment(false);
+                          const file = e.dataTransfer.files?.[0];
+                          if (file) { const v = validateFile(file); if (!v.isValid) { setReplyFileValidationError(v.error); } else { setReplyFileValidationError(null); setReplyFile(file); } }
+                        }}
+                        className={`flex items-center gap-3 px-4 py-3 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
+                          isDragOverAttachment ? "border-teal-400 bg-teal-50 dark:bg-teal-900/20" : "border-gray-200 bg-gray-50 dark:bg-gray-800/50 hover:border-teal-300 hover:bg-teal-50/50"
+                        }`}
+                      >
+                        <Paperclip className={`h-4 w-4 shrink-0 transition-colors ${isDragOverAttachment ? "text-teal-600" : "text-gray-400"}`} />
+                        <span className={`text-sm transition-colors ${isDragOverAttachment ? "text-teal-700 dark:text-teal-300" : "text-gray-500"}`}>
+                          {isDragOverAttachment ? "Drop file here" : "Click to browse or drag a file here"}
+                        </span>
+                        <span className="ml-auto text-xs text-gray-400 shrink-0">{ACCEPTED_FILE_TYPES_DISPLAY} · {MAX_FILE_SIZE_MB}MB</span>
+                      </label>
+                    ) : (
+                      <div className="flex items-center gap-3 px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl">
+                        {(() => {
+                          const ext = replyFile.name.split('.').pop()?.toUpperCase() || '?';
+                          const extColor = ext === 'PDF' ? 'bg-red-50 text-red-500 border-red-100' : ['DOC','DOCX'].includes(ext) ? 'bg-blue-50 text-blue-500 border-blue-100' : ['XLS','XLSX'].includes(ext) ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : ['PNG','JPG','JPEG','GIF','WEBP'].includes(ext) ? 'bg-green-50 text-green-600 border-green-100' : 'bg-gray-50 text-gray-500 border-gray-100';
+                          return <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 border ${extColor}`}>{ext.slice(0,4)}</div>;
+                        })()}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{replyFile.name}</p>
+                          <p className="text-xs text-gray-400">{(replyFile.size / 1024 / 1024).toFixed(2)} MB</p>
                         </div>
+                        <button onClick={() => { setReplyFile(null); setReplyFileValidationError(null); }} className="text-gray-300 hover:text-red-400 transition-colors shrink-0 p-1">
+                          <X className="h-4 w-4" />
+                        </button>
                       </div>
+                    )}
+                    {replyFileValidationError && (
+                      <p className="text-xs text-red-600">{replyFileValidationError}</p>
                     )}
                   </div>
 
