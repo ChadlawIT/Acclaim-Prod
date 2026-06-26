@@ -654,15 +654,15 @@ const handleReply = (message: any) => {
                               const file = e.dataTransfer.files?.[0];
                               if (file) { const v = validateFile(file); if (!v.isValid) { setFileValidationError(v.error); } else { setFileValidationError(null); setSelectedFile(file); } }
                             }}
-                            className={`flex items-center gap-3 px-4 py-3 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
+                            className={`flex flex-col items-center justify-center gap-1.5 px-4 py-5 border-2 border-dashed rounded-xl cursor-pointer transition-all text-center ${
                               isDragOverAttachment ? "border-teal-400 bg-teal-50 dark:bg-teal-900/20" : "border-gray-200 bg-gray-50 dark:bg-gray-800/50 hover:border-teal-300 hover:bg-teal-50/50"
                             }`}
                           >
-                            <Paperclip className={`h-4 w-4 shrink-0 transition-colors ${isDragOverAttachment ? "text-teal-600" : "text-gray-400"}`} />
+                            <Paperclip className={`h-5 w-5 transition-colors ${isDragOverAttachment ? "text-teal-600" : "text-gray-400"}`} />
                             <span className={`text-sm transition-colors ${isDragOverAttachment ? "text-teal-700 dark:text-teal-300" : "text-gray-500"}`}>
                               {isDragOverAttachment ? "Drop file here" : "Click to browse or drag a file here"}
                             </span>
-                            <span className="ml-auto text-xs text-gray-400 shrink-0">{ACCEPTED_FILE_TYPES_DISPLAY} · {MAX_FILE_SIZE_MB}MB</span>
+                            <span className="text-xs text-gray-400">{ACCEPTED_FILE_TYPES_DISPLAY} · {MAX_FILE_SIZE_MB}MB</span>
                           </label>
                         ) : (
                           <div className="flex items-center gap-3 px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl">
@@ -1003,15 +1003,15 @@ const handleReply = (message: any) => {
                           const file = e.dataTransfer.files?.[0];
                           if (file) { const v = validateFile(file); if (!v.isValid) { setViewReplyFileError(v.error!); } else { setViewReplyFileError(null); setViewReplyFile(file); } }
                         }}
-                        className={`flex items-center gap-3 px-4 py-3 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
+                        className={`flex flex-col items-center justify-center gap-1.5 px-4 py-5 border-2 border-dashed rounded-xl cursor-pointer transition-all text-center ${
                           viewReplyIsDragOver ? "border-teal-400 bg-teal-50 dark:bg-teal-900/20" : "border-gray-200 bg-gray-50 dark:bg-gray-800/50 hover:border-teal-300 hover:bg-teal-50/50"
                         }`}
                       >
-                        <Paperclip className={`h-4 w-4 shrink-0 ${viewReplyIsDragOver ? "text-teal-600" : "text-gray-400"}`} />
+                        <Paperclip className={`h-5 w-5 ${viewReplyIsDragOver ? "text-teal-600" : "text-gray-400"}`} />
                         <span className={`text-sm ${viewReplyIsDragOver ? "text-teal-700 dark:text-teal-300" : "text-gray-500"}`}>
                           {viewReplyIsDragOver ? "Drop file here" : "Click to browse or drag a file here"}
                         </span>
-                        <span className="ml-auto text-xs text-gray-400 shrink-0">{ACCEPTED_FILE_TYPES_DISPLAY} · {MAX_FILE_SIZE_MB}MB</span>
+                        <span className="text-xs text-gray-400">{ACCEPTED_FILE_TYPES_DISPLAY} · {MAX_FILE_SIZE_MB}MB</span>
                       </label>
                     ) : (
                       <div className="flex items-center gap-3 px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl">
