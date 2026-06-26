@@ -17,10 +17,10 @@ import {
   createOrganisationSchema,
   updateOrganisationSchema,
   insertScheduledReportSchema,
-  clPageEvents
+  auditLog
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, count, sql, and } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { z } from "zod";
 
 // Validates one or more email addresses separated by semicolons (or commas)
@@ -8698,21 +8698,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ─── Chadwick Lawrence Analytics ───────────────────────────────────────────
+  // ─── Chadwick Lawrence Analytics (stored in audit_log) ─────────────────────
+  // tableName='chadwick_lawrence', operation=eventType, recordId=linkHref|'page',
+  // fieldName=linkCategory, description=linkTitle
 
-  // Record a page view or link click
   app.post('/api/cl-analytics', isAuthenticated, async (req: any, res) => {
     try {
       const { eventType, linkTitle, linkHref, linkCategory } = req.body;
       if (!eventType || !['page_view', 'link_click'].includes(eventType)) {
         return res.status(400).json({ message: 'Invalid eventType' });
       }
-      await db.insert(clPageEvents).values({
+      await db.insert(auditLog).values({
+        tableName: 'chadwick_lawrence',
+        operation: eventType,
+        recordId: linkHref || 'page',
+        fieldName: linkCategory || null,
+        description: linkTitle || null,
         userId: req.user.id,
-        eventType,
-        linkTitle: linkTitle || null,
-        linkHref: linkHref || null,
-        linkCategory: linkCategory || null,
+        userEmail: req.user.email,
       });
       res.json({ ok: true });
     } catch (error) {
@@ -8721,92 +8724,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin: get CL analytics overview
   app.get('/api/admin/cl-analytics', isAuthenticated, isAdmin, async (req: any, res) => {
     try {
-      const rows = await db.select({
-        id: clPageEvents.id,
-        userId: clPageEvents.userId,
-        eventType: clPageEvents.eventType,
-        linkTitle: clPageEvents.linkTitle,
-        linkHref: clPageEvents.linkHref,
-        linkCategory: clPageEvents.linkCategory,
-        createdAt: clPageEvents.createdAt,
-      }).from(clPageEvents).orderBy(desc(clPageEvents.createdAt));
+      const rows = await db.select().from(auditLog)
+        .where(eq(auditLog.tableName, 'chadwick_lawrence'))
+        .orderBy(desc(auditLog.timestamp));
 
-      // Enrich with user info
-      const userIds = [...new Set(rows.map(r => r.userId))];
-      const userMap: Record<string, { firstName: string; lastName: string; email: string }> = {};
+      const userIds = [...new Set(rows.map(r => r.userId).filter(Boolean))] as string[];
+      const userMap: Record<string, { name: string; email: string }> = {};
       for (const uid of userIds) {
         const u = await storage.getUser(uid);
-        if (u) userMap[uid] = { firstName: u.firstName || '', lastName: u.lastName || '', email: u.email };
+        if (u) userMap[uid] = { name: `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email, email: u.email };
       }
 
-      const pageViews = rows.filter(r => r.eventType === 'page_view');
-      const linkClicks = rows.filter(r => r.eventType === 'link_click');
+      const pageViews = rows.filter(r => r.operation === 'page_view');
+      const linkClicks = rows.filter(r => r.operation === 'link_click');
 
-      // Per-user stats
       const userStats: Record<string, any> = {};
       for (const r of rows) {
-        if (!userStats[r.userId]) {
-          const u = userMap[r.userId] || { firstName: '', lastName: '', email: r.userId };
-          userStats[r.userId] = {
-            userId: r.userId,
-            name: `${u.firstName} ${u.lastName}`.trim() || r.userId,
-            email: u.email,
-            pageViews: 0,
-            lastPageView: null as string | null,
-            linkClicks: 0,
-            lastLinkClick: null as string | null,
-          };
+        const uid = r.userId || 'unknown';
+        if (!userStats[uid]) {
+          const u = userMap[uid] || { name: r.userEmail || uid, email: r.userEmail || uid };
+          userStats[uid] = { userId: uid, name: u.name, email: u.email, pageViews: 0, lastPageView: null, linkClicks: 0, lastLinkClick: null };
         }
-        if (r.eventType === 'page_view') {
-          userStats[r.userId].pageViews++;
-          if (!userStats[r.userId].lastPageView) userStats[r.userId].lastPageView = r.createdAt;
+        if (r.operation === 'page_view') {
+          userStats[uid].pageViews++;
+          if (!userStats[uid].lastPageView) userStats[uid].lastPageView = r.timestamp;
         } else {
-          userStats[r.userId].linkClicks++;
-          if (!userStats[r.userId].lastLinkClick) userStats[r.userId].lastLinkClick = r.createdAt;
+          userStats[uid].linkClicks++;
+          if (!userStats[uid].lastLinkClick) userStats[uid].lastLinkClick = r.timestamp;
         }
       }
 
-      // Per-link stats
-      const linkStats: Record<string, any> = {};
+      const linkStatsMap: Record<string, any> = {};
       for (const r of linkClicks) {
-        const key = r.linkHref || r.linkTitle || 'unknown';
-        if (!linkStats[key]) {
-          linkStats[key] = {
-            linkTitle: r.linkTitle,
-            linkHref: r.linkHref,
-            linkCategory: r.linkCategory,
-            clicks: 0,
-            lastClick: null as string | null,
-            uniqueUsers: new Set<string>(),
-          };
+        const key = r.recordId || 'unknown';
+        if (!linkStatsMap[key]) {
+          linkStatsMap[key] = { linkTitle: r.description, linkHref: r.recordId, linkCategory: r.fieldName, clicks: 0, lastClick: null, uniqueUsers: new Set<string>() };
         }
-        linkStats[key].clicks++;
-        if (!linkStats[key].lastClick) linkStats[key].lastClick = r.createdAt;
-        linkStats[key].uniqueUsers.add(r.userId);
+        linkStatsMap[key].clicks++;
+        if (!linkStatsMap[key].lastClick) linkStatsMap[key].lastClick = r.timestamp;
+        if (r.userId) linkStatsMap[key].uniqueUsers.add(r.userId);
       }
-
-      const linkStatsArr = Object.values(linkStats).map((l: any) => ({
-        ...l,
-        uniqueUsers: l.uniqueUsers.size,
-      })).sort((a: any, b: any) => b.clicks - a.clicks);
 
       res.json({
         summary: {
           totalPageViews: pageViews.length,
-          uniqueVisitors: new Set(pageViews.map(r => r.userId)).size,
+          uniqueVisitors: new Set(pageViews.map(r => r.userId).filter(Boolean)).size,
           totalLinkClicks: linkClicks.length,
-          uniqueLinkClickers: new Set(linkClicks.map(r => r.userId)).size,
+          uniqueLinkClickers: new Set(linkClicks.map(r => r.userId).filter(Boolean)).size,
         },
         userStats: Object.values(userStats).sort((a: any, b: any) => b.pageViews - a.pageViews),
-        linkStats: linkStatsArr,
-        recentEvents: rows.slice(0, 100).map(r => ({
-          ...r,
-          userName: userMap[r.userId] ? `${userMap[r.userId].firstName} ${userMap[r.userId].lastName}`.trim() : r.userId,
-          userEmail: userMap[r.userId]?.email || r.userId,
-        })),
+        linkStats: Object.values(linkStatsMap).map((l: any) => ({ ...l, uniqueUsers: l.uniqueUsers.size })).sort((a: any, b: any) => b.clicks - a.clicks),
       });
     } catch (error) {
       console.error('Error fetching CL analytics:', error);
@@ -8814,43 +8783,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin: get per-user CL link clicks
   app.get('/api/admin/cl-analytics/user/:userId', isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const { userId } = req.params;
-      const rows = await db.select().from(clPageEvents)
-        .where(and(eq(clPageEvents.userId, userId), eq(clPageEvents.eventType, 'link_click')))
-        .orderBy(desc(clPageEvents.createdAt));
-      res.json(rows);
+      const rows = await db.select().from(auditLog)
+        .where(and(eq(auditLog.tableName, 'chadwick_lawrence'), eq(auditLog.operation, 'link_click'), eq(auditLog.userId, userId)))
+        .orderBy(desc(auditLog.timestamp));
+      res.json(rows.map(r => ({ id: r.id, linkTitle: r.description, linkHref: r.recordId, linkCategory: r.fieldName, createdAt: r.timestamp })));
     } catch (error) {
       res.status(500).json({ message: 'Failed to fetch user events' });
     }
   });
 
-  // Admin: get per-link clickers
   app.get('/api/admin/cl-analytics/link', isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const { href } = req.query as { href: string };
-      const rows = await db.select().from(clPageEvents)
-        .where(and(eq(clPageEvents.eventType, 'link_click'), eq(clPageEvents.linkHref, href)))
-        .orderBy(desc(clPageEvents.createdAt));
+      const rows = await db.select().from(auditLog)
+        .where(and(eq(auditLog.tableName, 'chadwick_lawrence'), eq(auditLog.operation, 'link_click'), eq(auditLog.recordId, href)))
+        .orderBy(desc(auditLog.timestamp));
 
-      const userIds = [...new Set(rows.map(r => r.userId))];
+      const userIds = [...new Set(rows.map(r => r.userId).filter(Boolean))] as string[];
       const userMap: Record<string, any> = {};
       for (const uid of userIds) {
         const u = await storage.getUser(uid);
-        if (u) userMap[uid] = { name: `${u.firstName || ''} ${u.lastName || ''}`.trim(), email: u.email };
+        if (u) userMap[uid] = { name: `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email, email: u.email };
       }
 
       const perUser = userIds.map(uid => {
         const userRows = rows.filter(r => r.userId === uid);
-        return {
-          userId: uid,
-          name: userMap[uid]?.name || uid,
-          email: userMap[uid]?.email || uid,
-          clicks: userRows.length,
-          lastClick: userRows[0]?.createdAt || null,
-        };
+        return { userId: uid, name: userMap[uid]?.name || uid, email: userMap[uid]?.email || uid, clicks: userRows.length, lastClick: userRows[0]?.timestamp || null };
       }).sort((a, b) => b.clicks - a.clicks);
 
       res.json(perUser);
