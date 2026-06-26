@@ -20,7 +20,7 @@ export default function CaseSummaryReport() {
   const { user } = useAuth();
   const [statusFilter, setStatusFilter] = useState<string>("all"); // "all", "live", "closed"
   const [orgFilter, setOrgFilter] = useState<string>("all");
-  const [recentMessagesCount, setRecentMessagesCount] = useState<number>(0);
+  const [recentMessagesCount, setRecentMessagesCount] = useState<number>(1);
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["/api/dashboard/stats"],
