@@ -13,7 +13,7 @@ import { useTheme } from "@/hooks/use-theme";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest } from "@/lib/queryClient";
 import { useQueryClient } from "@tanstack/react-query";
-import { User, Settings, Phone, Mail, Calendar, Shield, ArrowLeft, Bell, BellOff, Building2, FileText, Download, Trash2, Upload, Search, Sun, Moon, HelpCircle, Briefcase, MessageSquare, BarChart3, Crown, ShieldCheck, ShieldOff, Loader2, Users, ChevronDown, ChevronUp, UserPlus, UserMinus, Send, Eye } from "lucide-react";
+import { User, Settings, Phone, Mail, Calendar, Shield, ArrowLeft, Bell, BellOff, Building2, FileText, Download, Trash2, Upload, Search, Sun, Moon, HelpCircle, Briefcase, MessageSquare, BarChart3, Crown, ShieldCheck, ShieldOff, Loader2, Users, ChevronDown, ChevronUp, UserPlus, UserMinus, Send, Eye, X } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -89,10 +89,10 @@ export default function UserProfile() {
   });
 
   // Organisation documents state
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [fileValidationError, setFileValidationError] = useState<string | null>(null);
-  const [customFileName, setCustomFileName] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [fileQueueErrors, setFileQueueErrors] = useState<Record<string, string>>({});
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null);
   const [documentSearch, setDocumentSearch] = useState("");
   const [selectedOrgForUpload, setSelectedOrgForUpload] = useState<string>("");
   const [notifyOnUpload, setNotifyOnUpload] = useState(true);
@@ -716,76 +716,95 @@ export default function UserProfile() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
-  // Handle document upload
-  const handleDocumentUpload = async () => {
-    if (!selectedFile) return;
-    
-    // Determine organisation ID for upload
-    let orgId: number | null = null;
-    
-    // For admins or users with multiple orgs, use selected org
+  // Resolve the org ID for upload
+  const resolveOrgId = (): number | null => {
     if (availableOrgsForUpload && availableOrgsForUpload.length > 1 && selectedOrgForUpload) {
-      orgId = parseInt(selectedOrgForUpload);
+      return parseInt(selectedOrgForUpload);
     } else if (availableOrgsForUpload && availableOrgsForUpload.length === 1) {
-      orgId = availableOrgsForUpload[0].id;
+      return availableOrgsForUpload[0].id;
     } else if (userProfile?.organisationId) {
-      orgId = userProfile.organisationId;
+      return userProfile.organisationId;
     }
+    return null;
+  };
 
+  // Add files to the queue, validating each one
+  const addFilesToQueue = (incoming: FileList | File[]) => {
+    const files = Array.from(incoming);
+    const errors: Record<string, string> = {};
+    const valid: File[] = [];
+    files.forEach(f => {
+      const v = validateFile(f);
+      if (!v.isValid) errors[f.name] = v.error || "Invalid file";
+      else valid.push(f);
+    });
+    setFileQueueErrors(prev => ({ ...prev, ...errors }));
+    setSelectedFiles(prev => {
+      const existing = new Set(prev.map(f => f.name));
+      return [...prev, ...valid.filter(f => !existing.has(f.name))];
+    });
+  };
+
+  const removeFromQueue = (name: string) => {
+    setSelectedFiles(prev => prev.filter(f => f.name !== name));
+    setFileQueueErrors(prev => { const n = { ...prev }; delete n[name]; return n; });
+  };
+
+  // Upload all queued files sequentially
+  const handleUploadAll = async () => {
+    if (!selectedFiles.length) return;
+
+    const orgId = resolveOrgId();
     if (!orgId) {
-      toast({
-        title: "Error",
-        description: "Please select an organisation to upload the document to.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Please select an organisation to upload to.", variant: "destructive" });
       return;
     }
 
-    setIsUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", selectedFile);
-      formData.append("organisationId", orgId.toString());
-      // Build final filename with original extension
-      const ext = selectedFile.name.split('.').pop();
-      const finalFileName = customFileName.trim() ? `${customFileName.trim()}.${ext}` : selectedFile.name;
-      if (finalFileName !== selectedFile.name) {
-        formData.append("customFileName", finalFileName);
-      }
-      // Admin uploads notify users, regular users notify admin
-      if (userProfile?.isAdmin) {
-        formData.append("notifyUsers", notifyOnUpload.toString());
-      } else {
-        formData.append("notifyAdmin", notifyOnUpload.toString());
-      }
+    setUploadProgress({ current: 0, total: selectedFiles.length });
+    let succeeded = 0;
+    const failed: string[] = [];
 
-      const response = await fetch("/api/organisation/documents/upload", {
-        method: "POST",
-        body: formData,
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Upload failed");
+    for (let i = 0; i < selectedFiles.length; i++) {
+      const file = selectedFiles[i];
+      setUploadProgress({ current: i + 1, total: selectedFiles.length });
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("organisationId", orgId.toString());
+        if (userProfile?.isAdmin) {
+          formData.append("notifyUsers", notifyOnUpload.toString());
+        } else {
+          formData.append("notifyAdmin", notifyOnUpload.toString());
+        }
+        const response = await fetch("/api/organisation/documents/upload", {
+          method: "POST",
+          body: formData,
+          credentials: "include",
+        });
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+          failed.push(`${file.name}: ${err.message || "failed"}`);
+        } else {
+          succeeded++;
+        }
+      } catch {
+        failed.push(`${file.name}: network error`);
       }
+    }
 
+    setUploadProgress(null);
+    setSelectedFiles([]);
+    setFileQueueErrors({});
+    queryClient.invalidateQueries({ queryKey: ["/api/organisation/documents"] });
+
+    if (failed.length === 0) {
+      toast({ title: "Upload complete", description: `${succeeded} file${succeeded !== 1 ? "s" : ""} uploaded successfully.` });
+    } else {
       toast({
-        title: "Success",
-        description: "Document uploaded successfully",
-      });
-      setSelectedFile(null);
-      setCustomFileName("");
-      setNotifyOnUpload(true);
-      queryClient.invalidateQueries({ queryKey: ["/api/organisation/documents"] });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to upload document",
+        title: `${succeeded} uploaded, ${failed.length} failed`,
+        description: failed.join("\n"),
         variant: "destructive",
       });
-    } finally {
-      setIsUploading(false);
     }
   };
 
@@ -2076,12 +2095,13 @@ export default function UserProfile() {
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Upload Section */}
-                <div className="p-4 border-2 border-dashed border-gray-200 rounded-lg space-y-4">
+                <div className="space-y-3">
+                  {/* Org selector (multi-org users) */}
                   {availableOrgsForUpload && availableOrgsForUpload.length > 1 && (
                     <div>
-                      <Label htmlFor="uploadOrg">Upload to Organisation</Label>
+                      <Label htmlFor="uploadOrg" className="text-sm font-medium">Upload to Organisation</Label>
                       <Select value={selectedOrgForUpload} onValueChange={setSelectedOrgForUpload}>
-                        <SelectTrigger>
+                        <SelectTrigger className="mt-1">
                           <SelectValue placeholder="Select organisation..." />
                         </SelectTrigger>
                         <SelectContent>
@@ -2094,64 +2114,116 @@ export default function UserProfile() {
                       </Select>
                     </div>
                   )}
-                  <p className="text-xs text-gray-500 mb-2">
-                    Max {MAX_FILE_SIZE_MB}MB. Formats: {ACCEPTED_FILE_TYPES_DISPLAY}
-                  </p>
-                  <div className="flex flex-col sm:flex-row items-center gap-4">
-                    <Input
-                      type="file"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0] || null;
-                        if (file) {
-                          const validation = validateFile(file);
-                          if (!validation.isValid) {
-                            setFileValidationError(validation.error);
-                            setSelectedFile(null);
-                            setCustomFileName("");
-                            e.target.value = '';
-                            return;
-                          }
-                        }
-                        setFileValidationError(null);
-                        setSelectedFile(file);
-                        setCustomFileName("");
-                      }}
-                      accept={ACCEPTED_FILE_TYPES_STRING}
-                      className="flex-1"
-                    />
-                    <Button
-                      onClick={handleDocumentUpload}
-                      disabled={!selectedFile || isUploading || (availableOrgsForUpload && availableOrgsForUpload.length > 1 && !selectedOrgForUpload)}
-                      className="bg-acclaim-teal hover:bg-acclaim-teal/90 w-full sm:w-auto"
-                    >
-                      <Upload className="h-4 w-4 mr-2" />
-                      {isUploading ? "Uploading..." : "Upload"}
-                    </Button>
-                  </div>
-                  {fileValidationError && (
-                    <p className="text-sm text-red-600 mt-2 bg-red-50 dark:bg-red-900/20 p-2 rounded">
-                      {fileValidationError}
-                    </p>
-                  )}
-                  {selectedFile && (
-                    <div className="space-y-3">
-                      <p className="text-sm text-gray-600">
-                        Selected: {selectedFile.name} ({formatFileSize(selectedFile.size)})
+
+                  {/* Drag-drop zone */}
+                  <input
+                    id="org-file-upload"
+                    type="file"
+                    multiple
+                    accept={ACCEPTED_FILE_TYPES_STRING}
+                    className="sr-only"
+                    onChange={(e) => { if (e.target.files) addFilesToQueue(e.target.files); e.target.value = ''; }}
+                  />
+                  <label
+                    htmlFor="org-file-upload"
+                    onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+                    onDragLeave={() => setIsDragOver(false)}
+                    onDrop={(e) => { e.preventDefault(); setIsDragOver(false); if (e.dataTransfer.files) addFilesToQueue(e.dataTransfer.files); }}
+                    className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl p-8 cursor-pointer transition-all ${
+                      isDragOver
+                        ? "border-teal-400 bg-teal-50 dark:bg-teal-900/20"
+                        : "border-gray-200 bg-gray-50 dark:bg-gray-800/50 hover:border-teal-300 hover:bg-teal-50/50"
+                    }`}
+                  >
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${isDragOver ? "bg-teal-100 dark:bg-teal-800" : "bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600"}`}>
+                      <Upload className={`h-5 w-5 transition-colors ${isDragOver ? "text-teal-600" : "text-gray-400"}`} />
+                    </div>
+                    <div className="text-center">
+                      <p className={`text-sm font-medium transition-colors ${isDragOver ? "text-teal-700 dark:text-teal-300" : "text-gray-600 dark:text-gray-400"}`}>
+                        {isDragOver ? "Drop files here" : "Click to browse or drag and drop"}
                       </p>
-                      <div>
-                        <Label htmlFor="org-custom-filename" className="text-sm text-acclaim-teal font-medium">Rename file (optional)</Label>
-                        <div className="flex items-center gap-1 mt-1">
-                          <Input
-                            id="org-custom-filename"
-                            type="text"
-                            value={customFileName}
-                            onChange={(e) => setCustomFileName(e.target.value)}
-                            placeholder="Enter new filename"
-                            className="flex-1"
-                          />
-                          <span className="text-sm text-gray-500">.{selectedFile.name.split('.').pop()}</span>
-                        </div>
+                      <p className="text-xs text-gray-400 mt-0.5">{ACCEPTED_FILE_TYPES_DISPLAY} · max {MAX_FILE_SIZE_MB}MB each</p>
+                    </div>
+                  </label>
+
+                  {/* Validation errors */}
+                  {Object.entries(fileQueueErrors).map(([name, err]) => (
+                    <p key={name} className="text-xs text-red-600 flex items-center gap-1">
+                      <span className="font-medium">{name}:</span> {err}
+                    </p>
+                  ))}
+
+                  {/* File queue */}
+                  {selectedFiles.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="divide-y divide-gray-100 dark:divide-gray-800 border border-gray-100 dark:border-gray-800 rounded-lg overflow-hidden">
+                        {selectedFiles.map((f) => {
+                          const ext = f.name.split('.').pop()?.toUpperCase() || '?';
+                          const extColor =
+                            ext === 'PDF' ? 'bg-red-50 text-red-500 border-red-100'
+                            : ['DOC','DOCX'].includes(ext) ? 'bg-blue-50 text-blue-500 border-blue-100'
+                            : ['XLS','XLSX'].includes(ext) ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                            : ['PNG','JPG','JPEG','GIF','WEBP'].includes(ext) ? 'bg-green-50 text-green-600 border-green-100'
+                            : 'bg-gray-50 text-gray-500 border-gray-100';
+                          return (
+                            <div key={f.name} className="flex items-center gap-3 px-3 py-2.5 bg-white dark:bg-gray-900">
+                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 border ${extColor}`}>
+                                {ext.slice(0, 4)}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{f.name}</p>
+                                <p className="text-xs text-gray-400">{formatFileSize(f.size)}</p>
+                              </div>
+                              {!uploadProgress && (
+                                <button onClick={() => removeFromQueue(f.name)} className="text-gray-300 hover:text-red-400 transition-colors shrink-0 p-1">
+                                  <X className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
+
+                      {/* Progress bar */}
+                      {uploadProgress && (
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-xs text-gray-500">
+                            <span>Uploading {uploadProgress.current} of {uploadProgress.total}…</span>
+                            <span>{Math.round((uploadProgress.current / uploadProgress.total) * 100)}%</span>
+                          </div>
+                          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-teal-500 rounded-full transition-all duration-300"
+                              style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Notify toggle + upload button */}
+                      <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <Checkbox
+                          id="org-notify-upload"
+                          checked={notifyOnUpload}
+                          onCheckedChange={(v) => setNotifyOnUpload(!!v)}
+                          disabled={!!uploadProgress}
+                        />
+                        <label htmlFor="org-notify-upload" className="text-sm text-gray-600 dark:text-gray-400 cursor-pointer flex-1">
+                          {userProfile?.isAdmin ? "Notify users of this upload" : "Notify Acclaim of this upload"}
+                        </label>
+                      </div>
+
+                      <Button
+                        onClick={handleUploadAll}
+                        disabled={!!uploadProgress || (availableOrgsForUpload && availableOrgsForUpload.length > 1 && !selectedOrgForUpload)}
+                        className="w-full bg-acclaim-teal hover:bg-acclaim-teal/90"
+                        size="sm"
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        {uploadProgress
+                          ? `Uploading ${uploadProgress.current} of ${uploadProgress.total}…`
+                          : `Upload ${selectedFiles.length} file${selectedFiles.length !== 1 ? 's' : ''}`}
+                      </Button>
                     </div>
                   )}
                 </div>
