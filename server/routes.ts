@@ -1,3 +1,4 @@
+import path from "path";
 import express, { type Express, type RequestHandler } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
@@ -1216,11 +1217,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Serve the file — ?inline=true opens in browser, otherwise force download
       const inline = req.query.inline === 'true';
+      const absolutePath = path.resolve(documentInfo.filePath);
       if (inline) {
         res.setHeader('Content-Disposition', `inline; filename="${documentInfo.fileName}"`);
-        res.sendFile(require('path').resolve(documentInfo.filePath));
+        res.sendFile(absolutePath);
       } else {
-        res.download(documentInfo.filePath, documentInfo.fileName);
+        res.download(absolutePath, documentInfo.fileName);
       }
     } catch (error) {
       console.error("Error serving document:", error);
