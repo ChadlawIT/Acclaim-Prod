@@ -159,8 +159,12 @@ function generateHtmlReport(
   // Build case summary rows - match Excel columns exactly
   let caseSummaryRows = '';
   let totalOriginal = 0, totalCosts = 0, totalInterest = 0, totalFees = 0, totalAdditional = 0, totalDebt = 0, totalPayments = 0, totalOutstanding = 0;
-  
-  cases.forEach((c: any) => {
+
+  const sortedCases = [...cases].sort((a: any, b: any) =>
+    (a.accountNumber || '').localeCompare(b.accountNumber || '', undefined, { numeric: true, sensitivity: 'base' })
+  );
+
+  sortedCases.forEach((c: any) => {
     const original = parseFloat(c.originalAmount || "0");
     const costs = parseFloat(c.costsAdded || "0");
     const interest = parseFloat(c.interestAdded || "0");
@@ -454,6 +458,10 @@ function addCaseSummarySheet(workbook: ExcelJS.Workbook, cases: any[]) {
     groupRow.height = 20;
 
     const sub = { original: 0, additional: 0, debt: 0, payments: 0, outstanding: 0, costs: 0, interest: 0, fees: 0 };
+
+    orgCases.sort((a: any, b: any) =>
+      (a.accountNumber || '').localeCompare(b.accountNumber || '', undefined, { numeric: true, sensitivity: 'base' })
+    );
 
     orgCases.forEach((c, index) => {
       const originalAmount = toAmount(c.originalAmount);
