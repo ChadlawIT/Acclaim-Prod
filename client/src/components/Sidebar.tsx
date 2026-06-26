@@ -126,7 +126,11 @@ export default function Sidebar({ activeSection, setActiveSection, collapsed, on
           </button>
           {!collapsed && seminars && seminars.length > 0 && (
             <div className="px-3 pt-0.5 pb-0.5">
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold text-white" style={{ backgroundColor: "#ba1b6e" }}>
+              <span
+                onClick={() => setActiveSection("chadwick-lawrence")}
+                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold text-white cursor-pointer hover:opacity-80 transition-opacity"
+                style={{ backgroundColor: "#ba1b6e" }}
+              >
                 {seminars.length} seminar{seminars.length !== 1 ? 's' : ''} available
               </span>
             </div>
