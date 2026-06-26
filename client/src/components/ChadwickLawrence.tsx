@@ -229,6 +229,7 @@ export default function ChadwickLawrence() {
     queryKey: ["/api/cl-seminars"],
     staleTime: 0,
     gcTime: 0,
+    refetchOnMount: "always",
   });
 
   return (

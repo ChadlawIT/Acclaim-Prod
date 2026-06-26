@@ -8887,6 +8887,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return results;
   }
 
+  app.get('/api/cl-seminars-debug', async (_req, res) => {
+    try {
+      const [employment, socialHousing] = await Promise.allSettled([
+        scrapeSeminarPage('https://www.chadwicklawrence.co.uk/seminars/business-services-seminars/', 'employment'),
+        scrapeSeminarPage('https://www.chadwicklawrence.co.uk/seminars/free-training-sessions/', 'social-housing'),
+      ]);
+      res.json({
+        employment: { status: employment.status, data: employment.status === 'fulfilled' ? employment.value : String((employment as any).reason) },
+        socialHousing: { status: socialHousing.status, data: socialHousing.status === 'fulfilled' ? socialHousing.value : String((socialHousing as any).reason) },
+        cache: seminarsCache ? { count: seminarsCache.data.length, ageMs: Date.now() - seminarsCache.fetchedAt } : null,
+      });
+    } catch (e: any) {
+      res.json({ error: e.message });
+    }
+  });
+
   app.get('/api/cl-seminars', isAuthenticated, async (_req, res) => {
     try {
       if (seminarsCache && Date.now() - seminarsCache.fetchedAt < SEMINARS_TTL) {
