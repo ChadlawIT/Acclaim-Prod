@@ -281,8 +281,8 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
     }
   };
 
-  const recentCases = cases?.sort((a: any, b: any) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()).slice(0, 5) || [];
-  const recentMessages = messages?.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 3) || [];
+  const recentCases = cases?.sort((a: any, b: any) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()).slice(0, 8) || [];
+  const recentMessages = messages?.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5) || [];
 
   const handleCaseClick = (caseData: any) => {
     setSelectedCase(caseData);
