@@ -282,7 +282,20 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
     }
   };
 
-  const recentCases = cases?.sort((a: any, b: any) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()).slice(0, 8) || [];
+  const caseMessageDates = new Map<number, Date>();
+  messages?.forEach((msg: any) => {
+    if (msg.caseId) {
+      const existing = caseMessageDates.get(msg.caseId);
+      const msgDate = new Date(msg.createdAt);
+      if (!existing || msgDate > existing) {
+        caseMessageDates.set(msg.caseId, msgDate);
+      }
+    }
+  });
+  const recentCases = cases
+    ?.filter((c: any) => caseMessageDates.has(c.id))
+    .sort((a: any, b: any) => (caseMessageDates.get(b.id)?.getTime() ?? 0) - (caseMessageDates.get(a.id)?.getTime() ?? 0))
+    .slice(0, 8) ?? [];
   const recentMessages = messages?.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5) || [];
 
   const handleCaseClick = (caseData: any) => {
