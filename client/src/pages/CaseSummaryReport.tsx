@@ -194,8 +194,8 @@ export default function CaseSummaryReport() {
     const getStatusColor = (status: string) => {
       switch (status) {
         case 'new':    return 'text-blue-700 dark:text-blue-300';
-        case 'active': return 'text-yellow-700 dark:text-yellow-300';
-        case 'Closed': return 'text-green-700 dark:text-green-300';
+        case 'active': return 'text-blue-700 dark:text-blue-300';
+        case 'Closed': return 'text-red-600 dark:text-red-400';
         default:       return 'text-gray-600 dark:text-gray-300';
       }
     };
@@ -282,14 +282,23 @@ export default function CaseSummaryReport() {
         const statusDisplay = caseItem.status === 'Closed'
           ? 'Closed'
           : escapeHtml((caseItem.status || '').charAt(0).toUpperCase() + (caseItem.status || '').slice(1));
-        const statusClass = escapeHtml(caseItem.status || '');
+        const statusHtmlColor = caseItem.status === 'Closed' ? '#dc2626' : '#1d4ed8';
+        const stageHtmlColor = (() => {
+          const n = (caseItem.stage || '').toLowerCase().replace(/[_\-\s]/g, '');
+          if (n === 'prelegal' || n === 'initialcontact') return '#1d4ed8';
+          if (n === 'claim') return '#a16207';
+          if (n === 'judgment' || n === 'judgement') return '#7e22ce';
+          if (n === 'enforcement' || n === 'legalaction') return '#c2410c';
+          if (n === 'paymentplan' || n === 'paid') return '#15803d';
+          return '#4b5563';
+        })();
 
         return `
           <tr>
             <td>${escapeHtml(caseItem.accountNumber || '')}</td>
             <td>${escapeHtml(caseItem.caseName || '')}${caseItem.organisationName ? ` <span style="font-size: 10px; color: #666;">(${escapeHtml(caseItem.organisationName)})</span>` : ''}</td>
-            <td><span class="status-${statusClass}">${statusDisplay}</span></td>
-            <td>${stageDisplay}</td>
+            <td><span style="color: ${statusHtmlColor}; font-weight: 600;">${statusDisplay}</span></td>
+            <td><span style="color: ${stageHtmlColor}; font-weight: 600;">${stageDisplay}</span></td>
             <td class="currency">${formatCurrency(caseItem.originalAmount || 0)}</td>
             <td class="currency">${formatCurrency(caseItem.costsAdded || 0)}</td>
             <td class="currency">${formatCurrency(caseItem.interestAdded || 0)}</td>
@@ -323,9 +332,6 @@ export default function CaseSummaryReport() {
             th, td { padding: 8px; text-align: left; border: 1px solid #ddd; font-size: 10px; }
             th { background-color: #f5f5f5; font-weight: bold; }
             .currency { text-align: right; }
-            .status-active { background-color: #fef3c7; color: #92400e; padding: 2px 6px; border-radius: 3px; }
-            .status-Closed { background-color: #d1fae5; color: #065f46; padding: 2px 6px; border-radius: 3px; }
-            .status-new { background-color: #dbeafe; color: #1e40af; padding: 2px 6px; border-radius: 3px; }
             @media print {
               body { margin: 0; }
               .no-print { display: none; }
