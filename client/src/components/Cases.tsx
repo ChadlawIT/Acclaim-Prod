@@ -14,6 +14,7 @@ const SORT_STORAGE_KEY = "cases-sort-preference";
 
 type SortOption =
   | "accountNumber-desc"
+  | "accountNumber-asc"
   | "caseName-asc"
   | "stage-asc"
   | "status-asc"
@@ -69,6 +70,12 @@ function sortCases(cases: any[], sortBy: SortOption): any[] {
         const bNum = parseFloat(b.accountNumber) || 0;
         if (bNum !== aNum) return bNum - aNum;
         return b.accountNumber.localeCompare(a.accountNumber);
+      }
+      case "accountNumber-asc": {
+        const aNum = parseFloat(a.accountNumber) || 0;
+        const bNum = parseFloat(b.accountNumber) || 0;
+        if (aNum !== bNum) return aNum - bNum;
+        return a.accountNumber.localeCompare(b.accountNumber);
       }
       case "caseName-asc":
         return (a.caseName || "").localeCompare(b.caseName || "");
@@ -270,7 +277,8 @@ export default function Cases() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="accountNumber-desc">Acclaim Account No. (largest first)</SelectItem>
+                  <SelectItem value="accountNumber-desc">Acclaim Account No. (newest first)</SelectItem>
+                  <SelectItem value="accountNumber-asc">Acclaim Account No. (oldest first)</SelectItem>
                   <SelectItem value="caseName-asc">Case Name (A–Z)</SelectItem>
                   <SelectItem value="stage-asc">Stage (A–Z)</SelectItem>
                   <SelectItem value="status-asc">Status (active first)</SelectItem>
