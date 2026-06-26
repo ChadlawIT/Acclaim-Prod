@@ -227,7 +227,8 @@ export default function ChadwickLawrence() {
 
   const { data: seminars = [], isLoading: seminarsLoading } = useQuery<Seminar[]>({
     queryKey: ["/api/cl-seminars"],
-    staleTime: 1000 * 60 * 60, // match server 1h cache
+    staleTime: 0,
+    gcTime: 0,
   });
 
   return (

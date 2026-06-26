@@ -8890,25 +8890,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/cl-seminars', isAuthenticated, async (_req, res) => {
     try {
       if (seminarsCache && Date.now() - seminarsCache.fetchedAt < SEMINARS_TTL) {
+        console.log('[cl-seminars] cache hit, count:', seminarsCache.data.length);
         return res.json(seminarsCache.data);
       }
 
+      console.log('[cl-seminars] fetching live...');
       const [employment, socialHousing] = await Promise.allSettled([
         scrapeSeminarPage('https://www.chadwicklawrence.co.uk/seminars/business-services-seminars/', 'employment'),
         scrapeSeminarPage('https://www.chadwicklawrence.co.uk/seminars/free-training-sessions/', 'social-housing'),
       ]);
+
+      console.log('[cl-seminars] employment:', employment.status, employment.status === 'fulfilled' ? employment.value.length : (employment as any).reason);
+      console.log('[cl-seminars] socialHousing:', socialHousing.status, socialHousing.status === 'fulfilled' ? socialHousing.value.length : (socialHousing as any).reason);
 
       const seminars = [
         ...(employment.status === 'fulfilled' ? employment.value : []),
         ...(socialHousing.status === 'fulfilled' ? socialHousing.value : []),
       ];
 
-      seminarsCache = { data: seminars, fetchedAt: Date.now() };
+      console.log('[cl-seminars] total:', seminars.length);
+      if (seminars.length > 0) seminarsCache = { data: seminars, fetchedAt: Date.now() };
       res.json(seminars);
     } catch (err: any) {
+      console.log('[cl-seminars] error:', err.message);
       res.json(seminarsCache?.data ?? []);
     }
   });
+
+  // Warm the seminar cache on startup
+  (async () => {
+    try {
+      console.log('[cl-seminars] warming cache on startup...');
+      const [employment, socialHousing] = await Promise.allSettled([
+        scrapeSeminarPage('https://www.chadwicklawrence.co.uk/seminars/business-services-seminars/', 'employment'),
+        scrapeSeminarPage('https://www.chadwicklawrence.co.uk/seminars/free-training-sessions/', 'social-housing'),
+      ]);
+      console.log('[cl-seminars] employment:', employment.status, employment.status === 'fulfilled' ? employment.value.length + ' events' : String((employment as any).reason));
+      console.log('[cl-seminars] socialHousing:', socialHousing.status, socialHousing.status === 'fulfilled' ? socialHousing.value.length + ' events' : String((socialHousing as any).reason));
+      const all = [
+        ...(employment.status === 'fulfilled' ? employment.value : []),
+        ...(socialHousing.status === 'fulfilled' ? socialHousing.value : []),
+      ];
+      console.log('[cl-seminars] cache warmed with', all.length, 'total events');
+      if (all.length > 0) seminarsCache = { data: all, fetchedAt: Date.now() };
+    } catch (e: any) {
+      console.log('[cl-seminars] startup warm failed:', e.message);
+    }
+  })();
 
   const httpServer = createServer(app);
   return httpServer;
