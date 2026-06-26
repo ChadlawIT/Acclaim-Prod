@@ -8951,9 +8951,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post('/api/cl-share', isAuthenticated, async (req: any, res) => {
-    const { recipientName, recipientEmail, seminar, senderName, senderEmail, senderOrganisation } = req.body;
+    const { recipientName, recipientEmail, recipientPhone, recipientOrganisation, recipientJobTitle, seminar, senderName, senderEmail, senderOrganisation } = req.body;
     if (!recipientName || !recipientEmail || !seminar?.name) return res.status(400).json({ error: 'Missing required fields' });
-    const sent = await emailService.sendSeminarShare({ recipientName, recipientEmail, seminar, senderName, senderEmail, senderOrganisation });
+    const sent = await emailService.sendSeminarShare({ recipientName, recipientEmail, recipientPhone, recipientOrganisation, recipientJobTitle, seminar, senderName, senderEmail, senderOrganisation });
     res.json({ ok: sent });
   });
 

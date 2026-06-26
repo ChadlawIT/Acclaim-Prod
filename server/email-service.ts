@@ -894,8 +894,7 @@ If you have any questions, please contact our support team.
               <tr><td style="padding:6px 0;font-weight:bold;color:#555;width:130px;">Name:</td><td style="padding:6px 0;color:#1a1a3e;">${data.name}</td></tr>
               <tr><td style="padding:6px 0;font-weight:bold;color:#555;">Email:</td><td style="padding:6px 0;color:#1a1a3e;">${data.email}</td></tr>
               <tr><td style="padding:6px 0;font-weight:bold;color:#555;">Organisation:</td><td style="padding:6px 0;color:#1a1a3e;">${data.organisation}</td></tr>
-              ${data.jobTitle ? `<tr><td style="padding:6px 0;font-weight:bold;color:#555;">Job Title:</td><td style="padding:6px 0;color:#1a1a3e;">${data.jobTitle}</td></tr>` : ''}
-              ${data.phone ? `<tr><td style="padding:6px 0;font-weight:bold;color:#555;">Telephone:</td><td style="padding:6px 0;color:#1a1a3e;">${data.phone}</td></tr>` : ''}
+              <tr><td style="padding:6px 0;font-weight:bold;color:#555;">Telephone:</td><td style="padding:6px 0;color:#1a1a3e;">${data.phone}</td></tr>
               ${data.notes ? `<tr><td colspan="2" style="padding:12px 0 6px;font-weight:bold;color:#555;">Additional Information:</td></tr><tr><td colspan="2"><div style="background:#f8f8fc;padding:12px;border-radius:6px;border-left:3px solid #ba1b6e;color:#1a1a3e;line-height:1.6;">${data.notes.replace(/\n/g, '<br>')}</div></td></tr>` : ''}
             </table>
           </div>
@@ -929,6 +928,9 @@ If you have any questions, please contact our support team.
   async sendSeminarShare(data: {
     recipientName: string;
     recipientEmail: string;
+    recipientPhone?: string;
+    recipientOrganisation?: string;
+    recipientJobTitle?: string;
     seminar: { name: string; category: string; date?: string; time?: string; location?: string; description?: string; infoUrl?: string | null };
     senderName: string;
     senderEmail: string;
@@ -996,6 +998,9 @@ If you have any questions, please contact our support team.
               <h3 style="color:#ba1b6e;margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:1px;">Shared With</h3>
               <p style="margin:3px 0;font-size:13px;color:#1a1a3e;"><strong>${data.recipientName}</strong></p>
               <p style="margin:3px 0;font-size:13px;color:#555;">${data.recipientEmail}</p>
+              ${data.recipientPhone ? `<p style="margin:3px 0;font-size:13px;color:#555;">${data.recipientPhone}</p>` : ''}
+              ${data.recipientOrganisation ? `<p style="margin:3px 0;font-size:13px;color:#555;">${data.recipientOrganisation}</p>` : ''}
+              ${data.recipientJobTitle ? `<p style="margin:3px 0;font-size:13px;color:#555;font-style:italic;">${data.recipientJobTitle}</p>` : ''}
             </div>
           </div>
         </div>

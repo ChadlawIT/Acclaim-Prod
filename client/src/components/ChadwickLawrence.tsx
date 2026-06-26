@@ -239,15 +239,17 @@ const bookingSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   email: z.string().email('Valid email address required'),
   organisation: z.string().min(1, 'Organisation is required'),
-  jobTitle: z.string().optional(),
-  phone: z.string().optional(),
+  phone: z.string().min(1, 'Telephone number is required'),
   notes: z.string().optional(),
 });
 type BookingFormValues = z.infer<typeof bookingSchema>;
 
 const shareSchema = z.object({
-  recipientName: z.string().min(1, "Recipient's name is required"),
+  recipientName: z.string().min(1, 'Name is required'),
   recipientEmail: z.string().email('Valid email address required'),
+  recipientPhone: z.string().min(1, 'Telephone number is required'),
+  recipientOrganisation: z.string().min(1, 'Organisation is required'),
+  recipientJobTitle: z.string().min(1, 'Job title is required'),
 });
 type ShareFormValues = z.infer<typeof shareSchema>;
 
@@ -287,14 +289,18 @@ export default function ChadwickLawrence() {
     queryKey: ["/api/user"],
   });
 
+  const { data: userOrganisations } = useQuery<Array<{ id: number; name: string }>>({
+    queryKey: ["/api/user/organisations"],
+  });
+
   const bookingForm = useForm<BookingFormValues>({
     resolver: zodResolver(bookingSchema),
-    defaultValues: { name: '', email: '', organisation: '', jobTitle: '', phone: '', notes: '' },
+    defaultValues: { name: '', email: '', organisation: '', phone: '', notes: '' },
   });
 
   const shareForm = useForm<ShareFormValues>({
     resolver: zodResolver(shareSchema),
-    defaultValues: { recipientName: '', recipientEmail: '' },
+    defaultValues: { recipientName: '', recipientEmail: '', recipientPhone: '', recipientOrganisation: '', recipientJobTitle: '' },
   });
 
   useEffect(() => {
@@ -302,13 +308,12 @@ export default function ChadwickLawrence() {
       bookingForm.reset({
         name: currentUser ? `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() : '',
         email: currentUser?.email || '',
-        organisation: '',
-        jobTitle: '',
+        organisation: userOrganisations?.[0]?.name || '',
         phone: '',
         notes: '',
       });
     }
-  }, [bookingSeminar]);
+  }, [bookingSeminar, userOrganisations]);
 
   useEffect(() => {
     if (!sharingSeminar) shareForm.reset();
@@ -764,23 +769,24 @@ export default function ChadwickLawrence() {
                 )}
               </div>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="b-org" className="text-xs font-medium">
-                Organisation <span className="text-red-500">*</span>
-              </Label>
-              <Input id="b-org" {...bookingForm.register('organisation')} placeholder="Your company or organisation" data-testid="input-booking-organisation" />
-              {bookingForm.formState.errors.organisation && (
-                <p className="text-red-500 text-xs">{bookingForm.formState.errors.organisation.message}</p>
-              )}
-            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="b-job" className="text-xs font-medium">Job Title</Label>
-                <Input id="b-job" {...bookingForm.register('jobTitle')} placeholder="Optional" data-testid="input-booking-job-title" />
+                <Label htmlFor="b-org" className="text-xs font-medium">
+                  Organisation <span className="text-red-500">*</span>
+                </Label>
+                <Input id="b-org" {...bookingForm.register('organisation')} placeholder="Your organisation" data-testid="input-booking-organisation" />
+                {bookingForm.formState.errors.organisation && (
+                  <p className="text-red-500 text-xs">{bookingForm.formState.errors.organisation.message}</p>
+                )}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="b-phone" className="text-xs font-medium">Telephone</Label>
-                <Input id="b-phone" {...bookingForm.register('phone')} placeholder="Optional" data-testid="input-booking-phone" />
+                <Label htmlFor="b-phone" className="text-xs font-medium">
+                  Telephone <span className="text-red-500">*</span>
+                </Label>
+                <Input id="b-phone" {...bookingForm.register('phone')} placeholder="Your phone number" data-testid="input-booking-phone" />
+                {bookingForm.formState.errors.phone && (
+                  <p className="text-red-500 text-xs">{bookingForm.formState.errors.phone.message}</p>
+                )}
               </div>
             </div>
             <div className="space-y-1.5">
@@ -836,22 +842,53 @@ export default function ChadwickLawrence() {
             <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
               Enter the details of the person you'd like to share this with. They'll receive an email from Chadwick Lawrence with the seminar information on your behalf.
             </p>
-            <div className="space-y-1.5">
-              <Label htmlFor="s-name" className="text-xs font-medium">
-                Recipient's Name <span className="text-red-500">*</span>
-              </Label>
-              <Input id="s-name" {...shareForm.register('recipientName')} placeholder="Their full name" data-testid="input-share-name" />
-              {shareForm.formState.errors.recipientName && (
-                <p className="text-red-500 text-xs">{shareForm.formState.errors.recipientName.message}</p>
-              )}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="s-name" className="text-xs font-medium">
+                  Full Name <span className="text-red-500">*</span>
+                </Label>
+                <Input id="s-name" {...shareForm.register('recipientName')} placeholder="Their full name" data-testid="input-share-name" />
+                {shareForm.formState.errors.recipientName && (
+                  <p className="text-red-500 text-xs">{shareForm.formState.errors.recipientName.message}</p>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="s-email" className="text-xs font-medium">
+                  Email Address <span className="text-red-500">*</span>
+                </Label>
+                <Input id="s-email" type="email" {...shareForm.register('recipientEmail')} placeholder="their@email.com" data-testid="input-share-email" />
+                {shareForm.formState.errors.recipientEmail && (
+                  <p className="text-red-500 text-xs">{shareForm.formState.errors.recipientEmail.message}</p>
+                )}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="s-phone" className="text-xs font-medium">
+                  Telephone <span className="text-red-500">*</span>
+                </Label>
+                <Input id="s-phone" {...shareForm.register('recipientPhone')} placeholder="Their phone number" data-testid="input-share-phone" />
+                {shareForm.formState.errors.recipientPhone && (
+                  <p className="text-red-500 text-xs">{shareForm.formState.errors.recipientPhone.message}</p>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="s-job" className="text-xs font-medium">
+                  Job Title <span className="text-red-500">*</span>
+                </Label>
+                <Input id="s-job" {...shareForm.register('recipientJobTitle')} placeholder="Their job title" data-testid="input-share-job-title" />
+                {shareForm.formState.errors.recipientJobTitle && (
+                  <p className="text-red-500 text-xs">{shareForm.formState.errors.recipientJobTitle.message}</p>
+                )}
+              </div>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="s-email" className="text-xs font-medium">
-                Recipient's Email Address <span className="text-red-500">*</span>
+              <Label htmlFor="s-org" className="text-xs font-medium">
+                Organisation <span className="text-red-500">*</span>
               </Label>
-              <Input id="s-email" type="email" {...shareForm.register('recipientEmail')} placeholder="their@email.com" data-testid="input-share-email" />
-              {shareForm.formState.errors.recipientEmail && (
-                <p className="text-red-500 text-xs">{shareForm.formState.errors.recipientEmail.message}</p>
+              <Input id="s-org" {...shareForm.register('recipientOrganisation')} placeholder="Their company or organisation" data-testid="input-share-organisation" />
+              {shareForm.formState.errors.recipientOrganisation && (
+                <p className="text-red-500 text-xs">{shareForm.formState.errors.recipientOrganisation.message}</p>
               )}
             </div>
             <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800">
