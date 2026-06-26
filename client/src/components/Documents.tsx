@@ -377,7 +377,7 @@ export default function Documents() {
             <CardTitle className="text-lg sm:text-xl">Document Library</CardTitle>
             <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="bg-white hover:bg-acclaim-teal/10 text-[#008a8a] border-2 border-[#008a8a] w-full sm:w-auto" size="sm">
+                <Button className="bg-white hover:bg-acclaim-teal/10 text-[#008a8a] border border-[#008a8a] w-full sm:w-auto" size="sm">
                   <Upload className="h-4 w-4 mr-2" />
                   Upload Document
                 </Button>
