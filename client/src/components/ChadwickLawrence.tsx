@@ -1,9 +1,10 @@
 import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Building2, Briefcase, Users, FileText, Gavel, AlertTriangle, Megaphone, Shield,
   Home, Trophy, ExternalLink, Calendar, Heart, Activity, ScrollText, Scale,
-  Stethoscope, Car, UserCog, Globe
+  Stethoscope, Car, UserCog, Globe, MapPin, Clock, RefreshCw,
 } from "lucide-react";
 import chadwickLawrenceLogo from "@assets/CL_long_logo_1768312503635.png";
 import { apiRequest } from "@/lib/queryClient";
@@ -208,10 +209,24 @@ function ServiceCard({ service, accentColor }: { service: Service; accentColor: 
   );
 }
 
+interface Seminar {
+  date: string;
+  time: string;
+  name: string;
+  location: string;
+  infoUrl: string | null;
+  bookUrl: string;
+}
+
 export default function ChadwickLawrence() {
   useEffect(() => {
     trackEvent("page_view");
   }, []);
+
+  const { data: seminars = [], isLoading: seminarsLoading } = useQuery<Seminar[]>({
+    queryKey: ["/api/cl-seminars"],
+    staleTime: 1000 * 60 * 60, // match server 1h cache
+  });
 
   return (
     <div className="space-y-6">
@@ -294,33 +309,108 @@ export default function ChadwickLawrence() {
             </div>
           </div>
 
-          {/* Events */}
-          <div className="p-6 bg-gradient-to-r from-[#ba1b6e] to-[#2e3192] rounded-lg text-white">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-white/20 rounded-lg">
-                <Calendar className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold">Free Training, Events & Seminars</h3>
-                <p className="text-sm text-white/80">Join free sessions delivered by experienced legal professionals</p>
+          {/* Events — live from chadwicklawrence.co.uk */}
+          <div className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+            {/* Header */}
+            <div className="p-5 bg-gradient-to-r from-[#ba1b6e] to-[#2e3192] text-white">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/20 rounded-lg">
+                    <Calendar className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-semibold">Free Training, Events & Seminars</h3>
+                    <p className="text-xs text-white/75 mt-0.5">Live from chadwicklawrence.co.uk · refreshed hourly</p>
+                  </div>
+                </div>
+                <a
+                  href="https://www.chadwicklawrence.co.uk/seminars/business-services-seminars/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => trackEvent("link_click", "View All Events", "https://www.chadwicklawrence.co.uk/seminars/business-services-seminars/", "events")}
+                  className="flex-shrink-0 inline-flex items-center gap-1.5 bg-white/20 hover:bg-white/30 transition-colors text-white text-xs font-medium px-3 py-1.5 rounded-lg"
+                >
+                  View all
+                  <ExternalLink className="h-3 w-3" />
+                </a>
               </div>
             </div>
-            <p className="text-white/90 text-sm mb-4">
-              At Chadwick Lawrence, we believe that access to clear, reliable legal information is vital.
-              Our free seminars cover employment law, social housing, and other key business topics.
-              Browse upcoming events to find sessions that can help you and your business.
-            </p>
-            <a
-              href="https://www.chadwicklawrence.co.uk/seminars/business-services-seminars/"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => trackEvent("link_click", "View Upcoming Events", "https://www.chadwicklawrence.co.uk/seminars/business-services-seminars/", "events")}
-              className="inline-flex items-center gap-2 bg-white text-[#2e3192] px-4 py-2 rounded-lg font-medium hover:bg-white/90 transition-colors text-sm"
-            >
-              <Calendar className="h-4 w-4" />
-              View Upcoming Events
-              <ExternalLink className="h-4 w-4" />
-            </a>
+
+            {/* Seminar rows */}
+            {seminarsLoading ? (
+              <div className="flex items-center justify-center gap-2 py-8 text-gray-400 text-sm">
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                Fetching upcoming events…
+              </div>
+            ) : seminars.length === 0 ? (
+              <div className="py-8 text-center text-gray-500 text-sm">
+                <Calendar className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                No upcoming events listed at the moment.
+                <div className="mt-3">
+                  <a
+                    href="https://www.chadwicklawrence.co.uk/seminars/business-services-seminars/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => trackEvent("link_click", "Check CL website for events", "https://www.chadwicklawrence.co.uk/seminars/business-services-seminars/", "events")}
+                    className="inline-flex items-center gap-1 text-[#2e3192] hover:underline text-sm"
+                  >
+                    Check the CL website for updates
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                </div>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                {seminars.map((s, i) => (
+                  <div key={i} className="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
+                    {/* Date/time pill */}
+                    <div className="flex-shrink-0 min-w-[120px]">
+                      <div className="text-xs font-semibold text-[#2e3192] dark:text-blue-300">{s.date}</div>
+                      {s.time && s.time !== "TBC" && (
+                        <div className="flex items-center gap-1 text-xs text-gray-400 mt-0.5">
+                          <Clock className="h-3 w-3" />
+                          {s.time}
+                        </div>
+                      )}
+                    </div>
+                    {/* Details */}
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm text-gray-900 dark:text-gray-100">{s.name}</div>
+                      {s.location && s.location !== "TBC" && (
+                        <div className="flex items-center gap-1 text-xs text-gray-400 mt-0.5">
+                          <MapPin className="h-3 w-3" />
+                          {s.location}
+                        </div>
+                      )}
+                    </div>
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {s.infoUrl && (
+                        <a
+                          href={s.infoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() => trackEvent("link_click", `More info: ${s.name}`, s.infoUrl!, "events")}
+                          className="text-xs text-[#2e3192] hover:underline font-medium"
+                        >
+                          More info
+                        </a>
+                      )}
+                      <a
+                        href={s.bookUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => trackEvent("link_click", `Book: ${s.name}`, s.bookUrl, "events")}
+                        className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg text-white transition-colors"
+                        style={{ background: "#ba1b6e" }}
+                      >
+                        Book now
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Contact */}

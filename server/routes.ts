@@ -8823,6 +8823,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // CL seminars scraper — cached 1 hour
+  let seminarsCache: { data: any[]; fetchedAt: number } | null = null;
+  const SEMINARS_TTL = 60 * 60 * 1000;
+
+  app.get('/api/cl-seminars', isAuthenticated, async (_req, res) => {
+    try {
+      if (seminarsCache && Date.now() - seminarsCache.fetchedAt < SEMINARS_TTL) {
+        return res.json(seminarsCache.data);
+      }
+
+      const response = await fetch('https://www.chadwicklawrence.co.uk/seminars/business-services-seminars/', {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AcclaimPortal/1.0)' },
+        signal: AbortSignal.timeout(10000),
+      });
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const html = await response.text();
+
+      // Extract #seminar-table rows
+      const tableMatch = html.match(/<table id="seminar-table">([\s\S]*?)<\/table>/);
+      if (!tableMatch) return res.json([]);
+
+      const rowMatches = tableMatch[1].matchAll(/<tr>([\s\S]*?)<\/tr>/g);
+      const seminars: any[] = [];
+
+      for (const row of rowMatches) {
+        const cells = [...row[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map(c => {
+          // Strip HTML tags, decode basic entities
+          return c[1]
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/&amp;/g, '&').replace(/&#038;/g, '&')
+            .replace(/&quot;/g, '"').replace(/&#8217;/g, "'")
+            .replace(/\s+/g, ' ').trim();
+        });
+
+        if (cells.length < 3) continue; // skip header / empty rows
+
+        const [date, time, name, location] = cells;
+        if (!name) continue;
+
+        // Extract link from More Info cell
+        const linkMatch = row[1].match(/href="(https?:\/\/www\.chadwicklawrence\.co\.uk\/seminars-events\/[^"]+)"/);
+        const bookMatch = row[1].match(/href="([^"]+)"[^>]*class="button">Book Now/);
+
+        seminars.push({
+          date: date || 'TBC',
+          time: time || 'TBC',
+          name,
+          location: location || 'TBC',
+          infoUrl: linkMatch?.[1] || null,
+          bookUrl: bookMatch ? `https://www.chadwicklawrence.co.uk${bookMatch[1].startsWith('/') ? bookMatch[1] : '/' + bookMatch[1]}` : 'https://www.chadwicklawrence.co.uk/contact-us/',
+        });
+      }
+
+      seminarsCache = { data: seminars, fetchedAt: Date.now() };
+      res.json(seminars);
+    } catch (err: any) {
+      // Return stale cache if available, otherwise empty
+      res.json(seminarsCache?.data ?? []);
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
