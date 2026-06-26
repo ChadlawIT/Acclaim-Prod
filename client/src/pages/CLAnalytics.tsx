@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -13,12 +12,15 @@ import {
 } from "@/components/ui/dialog";
 import {
   Eye, MousePointerClick, Users, TrendingUp, ArrowLeft, Search,
-  ChevronDown, ChevronUp, ExternalLink, Building2, User, Calendar,
+  ChevronDown, ChevronUp, ExternalLink, User,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { useLocation } from "wouter";
+import chadwickLawrenceLogo from "@assets/CL_long_logo_1768312503635.png";
 
-function formatDate(d: string | null): string {
+const CL_NAVY  = "#2e3192";
+const CL_PINK  = "#ba1b6e";
+
+function formatDate(d: string | null | undefined): string {
   if (!d) return "—";
   return new Date(d).toLocaleString("en-GB", {
     day: "2-digit", month: "short", year: "numeric",
@@ -26,22 +28,26 @@ function formatDate(d: string | null): string {
   });
 }
 
-function categoryBadge(cat: string | null) {
+function CategoryBadge({ cat }: { cat: string | null | undefined }) {
   if (!cat) return null;
-  const map: Record<string, string> = {
-    business: "bg-blue-100 text-blue-700",
-    personal: "bg-pink-100 text-pink-700",
-    events: "bg-purple-100 text-purple-700",
-    contact: "bg-green-100 text-green-700",
+  const styles: Record<string, { bg: string; color: string }> = {
+    business: { bg: "#e8eaf6", color: CL_NAVY },
+    personal: { bg: "#fce4ec", color: CL_PINK },
+    events:   { bg: "#f3e5f5", color: "#6a1b9a" },
+    contact:  { bg: "#e8f5e9", color: "#2e7d32" },
   };
+  const s = styles[cat] || { bg: "#f5f5f5", color: "#555" };
   return (
-    <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium capitalize ${map[cat] || "bg-gray-100 text-gray-600"}`}>
+    <span
+      className="inline-block px-2 py-0.5 rounded text-xs font-semibold capitalize"
+      style={{ background: s.bg, color: s.color }}
+    >
       {cat}
     </span>
   );
 }
 
-type SortKey = "name" | "pageViews" | "linkClicks" | "lastPageView" | "lastLinkClick";
+type UserSortKey = "name" | "pageViews" | "linkClicks" | "lastPageView" | "lastLinkClick";
 type LinkSortKey = "linkTitle" | "linkCategory" | "clicks" | "uniqueUsers" | "lastClick";
 
 export default function CLAnalytics() {
@@ -50,9 +56,9 @@ export default function CLAnalytics() {
 
   const [userSearch, setUserSearch] = useState("");
   const [linkSearch, setLinkSearch] = useState("");
-  const [userSort, setUserSort] = useState<SortKey>("pageViews");
+  const [userSort, setUserSort]     = useState<UserSortKey>("pageViews");
   const [userSortDir, setUserSortDir] = useState<"asc" | "desc">("desc");
-  const [linkSort, setLinkSort] = useState<LinkSortKey>("clicks");
+  const [linkSort, setLinkSort]     = useState<LinkSortKey>("clicks");
   const [linkSortDir, setLinkSortDir] = useState<"asc" | "desc">("desc");
 
   const [selectedUser, setSelectedUser] = useState<{ userId: string; name: string } | null>(null);
@@ -62,10 +68,7 @@ export default function CLAnalytics() {
     summary: { totalPageViews: number; uniqueVisitors: number; totalLinkClicks: number; uniqueLinkClickers: number };
     userStats: any[];
     linkStats: any[];
-    recentEvents: any[];
-  }>({
-    queryKey: ["/api/admin/cl-analytics"],
-  });
+  }>({ queryKey: ["/api/admin/cl-analytics"] });
 
   const { data: userEvents, isLoading: userEventsLoading } = useQuery<any[]>({
     queryKey: ["/api/admin/cl-analytics/user", selectedUser?.userId],
@@ -78,18 +81,13 @@ export default function CLAnalytics() {
   });
 
   if (!user?.isAdmin) {
-    return (
-      <div className="p-8 text-center text-gray-500">
-        You do not have permission to view this page.
-      </div>
-    );
+    return <div className="p-8 text-center text-gray-500">You do not have permission to view this page.</div>;
   }
 
-  function toggleUserSort(key: SortKey) {
+  function toggleUserSort(key: UserSortKey) {
     if (userSort === key) setUserSortDir(d => d === "asc" ? "desc" : "asc");
     else { setUserSort(key); setUserSortDir("desc"); }
   }
-
   function toggleLinkSort(key: LinkSortKey) {
     if (linkSort === key) setLinkSortDir(d => d === "asc" ? "desc" : "asc");
     else { setLinkSort(key); setLinkSortDir("desc"); }
@@ -98,8 +96,7 @@ export default function CLAnalytics() {
   const filteredUsers = (data?.userStats || [])
     .filter(u => u.name.toLowerCase().includes(userSearch.toLowerCase()) || u.email.toLowerCase().includes(userSearch.toLowerCase()))
     .sort((a, b) => {
-      const av = a[userSort] ?? "";
-      const bv = b[userSort] ?? "";
+      const av = a[userSort] ?? ""; const bv = b[userSort] ?? "";
       const cmp = typeof av === "number" ? av - bv : String(av).localeCompare(String(bv));
       return userSortDir === "asc" ? cmp : -cmp;
     });
@@ -107,8 +104,7 @@ export default function CLAnalytics() {
   const filteredLinks = (data?.linkStats || [])
     .filter(l => (l.linkTitle || "").toLowerCase().includes(linkSearch.toLowerCase()))
     .sort((a, b) => {
-      const av = a[linkSort] ?? "";
-      const bv = b[linkSort] ?? "";
+      const av = a[linkSort] ?? ""; const bv = b[linkSort] ?? "";
       const cmp = typeof av === "number" ? av - bv : String(av).localeCompare(String(bv));
       return linkSortDir === "asc" ? cmp : -cmp;
     });
@@ -120,178 +116,139 @@ export default function CLAnalytics() {
       : <ChevronDown className="h-3 w-3 inline ml-1" />;
   }
 
+  const summary = data?.summary;
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
 
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => setLocation("/admin")}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Admin Panel
-          </Button>
+      {/* CL Branded Header */}
+      <div style={{ background: `linear-gradient(135deg, ${CL_NAVY} 0%, ${CL_PINK} 100%)` }} className="text-white shadow-lg">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          {/* Back link */}
+          <div className="pt-4">
+            <button
+              onClick={() => setLocation("/admin")}
+              className="inline-flex items-center gap-1.5 text-white/70 hover:text-white text-sm transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Admin Panel
+            </button>
+          </div>
+
+          {/* Logo + title row */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-5 py-6">
+            <div className="bg-white rounded-xl px-5 py-3 shadow-md flex-shrink-0 self-start">
+              <img
+                src={chadwickLawrenceLogo}
+                alt="Chadwick Lawrence"
+                className="h-10 object-contain"
+              />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">Page Analytics</h1>
+              <p className="text-white/75 text-sm mt-0.5">
+                Monitoring user engagement with the Chadwick Lawrence services page
+              </p>
+            </div>
+          </div>
+
+          {/* Summary stat strip */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-white/20 border-t border-white/20 -mx-4 sm:-mx-6">
+            {[
+              { label: "Page Views",      value: summary?.totalPageViews      ?? "—", icon: Eye },
+              { label: "Unique Visitors", value: summary?.uniqueVisitors      ?? "—", icon: Users },
+              { label: "Link Clicks",     value: summary?.totalLinkClicks     ?? "—", icon: MousePointerClick },
+              { label: "Link Clickers",   value: summary?.uniqueLinkClickers  ?? "—", icon: TrendingUp },
+            ].map(({ label, value, icon: Icon }) => (
+              <div key={label} className="bg-white/10 hover:bg-white/20 transition-colors px-6 py-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <Icon className="h-4 w-4 text-white/60" />
+                  <span className="text-xs text-white/60 uppercase tracking-wide font-medium">{label}</span>
+                </div>
+                <div className="text-2xl font-bold">{isLoading ? "—" : value}</div>
+              </div>
+            ))}
+          </div>
         </div>
+      </div>
 
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Chadwick Lawrence Page Analytics</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Track which users visit the Chadwick Lawrence page and which links they engage with.
-          </p>
-        </div>
-
-        {/* Summary Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Page Views</p>
-                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">
-                    {isLoading ? "—" : data?.summary.totalPageViews ?? 0}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">total visits</p>
-                </div>
-                <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg">
-                  <Eye className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Unique Visitors</p>
-                  <p className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">
-                    {isLoading ? "—" : data?.summary.uniqueVisitors ?? 0}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">distinct users</p>
-                </div>
-                <div className="p-2 bg-amber-100 dark:bg-amber-900/40 rounded-lg">
-                  <Users className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Link Clicks</p>
-                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400 mt-1">
-                    {isLoading ? "—" : data?.summary.totalLinkClicks ?? 0}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">total clicks</p>
-                </div>
-                <div className="p-2 bg-purple-100 dark:bg-purple-900/40 rounded-lg">
-                  <MousePointerClick className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Link Clickers</p>
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">
-                    {isLoading ? "—" : data?.summary.uniqueLinkClickers ?? 0}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">distinct users</p>
-                </div>
-                <div className="p-2 bg-green-100 dark:bg-green-900/40 rounded-lg">
-                  <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+      {/* Main content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
 
         {/* User Breakdown */}
-        <Card>
-          <CardHeader className="border-b">
+        <Card className="overflow-hidden shadow-sm border-0 ring-1 ring-gray-200 dark:ring-gray-700">
+          <CardHeader className="border-b py-4" style={{ background: `${CL_NAVY}08` }}>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5 text-gray-500" />
+              <CardTitle className="flex items-center gap-2 text-base" style={{ color: CL_NAVY }}>
+                <User className="h-4 w-4" />
                 User Breakdown
               </CardTitle>
-              <div className="relative w-full sm:w-64">
+              <div className="relative w-full sm:w-60">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search users…"
-                  value={userSearch}
-                  onChange={e => setUserSearch(e.target.value)}
-                  className="pl-9"
-                />
+                <Input placeholder="Search users…" value={userSearch} onChange={e => setUserSearch(e.target.value)} className="pl-9 h-8 text-sm" />
               </div>
             </div>
           </CardHeader>
           <CardContent className="p-0">
             {isLoading ? (
-              <div className="p-8 text-center text-gray-400">Loading…</div>
+              <div className="p-10 text-center text-gray-400 text-sm">Loading…</div>
             ) : filteredUsers.length === 0 ? (
-              <div className="p-8 text-center text-gray-400">No data yet.</div>
+              <div className="p-10 text-center text-gray-400 text-sm">No data yet — users will appear once they visit the page.</div>
             ) : (
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead
-                        className="cursor-pointer select-none whitespace-nowrap"
-                        onClick={() => toggleUserSort("name")}
-                      >
-                        User <SortIcon col="name" current={userSort} dir={userSortDir} />
-                      </TableHead>
-                      <TableHead
-                        className="cursor-pointer select-none text-right whitespace-nowrap"
-                        onClick={() => toggleUserSort("pageViews")}
-                      >
-                        Page Views <SortIcon col="pageViews" current={userSort} dir={userSortDir} />
-                      </TableHead>
-                      <TableHead
-                        className="cursor-pointer select-none whitespace-nowrap"
-                        onClick={() => toggleUserSort("lastPageView")}
-                      >
-                        Last Visit <SortIcon col="lastPageView" current={userSort} dir={userSortDir} />
-                      </TableHead>
-                      <TableHead
-                        className="cursor-pointer select-none text-right whitespace-nowrap"
-                        onClick={() => toggleUserSort("linkClicks")}
-                      >
-                        Link Clicks <SortIcon col="linkClicks" current={userSort} dir={userSortDir} />
-                      </TableHead>
-                      <TableHead
-                        className="cursor-pointer select-none whitespace-nowrap"
-                        onClick={() => toggleUserSort("lastLinkClick")}
-                      >
-                        Last Link Click <SortIcon col="lastLinkClick" current={userSort} dir={userSortDir} />
-                      </TableHead>
+                    <TableRow style={{ background: `${CL_NAVY}06` }}>
+                      {([
+                        { key: "name",         label: "User",           align: "left"  },
+                        { key: "pageViews",    label: "Page Views",     align: "right" },
+                        { key: "lastPageView", label: "Last Visit",     align: "left"  },
+                        { key: "linkClicks",   label: "Link Clicks",    align: "right" },
+                        { key: "lastLinkClick",label: "Last Link Click",align: "left"  },
+                      ] as const).map(({ key, label, align }) => (
+                        <TableHead
+                          key={key}
+                          className={`cursor-pointer select-none whitespace-nowrap text-xs font-semibold uppercase tracking-wide ${align === "right" ? "text-right" : ""}`}
+                          style={{ color: CL_NAVY }}
+                          onClick={() => toggleUserSort(key as UserSortKey)}
+                        >
+                          {label}
+                          <SortIcon col={key} current={userSort} dir={userSortDir} />
+                        </TableHead>
+                      ))}
                       <TableHead />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredUsers.map((u: any) => (
-                      <TableRow key={u.userId} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                      <TableRow key={u.userId} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
                         <TableCell>
-                          <div className="font-medium text-sm">{u.name}</div>
+                          <div className="font-medium text-sm text-gray-900 dark:text-gray-100">{u.name}</div>
                           <div className="text-xs text-gray-400">{u.email}</div>
                         </TableCell>
-                        <TableCell className="text-right font-mono text-sm">{u.pageViews}</TableCell>
-                        <TableCell className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                          {formatDate(u.lastPageView)}
+                        <TableCell className="text-right">
+                          <span className="inline-block min-w-[2rem] text-center font-semibold text-sm rounded-full px-2 py-0.5" style={{ background: `${CL_NAVY}12`, color: CL_NAVY }}>
+                            {u.pageViews}
+                          </span>
                         </TableCell>
-                        <TableCell className="text-right font-mono text-sm">{u.linkClicks}</TableCell>
-                        <TableCell className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                          {formatDate(u.lastLinkClick)}
+                        <TableCell className="text-sm text-gray-500 whitespace-nowrap">{formatDate(u.lastPageView)}</TableCell>
+                        <TableCell className="text-right">
+                          {u.linkClicks > 0 ? (
+                            <span className="inline-block min-w-[2rem] text-center font-semibold text-sm rounded-full px-2 py-0.5" style={{ background: `${CL_PINK}12`, color: CL_PINK }}>
+                              {u.linkClicks}
+                            </span>
+                          ) : (
+                            <span className="text-sm text-gray-300">0</span>
+                          )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-sm text-gray-500 whitespace-nowrap">{formatDate(u.lastLinkClick)}</TableCell>
+                        <TableCell className="text-right">
                           {u.linkClicks > 0 && (
                             <Button
                               variant="ghost"
                               size="sm"
+                              className="text-xs h-7"
+                              style={{ color: CL_NAVY }}
                               onClick={() => setSelectedUser({ userId: u.userId, name: u.name })}
                             >
                               View links
@@ -308,84 +265,70 @@ export default function CLAnalytics() {
         </Card>
 
         {/* Link Breakdown */}
-        <Card>
-          <CardHeader className="border-b">
+        <Card className="overflow-hidden shadow-sm border-0 ring-1 ring-gray-200 dark:ring-gray-700">
+          <CardHeader className="border-b py-4" style={{ background: `${CL_PINK}08` }}>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <CardTitle className="flex items-center gap-2">
-                <ExternalLink className="h-5 w-5 text-gray-500" />
-                Link Breakdown
+              <CardTitle className="flex items-center gap-2 text-base" style={{ color: CL_PINK }}>
+                <ExternalLink className="h-4 w-4" />
+                Link Engagement
               </CardTitle>
-              <div className="relative w-full sm:w-64">
+              <div className="relative w-full sm:w-60">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search links…"
-                  value={linkSearch}
-                  onChange={e => setLinkSearch(e.target.value)}
-                  className="pl-9"
-                />
+                <Input placeholder="Search links…" value={linkSearch} onChange={e => setLinkSearch(e.target.value)} className="pl-9 h-8 text-sm" />
               </div>
             </div>
           </CardHeader>
           <CardContent className="p-0">
             {isLoading ? (
-              <div className="p-8 text-center text-gray-400">Loading…</div>
+              <div className="p-10 text-center text-gray-400 text-sm">Loading…</div>
             ) : filteredLinks.length === 0 ? (
-              <div className="p-8 text-center text-gray-400">No link clicks recorded yet.</div>
+              <div className="p-10 text-center text-gray-400 text-sm">No link clicks recorded yet.</div>
             ) : (
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead
-                        className="cursor-pointer select-none"
-                        onClick={() => toggleLinkSort("linkTitle")}
-                      >
-                        Link <SortIcon col="linkTitle" current={linkSort} dir={linkSortDir} />
-                      </TableHead>
-                      <TableHead
-                        className="cursor-pointer select-none"
-                        onClick={() => toggleLinkSort("linkCategory")}
-                      >
-                        Category <SortIcon col="linkCategory" current={linkSort} dir={linkSortDir} />
-                      </TableHead>
-                      <TableHead
-                        className="cursor-pointer select-none text-right whitespace-nowrap"
-                        onClick={() => toggleLinkSort("clicks")}
-                      >
-                        Clicks <SortIcon col="clicks" current={linkSort} dir={linkSortDir} />
-                      </TableHead>
-                      <TableHead
-                        className="cursor-pointer select-none text-right whitespace-nowrap"
-                        onClick={() => toggleLinkSort("uniqueUsers")}
-                      >
-                        Unique Users <SortIcon col="uniqueUsers" current={linkSort} dir={linkSortDir} />
-                      </TableHead>
-                      <TableHead
-                        className="cursor-pointer select-none whitespace-nowrap"
-                        onClick={() => toggleLinkSort("lastClick")}
-                      >
-                        Last Click <SortIcon col="lastClick" current={linkSort} dir={linkSortDir} />
-                      </TableHead>
+                    <TableRow style={{ background: `${CL_PINK}06` }}>
+                      {([
+                        { key: "linkTitle",    label: "Link",         align: "left"  },
+                        { key: "linkCategory", label: "Category",     align: "left"  },
+                        { key: "clicks",       label: "Clicks",       align: "right" },
+                        { key: "uniqueUsers",  label: "Unique Users", align: "right" },
+                        { key: "lastClick",    label: "Last Click",   align: "left"  },
+                      ] as const).map(({ key, label, align }) => (
+                        <TableHead
+                          key={key}
+                          className={`cursor-pointer select-none whitespace-nowrap text-xs font-semibold uppercase tracking-wide ${align === "right" ? "text-right" : ""}`}
+                          style={{ color: CL_PINK }}
+                          onClick={() => toggleLinkSort(key as LinkSortKey)}
+                        >
+                          {label}
+                          <SortIcon col={key} current={linkSort} dir={linkSortDir} />
+                        </TableHead>
+                      ))}
                       <TableHead />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredLinks.map((l: any) => (
-                      <TableRow key={l.linkHref} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                      <TableRow key={l.linkHref} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
                         <TableCell>
-                          <div className="font-medium text-sm">{l.linkTitle}</div>
+                          <div className="font-medium text-sm text-gray-900 dark:text-gray-100">{l.linkTitle}</div>
                           <div className="text-xs text-gray-400 truncate max-w-xs">{l.linkHref}</div>
                         </TableCell>
-                        <TableCell>{categoryBadge(l.linkCategory)}</TableCell>
-                        <TableCell className="text-right font-mono text-sm">{l.clicks}</TableCell>
-                        <TableCell className="text-right font-mono text-sm">{l.uniqueUsers}</TableCell>
-                        <TableCell className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                          {formatDate(l.lastClick)}
+                        <TableCell><CategoryBadge cat={l.linkCategory} /></TableCell>
+                        <TableCell className="text-right">
+                          <span className="inline-block min-w-[2rem] text-center font-semibold text-sm rounded-full px-2 py-0.5" style={{ background: `${CL_PINK}12`, color: CL_PINK }}>
+                            {l.clicks}
+                          </span>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-right font-mono text-sm text-gray-600">{l.uniqueUsers}</TableCell>
+                        <TableCell className="text-sm text-gray-500 whitespace-nowrap">{formatDate(l.lastClick)}</TableCell>
+                        <TableCell className="text-right">
                           <Button
                             variant="ghost"
                             size="sm"
+                            className="text-xs h-7"
+                            style={{ color: CL_PINK }}
                             onClick={() => setSelectedLink({ title: l.linkTitle, href: l.linkHref })}
                           >
                             View users
@@ -400,41 +343,41 @@ export default function CLAnalytics() {
           </CardContent>
         </Card>
 
+        {/* Footer branding */}
+        <div className="flex items-center justify-center pt-2 pb-6 opacity-40">
+          <img src={chadwickLawrenceLogo} alt="Chadwick Lawrence" className="h-6 object-contain" />
+        </div>
       </div>
 
       {/* User drill-down dialog */}
       <Dialog open={!!selectedUser} onOpenChange={open => !open && setSelectedUser(null)}>
         <DialogContent className="max-w-xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <MousePointerClick className="h-5 w-5 text-purple-500" />
+            <DialogTitle className="flex items-center gap-2 text-base" style={{ color: CL_PINK }}>
+              <MousePointerClick className="h-4 w-4" />
               Links clicked by {selectedUser?.name}
             </DialogTitle>
           </DialogHeader>
           {userEventsLoading ? (
-            <div className="p-6 text-center text-gray-400">Loading…</div>
-          ) : !userEvents || userEvents.length === 0 ? (
-            <div className="p-6 text-center text-gray-400">No link clicks recorded.</div>
+            <div className="p-6 text-center text-gray-400 text-sm">Loading…</div>
+          ) : !userEvents?.length ? (
+            <div className="p-6 text-center text-gray-400 text-sm">No link clicks recorded.</div>
           ) : (
             <div className="overflow-y-auto max-h-[60vh]">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Link</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>When</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wide" style={{ color: CL_NAVY }}>Link</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wide" style={{ color: CL_NAVY }}>Category</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wide" style={{ color: CL_NAVY }}>When</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {userEvents.map((e: any) => (
-                    <TableRow key={e.id}>
-                      <TableCell>
-                        <div className="font-medium text-sm">{e.linkTitle}</div>
-                      </TableCell>
-                      <TableCell>{categoryBadge(e.linkCategory)}</TableCell>
-                      <TableCell className="text-xs text-gray-500 whitespace-nowrap">
-                        {formatDate(e.createdAt)}
-                      </TableCell>
+                    <TableRow key={e.id} className="hover:bg-gray-50">
+                      <TableCell className="font-medium text-sm">{e.linkTitle}</TableCell>
+                      <TableCell><CategoryBadge cat={e.linkCategory} /></TableCell>
+                      <TableCell className="text-xs text-gray-500 whitespace-nowrap">{formatDate(e.createdAt)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -448,36 +391,38 @@ export default function CLAnalytics() {
       <Dialog open={!!selectedLink} onOpenChange={open => !open && setSelectedLink(null)}>
         <DialogContent className="max-w-xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-blue-500" />
+            <DialogTitle className="flex items-center gap-2 text-base" style={{ color: CL_NAVY }}>
+              <Users className="h-4 w-4" />
               Users who clicked: {selectedLink?.title}
             </DialogTitle>
           </DialogHeader>
           {linkClickersLoading ? (
-            <div className="p-6 text-center text-gray-400">Loading…</div>
-          ) : !linkClickers || linkClickers.length === 0 ? (
-            <div className="p-6 text-center text-gray-400">No clickers found.</div>
+            <div className="p-6 text-center text-gray-400 text-sm">Loading…</div>
+          ) : !linkClickers?.length ? (
+            <div className="p-6 text-center text-gray-400 text-sm">No clickers found.</div>
           ) : (
             <div className="overflow-y-auto max-h-[60vh]">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>User</TableHead>
-                    <TableHead className="text-right">Clicks</TableHead>
-                    <TableHead>Last Click</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wide" style={{ color: CL_NAVY }}>User</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wide text-right" style={{ color: CL_NAVY }}>Clicks</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wide" style={{ color: CL_NAVY }}>Last Click</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {linkClickers.map((u: any) => (
-                    <TableRow key={u.userId}>
+                    <TableRow key={u.userId} className="hover:bg-gray-50">
                       <TableCell>
                         <div className="font-medium text-sm">{u.name}</div>
                         <div className="text-xs text-gray-400">{u.email}</div>
                       </TableCell>
-                      <TableCell className="text-right font-mono text-sm">{u.clicks}</TableCell>
-                      <TableCell className="text-xs text-gray-500 whitespace-nowrap">
-                        {formatDate(u.lastClick)}
+                      <TableCell className="text-right">
+                        <span className="inline-block font-semibold text-sm rounded-full px-2 py-0.5" style={{ background: `${CL_PINK}12`, color: CL_PINK }}>
+                          {u.clicks}
+                        </span>
                       </TableCell>
+                      <TableCell className="text-xs text-gray-500 whitespace-nowrap">{formatDate(u.lastClick)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
