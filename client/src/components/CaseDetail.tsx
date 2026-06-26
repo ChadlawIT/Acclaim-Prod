@@ -1714,7 +1714,7 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
                   ))}
                 </div>
               ) : messages && messages.length > 0 ? (
-                <div className="space-y-4 max-h-64 overflow-y-auto">
+                <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
                   {messages
                     .filter((message: any) => {
                       if (!messageSearch.trim()) return true;
@@ -1728,15 +1728,15 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
                     .map((message: any) => (
                     <div 
                       key={message.id} 
-                      className="p-3 border rounded-lg bg-gray-50 border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
+                      className="p-4 border rounded-lg bg-gray-50 border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
                       onClick={() => handleOpenMessage(message)}
                     >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center space-x-2">
-                          <p className="font-medium text-sm">{message.subject}</p>
+                      <div className="flex items-start justify-between mb-1.5">
+                        <div className="flex items-center space-x-2 min-w-0">
+                          <p className="font-medium text-sm truncate">{message.subject}</p>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <p className="text-xs text-gray-500">{formatDate(message.createdAt)}</p>
+                        <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
+                          <p className="text-xs text-gray-500 whitespace-nowrap">{formatDate(message.createdAt)}</p>
                           {user?.isAdmin && (
                             <Button
                               variant="ghost"
@@ -1755,10 +1755,10 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
                           )}
                         </div>
                       </div>
-                      <p className="text-xs text-gray-600 mb-2">From: {message.senderName || 'Unknown'}</p>
-                      <p className="text-sm text-gray-700">{truncateContent(message.content, 250)}</p>
+                      <p className="text-xs text-gray-500 mb-2">From: {message.senderName || 'Unknown'}</p>
+                      <p className="text-sm text-gray-700 leading-relaxed">{truncateContent(message.content, 400)}</p>
                       {message.attachmentFileName && (
-                        <div className="mt-2 flex items-center space-x-2 text-xs text-acclaim-teal">
+                        <div className="mt-2.5 flex items-center space-x-2 text-xs text-acclaim-teal">
                           <FileText className="h-3 w-3" />
                           <span>{message.attachmentFileName}</span>
                         </div>
