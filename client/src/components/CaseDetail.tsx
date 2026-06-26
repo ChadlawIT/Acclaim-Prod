@@ -775,48 +775,34 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
               margin: 0 auto;
             }
 
-            /* ── Gradient header ── */
+            /* ── Header ── */
             .header {
-              background: linear-gradient(135deg, #064e3b 0%, #0d9488 60%, #0e9f8e 100%);
-              border-radius: 16px;
-              padding: 28px 32px;
-              color: white;
-              margin-bottom: 20px;
-              position: relative;
-              overflow: hidden;
+              border-bottom: 2px solid #0d9488;
+              padding-bottom: 20px;
+              margin-bottom: 30px;
             }
             .header-top {
               display: flex;
               justify-content: space-between;
               align-items: flex-start;
-              margin-bottom: 18px;
+              margin-bottom: 15px;
             }
-            .brand { font-size: 0.8em; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; opacity: 0.7; }
-            .report-date { font-size: 0.78em; opacity: 0.55; }
-            .case-title { font-size: 1.25em; font-weight: 700; line-height: 1.3; }
-            .case-ref { font-size: 0.82em; opacity: 0.55; margin-top: 3px; font-family: monospace; }
+            .company-name { font-size: 1.1em; font-weight: 600; color: #0d9488; }
+            .report-date  { font-size: 0.85em; color: #6b7280; }
+            .case-title   { font-size: 1.5em; font-weight: 600; color: #1f2937; margin: 0; }
+            .case-ref     { font-size: 0.95em; color: #6b7280; margin-top: 5px; }
 
-            /* stat pills */
-            .stats {
+            /* summary row */
+            .summary-row {
               display: flex;
-              flex-wrap: wrap;
-              gap: 10px;
-              margin-top: 18px;
+              gap: 40px;
+              padding: 20px 0;
+              border-bottom: 1px solid #e5e7eb;
+              margin-bottom: 30px;
             }
-            .stat-pill {
-              background: rgba(255,255,255,0.12);
-              border: 1px solid rgba(255,255,255,0.2);
-              border-radius: 10px;
-              padding: 8px 14px;
-            }
-            .stat-label { font-size: 0.65em; text-transform: uppercase; letter-spacing: 1px; opacity: 0.55; margin-bottom: 2px; }
-            .stat-value { font-size: 0.9em; font-weight: 700; }
-
-            /* progress bar */
-            .progress-wrap { margin-top: 18px; }
-            .progress-meta { display: flex; justify-content: space-between; font-size: 0.72em; opacity: 0.55; margin-bottom: 6px; }
-            .progress-track { height: 6px; background: rgba(0,0,0,0.2); border-radius: 99px; overflow: hidden; }
-            .progress-fill  { height: 100%; background: rgba(255,255,255,0.85); border-radius: 99px; }
+            .summary-item { flex: 1; }
+            .summary-label { font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.5px; color: #6b7280; margin-bottom: 4px; }
+            .summary-value { font-size: 1.1em; font-weight: 600; color: #1f2937; }
 
             /* ── Timeline card ── */
             .timeline-card {
@@ -913,44 +899,32 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
         <body>
           <div class="page">
 
-            <!-- Gradient header -->
             <div class="header">
               <div class="header-top">
-                <div class="brand">Acclaim</div>
+                <div class="company-name">Acclaim</div>
                 <div class="report-date">Generated: ${currentDate}</div>
               </div>
-              <div class="case-title">${caseData.caseName}</div>
-              <div class="case-ref">${caseData.accountNumber}</div>
+              <h1 class="case-title">${caseData.caseName}</h1>
+              <div class="case-ref">Account: ${caseData.accountNumber}</div>
+            </div>
 
-              <div class="stats">
-                <div class="stat-pill">
-                  <div class="stat-label">Outstanding</div>
-                  <div class="stat-value">${formatCurrency(outstandingAmount)}</div>
-                </div>
-                <div class="stat-pill">
-                  <div class="stat-label">Total Paid</div>
-                  <div class="stat-value">${formatCurrency(totalPayments)}</div>
-                </div>
-                <div class="stat-pill">
-                  <div class="stat-label">Stage</div>
-                  <div class="stat-value">${caseData.stage || '—'}</div>
-                </div>
-                <div class="stat-pill">
-                  <div class="stat-label">Events</div>
-                  <div class="stat-value">${timelineEvents.length}</div>
-                </div>
+            <div class="summary-row">
+              <div class="summary-item">
+                <div class="summary-label">Status</div>
+                <div class="summary-value">${caseData.status || 'Active'}</div>
               </div>
-
-              ${(() => {
-                const total = parseFloat(caseData.totalDebtAmount || caseData.outstandingAmount || '0');
-                const paid  = totalPayments;
-                const pct   = total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0;
-                return `
-                  <div class="progress-wrap">
-                    <div class="progress-meta"><span>Repayment progress</span><span>${pct}% paid</span></div>
-                    <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
-                  </div>`;
-              })()}
+              <div class="summary-item">
+                <div class="summary-label">Outstanding</div>
+                <div class="summary-value">${formatCurrency(outstandingAmount)}</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-label">Payments</div>
+                <div class="summary-value">${formatCurrency(totalPayments)}</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-label">Events</div>
+                <div class="summary-value">${timelineEvents.length}</div>
+              </div>
             </div>
 
             <!-- Timeline -->
