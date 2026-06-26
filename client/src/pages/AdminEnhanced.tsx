@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import ExcelJS from "exceljs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useAuth } from "@/hooks/use-auth";
-import { Users, Building, Plus, Edit, Trash2, Shield, UserPlus, AlertTriangle, ShieldCheck, ShieldAlert, ArrowLeft, Activity, FileText, CreditCard, Archive, ArchiveRestore, Download, Check, Eye, EyeOff, Mail, Bell, BellOff, FilePlus, FileX, BarChart3, Search, Crown, Calendar, CalendarOff, Pencil, LogOut, RefreshCw, ChevronDown, ChevronUp, ChevronRight, Clock, Send, History, KeyRound, Copy, HelpCircle, X, ClipboardList, ClipboardX, MapPin, Phone, Banknote, User, FileImage, FileSpreadsheet, FileVideo, Receipt } from "lucide-react";
+import { Users, Building, Plus, Edit, Trash2, Shield, UserPlus, AlertTriangle, ShieldCheck, ShieldAlert, ArrowLeft, Activity, FileText, CreditCard, Archive, ArchiveRestore, Download, Check, Eye, EyeOff, Mail, Bell, BellOff, FilePlus, FileX, BarChart3, Search, Crown, Calendar, CalendarOff, Pencil, LogOut, RefreshCw, ChevronDown, ChevronUp, ChevronRight, Clock, Send, History, KeyRound, Copy, HelpCircle, X, ClipboardList, ClipboardX, MapPin, Phone, Banknote, User, FileImage, FileSpreadsheet, FileVideo, Receipt, Scale } from "lucide-react";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { createUserSchema, updateUserSchema, createOrganisationSchema, updateOrganisationSchema } from "@shared/schema";
@@ -3797,6 +3797,13 @@ export default function AdminEnhanced() {
               <Mail className="h-4 w-4 mr-2" />
               <span className="hidden sm:inline">Messages Report</span>
               <span className="sm:hidden">Messages</span>
+            </Button>
+          </Link>
+          <Link href="/cl-analytics">
+            <Button variant="outline" size="sm">
+              <Scale className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">CL Page Analytics</span>
+              <span className="sm:hidden">CL</span>
             </Button>
           </Link>
           {isSuperAdmin && (

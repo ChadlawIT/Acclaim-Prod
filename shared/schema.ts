@@ -354,6 +354,20 @@ export const externalApiCredentials = pgTable("external_api_credentials", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Chadwick Lawrence page analytics
+export const clPageEvents = pgTable("cl_page_events", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  eventType: varchar("event_type", { length: 20 }).notNull(), // 'page_view' | 'link_click'
+  linkTitle: varchar("link_title", { length: 200 }),
+  linkHref: varchar("link_href", { length: 500 }),
+  linkCategory: varchar("link_category", { length: 50 }), // 'business' | 'personal' | 'events' | 'contact'
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type ClPageEvent = typeof clPageEvents.$inferSelect;
+export type InsertClPageEvent = typeof clPageEvents.$inferInsert;
+
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   organisation: one(organisations, {

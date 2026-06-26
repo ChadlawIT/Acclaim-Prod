@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Building2, Briefcase, Users, FileText, Gavel, AlertTriangle, Megaphone, Shield,
@@ -5,12 +6,14 @@ import {
   Stethoscope, Car, UserCog, Globe
 } from "lucide-react";
 import chadwickLawrenceLogo from "@assets/CL_long_logo_1768312503635.png";
+import { apiRequest } from "@/lib/queryClient";
 
 interface Service {
   title: string;
   description: string;
   href: string;
   icon: React.ReactNode;
+  category: string;
 }
 
 const BUSINESS_SERVICES: Service[] = [
@@ -19,60 +22,70 @@ const BUSINESS_SERVICES: Service[] = [
     description: "Commercial property transactions, leases, portfolio management and disposals.",
     href: "https://www.chadwicklawrence.co.uk/business-services/property/",
     icon: <Building2 className="h-5 w-5 text-[#2e3192]" />,
+    category: "business",
   },
   {
     title: "Corporate & Contracts",
     description: "Practical, cost-effective advice for business transactions, mergers and commercial contracts.",
     href: "https://www.chadwicklawrence.co.uk/business-services/corporate-and-contracts/",
     icon: <Briefcase className="h-5 w-5 text-[#2e3192]" />,
+    category: "business",
   },
   {
     title: "Recovery & Insolvency",
     description: "Realistic commercial solutions for business and personal financial difficulties and insolvency.",
     href: "https://www.chadwicklawrence.co.uk/business-services/corporate-recovery-insolvency/",
     icon: <AlertTriangle className="h-5 w-5 text-[#2e3192]" />,
+    category: "business",
   },
   {
     title: "Employment Law",
     description: "Employment law, health & safety compliance, HR support and tribunal litigation for employers.",
     href: "https://www.chadwicklawrence.co.uk/business-services/employment-law/",
     icon: <Users className="h-5 w-5 text-[#2e3192]" />,
+    category: "business",
   },
   {
     title: "Intellectual Property",
     description: "Protect your business's ideas, brand, data assets and confidential information.",
     href: "https://www.chadwicklawrence.co.uk/business-services/intellectual-property/",
     icon: <FileText className="h-5 w-5 text-[#2e3192]" />,
+    category: "business",
   },
   {
     title: "Litigation",
     description: "Proactive, value-driven dispute resolution and commercial litigation support.",
     href: "https://www.chadwicklawrence.co.uk/business-services/litigation-in-business/",
     icon: <Gavel className="h-5 w-5 text-[#2e3192]" />,
+    category: "business",
   },
   {
     title: "Media Law & Reputation",
     description: "Protect and manage your business's media presence, reputation and brand integrity.",
     href: "https://www.chadwicklawrence.co.uk/business-services/media-law-and-reputation/",
     icon: <Megaphone className="h-5 w-5 text-[#2e3192]" />,
+    category: "business",
   },
   {
     title: "Regulatory Services",
     description: "Navigate regulatory investigations, compliance obligations and enforcement proceedings.",
     href: "https://www.chadwicklawrence.co.uk/business-services/regulatory-services-solicitors/",
     icon: <Shield className="h-5 w-5 text-[#2e3192]" />,
+    category: "business",
   },
   {
     title: "Social Housing",
     description: "Specialist legal support for housing associations and social housing management.",
     href: "https://www.chadwicklawrence.co.uk/business-services/social-housing-management/",
     icon: <Home className="h-5 w-5 text-[#2e3192]" />,
+    category: "business",
   },
   {
     title: "Sports Law",
     description: "Specialist legal advice for players, clubs, agents and sporting organisations.",
     href: "https://www.chadwicklawrence.co.uk/business-services/sports-law/",
     icon: <Trophy className="h-5 w-5 text-[#2e3192]" />,
+    category: "business",
   },
 ];
 
@@ -82,56 +95,69 @@ const PERSONAL_SERVICES: Service[] = [
     description: "Buying, selling and remortgaging — clear upfront costs and plain English advice at every step.",
     href: "https://www.chadwicklawrence.co.uk/personal-services/personal-property-services/",
     icon: <Home className="h-5 w-5 text-[#ba1b6e]" />,
+    category: "personal",
   },
   {
     title: "Family Law",
     description: "Divorce, child arrangements, financial settlements, cohabitation agreements and domestic abuse support.",
     href: "https://www.chadwicklawrence.co.uk/personal-services/family-law/",
     icon: <Heart className="h-5 w-5 text-[#ba1b6e]" />,
+    category: "personal",
   },
   {
     title: "Wills & Probate",
     description: "Will drafting, probate administration, lasting powers of attorney, trusts and succession planning.",
     href: "https://www.chadwicklawrence.co.uk/personal-services/wills-probate/",
     icon: <ScrollText className="h-5 w-5 text-[#ba1b6e]" />,
+    category: "personal",
   },
   {
     title: "Personal Injury",
     description: "No Win, No Fee claims for road traffic accidents, workplace injuries and slips or trips.",
     href: "https://www.chadwicklawrence.co.uk/personal-services/personal-injury/",
     icon: <Activity className="h-5 w-5 text-[#ba1b6e]" />,
+    category: "personal",
   },
   {
     title: "Medical Negligence",
     description: "No Win, No Fee claims for surgical errors, misdiagnosis, GP negligence and birth injuries.",
     href: "https://www.chadwicklawrence.co.uk/personal-services/medical-negligence/",
     icon: <Stethoscope className="h-5 w-5 text-[#ba1b6e]" />,
+    category: "personal",
   },
   {
     title: "Employment Law",
     description: "Redundancy, unfair dismissal, discrimination claims, tribunal representation and settlement agreements.",
     href: "https://www.chadwicklawrence.co.uk/personal-services/employment-law/",
     icon: <UserCog className="h-5 w-5 text-[#ba1b6e]" />,
+    category: "personal",
   },
   {
     title: "Dispute Resolution",
     description: "Debt recovery, contract disputes, professional negligence, property disagreements and GDPR breaches.",
     href: "https://www.chadwicklawrence.co.uk/personal-services/dispute-resolution/",
     icon: <Scale className="h-5 w-5 text-[#ba1b6e]" />,
+    category: "personal",
   },
   {
     title: "Road Traffic & Motoring Law",
     description: "Expert defence for drink driving, speeding, disqualification and other motoring offences.",
     href: "https://www.chadwicklawrence.co.uk/personal-services/road-traffic-motoring-law/",
     icon: <Car className="h-5 w-5 text-[#ba1b6e]" />,
+    category: "personal",
   },
   {
     title: "Media Law & Reputation",
     description: "Online reputation management, defamation, harassment and social media attack response.",
     href: "https://www.chadwicklawrence.co.uk/personal-services/media-law-and-reputation/",
     icon: <Globe className="h-5 w-5 text-[#ba1b6e]" />,
+    category: "personal",
   },
 ];
+
+function trackEvent(eventType: string, linkTitle?: string, linkHref?: string, linkCategory?: string) {
+  apiRequest("POST", "/api/cl-analytics", { eventType, linkTitle, linkHref, linkCategory }).catch(() => {});
+}
 
 function ServiceCard({ service, accentColor }: { service: Service; accentColor: string }) {
   return (
@@ -139,6 +165,7 @@ function ServiceCard({ service, accentColor }: { service: Service; accentColor: 
       href={service.href}
       target="_blank"
       rel="noopener noreferrer"
+      onClick={() => trackEvent("link_click", service.title, service.href, service.category)}
       className={`group block p-4 border rounded-lg hover:shadow-md transition-all ${
         accentColor === "blue"
           ? "hover:border-[#2e3192]"
@@ -182,6 +209,10 @@ function ServiceCard({ service, accentColor }: { service: Service; accentColor: 
 }
 
 export default function ChadwickLawrence() {
+  useEffect(() => {
+    trackEvent("page_view");
+  }, []);
+
   return (
     <div className="space-y-6">
       <Card>
@@ -223,6 +254,7 @@ export default function ChadwickLawrence() {
                 href="https://www.chadwicklawrence.co.uk/business-services/"
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => trackEvent("link_click", "View all business services", "https://www.chadwicklawrence.co.uk/business-services/", "business")}
                 className="inline-flex items-center gap-2 text-sm text-[#2e3192] font-medium hover:underline"
               >
                 View all business services on chadwicklawrence.co.uk
@@ -253,6 +285,7 @@ export default function ChadwickLawrence() {
                 href="https://www.chadwicklawrence.co.uk/personal-services/"
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => trackEvent("link_click", "View all personal services", "https://www.chadwicklawrence.co.uk/personal-services/", "personal")}
                 className="inline-flex items-center gap-2 text-sm text-[#ba1b6e] font-medium hover:underline"
               >
                 View all personal services on chadwicklawrence.co.uk
@@ -281,6 +314,7 @@ export default function ChadwickLawrence() {
               href="https://www.chadwicklawrence.co.uk/seminars/business-services-seminars/"
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => trackEvent("link_click", "View Upcoming Events", "https://www.chadwicklawrence.co.uk/seminars/business-services-seminars/", "events")}
               className="inline-flex items-center gap-2 bg-white text-[#2e3192] px-4 py-2 rounded-lg font-medium hover:bg-white/90 transition-colors text-sm"
             >
               <Calendar className="h-4 w-4" />
@@ -295,11 +329,23 @@ export default function ChadwickLawrence() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <p className="text-gray-200 text-sm mb-1">Freephone</p>
-                <a href="tel:08000150340" className="text-white font-medium hover:underline">0800 015 0340</a>
+                <a
+                  href="tel:08000150340"
+                  onClick={() => trackEvent("link_click", "Freephone 0800 015 0340", "tel:08000150340", "contact")}
+                  className="text-white font-medium hover:underline"
+                >
+                  0800 015 0340
+                </a>
               </div>
               <div>
                 <p className="text-gray-200 text-sm mb-1">Email</p>
-                <a href="mailto:info@chadlaw.co.uk" className="text-white font-medium hover:underline">info@chadlaw.co.uk</a>
+                <a
+                  href="mailto:info@chadlaw.co.uk"
+                  onClick={() => trackEvent("link_click", "Email info@chadlaw.co.uk", "mailto:info@chadlaw.co.uk", "contact")}
+                  className="text-white font-medium hover:underline"
+                >
+                  info@chadlaw.co.uk
+                </a>
               </div>
             </div>
             <div className="mt-4 pt-4 border-t border-white/20 flex items-center justify-end">
