@@ -587,111 +587,100 @@ export default function Documents() {
             </div>
           ) : Object.keys(groupedDocuments).length > 0 ? (
             <div className="space-y-6">
-              {Object.entries(groupedDocuments).map(([caseId, caseDocuments]: [string, any]) => (
-                <div key={caseId} className="space-y-3">
-                  <div className="flex items-center space-x-2">
-                    <Badge variant="outline" className="text-acclaim-teal border-acclaim-teal">
-                      {(() => {
-                        const caseDetails = getCaseDetails(parseInt(caseId));
-                        return caseDetails ? `${caseDetails.accountNumber} - ${caseDetails.caseName}` : 'Case Documents';
-                      })()}
-                    </Badge>
-                    <span className="text-sm text-gray-500">({caseDocuments.length} files)</span>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    {caseDocuments.map((doc: any) => (
-                      <div
-                        key={doc.id}
-                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors border gap-2 sm:gap-4"
+              {Object.entries(groupedDocuments).map(([caseId, caseDocuments]: [string, any]) => {
+                const caseDetails = getCaseDetails(parseInt(caseId));
+                return (
+                  <div key={caseId}>
+                    {/* Case group header */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-1 h-4 rounded-full bg-teal-500 shrink-0" />
+                      <button
+                        onClick={() => handleCaseClick(parseInt(caseId))}
+                        className="text-sm font-semibold text-gray-700 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 transition-colors truncate"
                       >
-                        <div className="flex items-start sm:items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
-                          <div className="flex-shrink-0 mt-0.5 sm:mt-0">
-                            {getFileIcon(doc.fileType)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-gray-900 text-sm sm:text-base truncate">{doc.fileName}</p>
-                            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1">
-                              <span className="text-xs text-gray-500">{formatDate(doc.createdAt)}</span>
-                              {doc.fileSize && (
+                        {caseDetails ? `${caseDetails.accountNumber} — ${caseDetails.caseName}` : 'Case Documents'}
+                      </button>
+                      {caseDetails?.organisationName && (
+                        <span className="text-xs text-gray-400 shrink-0">· {caseDetails.organisationName}</span>
+                      )}
+                      <span className="text-xs text-gray-400 shrink-0 ml-auto">{(caseDocuments as any[]).length} {(caseDocuments as any[]).length === 1 ? 'file' : 'files'}</span>
+                    </div>
+
+                    {/* Document rows */}
+                    <div className="divide-y divide-gray-100 dark:divide-gray-800 pl-3">
+                      {(caseDocuments as any[]).map((doc: any) => {
+                        const ext = doc.fileName?.split('.').pop()?.toLowerCase() || '';
+                        const isPdf = doc.fileType?.includes('pdf') || ext === 'pdf';
+                        const isWord = doc.fileType?.includes('word') || doc.fileType?.includes('document') || ['doc','docx'].includes(ext);
+                        const isImage = doc.fileType?.includes('image') || ['jpg','jpeg','png','gif','webp'].includes(ext);
+                        const isSheet = doc.fileType?.includes('sheet') || doc.fileType?.includes('excel') || ['xls','xlsx','csv'].includes(ext);
+                        const iconColour = isPdf ? 'text-red-500' : isWord ? 'text-blue-500' : isImage ? 'text-green-500' : isSheet ? 'text-emerald-600' : 'text-gray-400';
+                        const bgColour = isPdf ? 'bg-red-50 dark:bg-red-900/20' : isWord ? 'bg-blue-50 dark:bg-blue-900/20' : isImage ? 'bg-green-50 dark:bg-green-900/20' : isSheet ? 'bg-emerald-50 dark:bg-emerald-900/20' : 'bg-gray-100 dark:bg-gray-800';
+                        return (
+                          <div
+                            key={doc.id}
+                            className="flex items-center gap-3 py-2.5 first:pt-1 last:pb-0 group"
+                          >
+                            {/* file type icon */}
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${bgColour}`}>
+                              <FileText className={`h-4 w-4 ${iconColour}`} />
+                            </div>
+                            {/* info */}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
+                                {doc.fileName}
+                              </p>
+                              <p className="text-[10px] text-gray-400 mt-0.5">
+                                {formatDate(doc.createdAt)}
+                                {doc.fileSize && <span className="ml-1.5">· {formatFileSize(doc.fileSize)}</span>}
+                              </p>
+                            </div>
+                            {/* actions — always visible on mobile, fade-in on desktop */}
+                            <div className="flex items-center gap-1 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDownload(doc.id)}
+                                className="h-7 w-7 p-0 text-gray-400 hover:text-teal-600"
+                                title="Download"
+                              >
+                                <Download className="h-3.5 w-3.5" />
+                              </Button>
+                              {user?.isAdmin && (
                                 <>
-                                  <span className="text-xs text-gray-400">•</span>
-                                  <span className="text-xs text-gray-500">{formatFileSize(doc.fileSize)}</span>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleOpenAuditDialog(doc.id)}
+                                    className="h-7 w-7 p-0 text-gray-400 hover:text-purple-600"
+                                    title="View download history"
+                                  >
+                                    <Eye className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      if (confirm("Are you sure you want to delete this document?")) {
+                                        deleteDocumentMutation.mutate(doc.id);
+                                      }
+                                    }}
+                                    className="h-7 w-7 p-0 text-gray-400 hover:text-red-600"
+                                    disabled={deleteDocumentMutation.isPending}
+                                    title="Delete"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
                                 </>
                               )}
                             </div>
-                            {doc.caseId && (() => {
-                              const caseDetails = getCaseDetails(doc.caseId);
-                              if (caseDetails) {
-                                return (
-                                  <div className="flex flex-wrap items-center gap-x-1 gap-y-0.5 mt-1">
-                                    <span className="text-xs text-gray-500">Case:</span>
-                                    <button
-                                      onClick={() => handleCaseClick(doc.caseId)}
-                                      className="text-xs text-acclaim-teal hover:text-acclaim-teal/80 hover:underline font-medium"
-                                    >
-                                      {caseDetails.accountNumber}
-                                    </button>
-                                    {caseDetails.organisationName && (
-                                      <span className="text-xs text-gray-500">
-                                        ({caseDetails.organisationName})
-                                      </span>
-                                    )}
-                                  </div>
-                                );
-                              }
-                              return null;
-                            })()}
                           </div>
-                        </div>
-                        
-                        <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 pl-8 sm:pl-0">
-                          <div className="text-left sm:text-right hidden sm:block">
-                            <p className="text-xs sm:text-sm text-gray-600">{doc.fileType}</p>
-                          </div>
-                          <div className="flex items-center gap-1 sm:gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDownload(doc.id)}
-                              className="text-acclaim-teal hover:text-acclaim-teal h-8 px-2 sm:px-3"
-                            >
-                              <Download className="h-4 w-4" />
-                              <span className="ml-1 text-xs sm:hidden">Download</span>
-                            </Button>
-                            {user?.isAdmin && (
-                              <>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleOpenAuditDialog(doc.id)}
-                                  className="text-purple-600 hover:text-purple-700 h-8 px-2"
-                                  title="View download history"
-                                >
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    if (confirm("Are you sure you want to delete this document?")) {
-                                      deleteDocumentMutation.mutate(doc.id);
-                                    }
-                                  }}
-                                  className="text-red-600 hover:text-red-700 h-8 px-2"
-                                  disabled={deleteDocumentMutation.isPending}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="text-center py-8 sm:py-12">
