@@ -158,7 +158,7 @@ export default function PaymentPerformanceReport() {
     }, {} as Record<string, { label: string; total: number; count: number }>);
 
     const monthlyTrends = Object.entries(monthlyMap)
-      .sort(([a], [b]) => a.localeCompare(b))
+      .sort(([a], [b]) => b.localeCompare(a))
       .map(([, v]) => v);
 
     return {
