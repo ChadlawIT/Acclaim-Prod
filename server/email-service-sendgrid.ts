@@ -139,6 +139,7 @@ interface EmailNotificationData {
     fileSize: number;
     fileType: string;
   };
+  copyRecipients?: Array<{ name: string; reason: 'reply' | 'name-mention' }>;
 }
 
 interface AdminToUserNotificationData {
@@ -697,7 +698,12 @@ Portal: https://acclaim-api-prod-uks-001.azurewebsites.net/auth
                       <div style="background: #fffbeb; border: 2px solid #f59e0b; border-radius: 10px; padding: 16px 20px; margin-bottom: 24px;">
                         <p style="margin: 0 0 8px 0; font-weight: 700; color: #92400e; font-size: 14px;">⚠️ Case Handler Responsibility Notice</p>
                         <p style="margin: 0 0 6px 0; color: #78350f; font-size: 13px; line-height: 1.6;"><strong>${data.caseDetails.assignedTo}</strong> is recorded as the Case Handler for this matter and is primarily responsible for actioning this message.</p>
-                        <p style="margin: 0; color: #78350f; font-size: 13px; line-height: 1.6;">No other team members have directly received this notification — it is your responsibility to either action this message yourself or distribute it accordingly if necessary.</p>
+                        ${(data.copyRecipients && data.copyRecipients.length > 0) ? data.copyRecipients.map(r => {
+                          const reasonText = r.reason === 'reply'
+                            ? `because the client replied to a message previously sent by <strong>${r.name}</strong>`
+                            : `because the client addressed <strong>${r.name}</strong> by name in the opening of their message`;
+                          return `<p style="margin: 6px 0 0 0; color: #78350f; font-size: 13px; line-height: 1.6;">A copy of this notification has also been sent to <strong>${r.name}</strong> ${reasonText}.</p>`;
+                        }).join('') : `<p style="margin: 0; color: #78350f; font-size: 13px; line-height: 1.6;">No other team members have directly received this notification — it is your responsibility to either action this message yourself or distribute it accordingly if necessary.</p>`}
                       </div>
                       ` : ''}
 

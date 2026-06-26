@@ -1822,8 +1822,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
             };
           }
 
-          // Send email notification only to admin email - no other users
-          console.log(`[MSG Email] Calling sendMessageNotification → adminEmail=${adminEmail}, from=${user.email}`);
+          // ── Pre-detect copy recipients so the handler email can name them ────
+          // Safeguard 2: Reply detection — "From: Acclaim (Name)" in message body
+          const copyRecipients: Array<{ name: string; email: string; reason: 'reply' | 'name-mention'; mentionedAs?: string }> = [];
+
+          const replyPatternMatch = (messageData.content || '').match(
+            /From:\s*Acclaim\s*\(([^)]+)\)/i
+          );
+          if (replyPatternMatch) {
+            const originalSenderName = replyPatternMatch[1].trim();
+            const originalSender = await storage.getAdminByName(originalSenderName);
+            if (originalSender?.email && originalSender.email.toLowerCase() !== adminEmail.toLowerCase()) {
+              copyRecipients.push({
+                name: `${originalSender.firstName || ''} ${originalSender.lastName || ''}`.trim(),
+                email: originalSender.email,
+                reason: 'reply',
+              });
+            }
+          }
+
+          // Safeguard 3: Name-mention detection — "Hi Name" / "Hello Name" etc.
+          const greetingMatch = (messageData.content || '').slice(0, 200).match(
+            /^[\r\n\s]*(?:hi|hello|dear|hey|good\s+morning|morning|good\s+afternoon|afternoon)\s+([a-zA-Z]+)[,\s!.\r\n]/i
+          );
+          if (greetingMatch) {
+            const mentionedName = greetingMatch[1].trim();
+            const namedAdmin = await findAdminByMentionedName(mentionedName);
+            if (namedAdmin?.email && namedAdmin.email.toLowerCase() !== adminEmail.toLowerCase()) {
+              // Avoid double-adding if already captured as a reply recipient
+              const alreadyAdded = copyRecipients.some(r => r.email.toLowerCase() === namedAdmin.email.toLowerCase());
+              if (!alreadyAdded) {
+                copyRecipients.push({
+                  name: `${namedAdmin.firstName || ''} ${namedAdmin.lastName || ''}`.trim(),
+                  email: namedAdmin.email,
+                  reason: 'name-mention',
+                  mentionedAs: mentionedName,
+                });
+              }
+            }
+          }
+
+          // Send primary notification to case handler, including who (if anyone) is also getting a copy
+          console.log(`[MSG Email] Calling sendMessageNotification → adminEmail=${adminEmail}, from=${user.email}, copies=${copyRecipients.length}`);
           await sendGridEmailService.sendMessageNotification(
             {
               userEmail: user.email || '',
@@ -1834,26 +1874,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
               caseDetails,
               organisationName,
               attachment: attachmentData,
+              copyRecipients: copyRecipients.map(r => ({ name: r.name, reason: r.reason })),
             },
             adminEmail
           );
 
-          // ── Safeguard 2: Reply detection ─────────────────────────────────────
-          // If the message body contains "From: Acclaim (Name)" the user is
-          // replying to a previous message from that named admin. If that admin is
-          // not the case handler they won't have received the primary email above,
-          // so send them a copy.
-          const replyPatternMatch = (messageData.content || '').match(
-            /From:\s*Acclaim\s*\(([^)]+)\)/i
-          );
-          if (replyPatternMatch) {
-            const originalSenderName = replyPatternMatch[1].trim();
-            const originalSender = await storage.getAdminByName(originalSenderName);
-            if (originalSender?.email && originalSender.email.toLowerCase() !== adminEmail.toLowerCase()) {
-              const recipientFullName = `${originalSender.firstName || ''} ${originalSender.lastName || ''}`.trim();
+          // Send copy notifications to each detected recipient
+          for (const copy of copyRecipients) {
+            if (copy.reason === 'reply') {
               await sendGridEmailService.sendCopyNotification({
                 type: 'reply',
-                recipientName: recipientFullName,
+                recipientName: copy.name,
                 caseHandlerName: caseHandler || 'the Case Handler',
                 userEmail: user.email || '',
                 userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || '',
@@ -1861,26 +1892,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 caseReference,
                 organisationName,
                 caseDetails,
-              }, originalSender.email);
-              console.log(`[Safeguard2] Reply-copy sent to ${originalSender.email} (case handler: ${adminEmail})`);
-            }
-          }
-
-          // ── Safeguard 3: Name-mention detection ──────────────────────────────
-          // If the user opens their message with "Hi Name" / "Hello Name" etc.
-          // and that name fuzzy-matches an admin who is NOT the case handler,
-          // send that admin a copy so they are aware the client addressed them.
-          const greetingMatch = (messageData.content || '').slice(0, 200).match(
-            /^[\r\n\s]*(?:hi|hello|dear|hey|good\s+morning|morning|good\s+afternoon|afternoon)\s+([a-zA-Z]+)[,\s!.\r\n]/i
-          );
-          if (greetingMatch) {
-            const mentionedName = greetingMatch[1].trim();
-            const namedAdmin = await findAdminByMentionedName(mentionedName);
-            if (namedAdmin?.email && namedAdmin.email.toLowerCase() !== adminEmail.toLowerCase()) {
-              const recipientFullName = `${namedAdmin.firstName || ''} ${namedAdmin.lastName || ''}`.trim();
+              }, copy.email);
+              console.log(`[Safeguard2] Reply-copy sent to ${copy.email} (case handler: ${adminEmail})`);
+            } else {
               await sendGridEmailService.sendCopyNotification({
                 type: 'name-mention',
-                recipientName: recipientFullName,
+                recipientName: copy.name,
                 caseHandlerName: caseHandler || 'the Case Handler',
                 userEmail: user.email || '',
                 userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || '',
@@ -1888,9 +1905,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 caseReference,
                 organisationName,
                 caseDetails,
-                mentionedAs: mentionedName,
-              }, namedAdmin.email);
-              console.log(`[Safeguard3] Name-mention copy sent to ${namedAdmin.email} (user wrote "Hi ${mentionedName}", handler: ${adminEmail})`);
+                mentionedAs: copy.mentionedAs,
+              }, copy.email);
+              console.log(`[Safeguard3] Name-mention copy sent to ${copy.email} (user wrote "Hi ${copy.mentionedAs}", handler: ${adminEmail})`);
             }
           }
 
