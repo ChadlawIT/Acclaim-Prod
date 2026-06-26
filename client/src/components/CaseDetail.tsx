@@ -1457,22 +1457,20 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
                   ))}
                 </div>
               ) : activities && activities.length > 0 ? (
-                <div className="relative">
-                  <div className="absolute left-[9px] top-4 bottom-4 w-px bg-gray-200" />
-                  <div className="space-y-3">
+                <div className="space-y-4">
                   {activities.map((activity: any) => (
-                    <div key={activity.id} className="flex items-start gap-3 group">
-                      <div className="w-[18px] h-[18px] rounded-full bg-white border-2 border-acclaim-teal mt-1 flex-shrink-0 z-10 shadow-sm" />
-                      <div className="flex-1 bg-gray-50 hover:bg-white border border-gray-100 hover:border-gray-200 hover:shadow-sm rounded-xl px-4 py-3 transition-all">
-                        <div className="flex items-start justify-between gap-2">
+                    <div key={activity.id} className="flex items-start space-x-3">
+                      <div className="w-4 h-4 bg-acclaim-teal rounded-full mt-1 flex-shrink-0"></div>
+                      <div className="flex-1">
+                        <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900 leading-snug">{activity.description}</p>
-                            <div className="flex items-center gap-1.5 mt-1.5">
+                            <p className="text-sm font-medium text-gray-900">{activity.description}</p>
+                            <div className="flex items-center space-x-2 mt-1">
                               <Calendar className="h-3 w-3 text-gray-400" />
                               <p className="text-xs text-gray-500">{formatDateOnly(activity.createdAt)}</p>
                               {activity.performedBy && (
                                 <>
-                                  <span className="text-xs text-gray-300">·</span>
+                                  <span className="text-xs text-gray-400">•</span>
                                   <p className="text-xs text-gray-500">by {activity.performedBy}</p>
                                 </>
                               )}
@@ -1487,17 +1485,16 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
                                   deleteActivityMutation.mutate(activity.id);
                                 }
                               }}
-                              className="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity ml-1"
+                              className="text-red-600 hover:text-red-700 ml-2"
                               disabled={deleteActivityMutation.isPending}
                             >
-                              <Trash2 className="h-3.5 w-3.5" />
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           )}
                         </div>
                       </div>
                     </div>
                   ))}
-                  </div>
                 </div>
               ) : (
                 <div className="text-center py-8">
@@ -1621,29 +1618,22 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
                       return doc.fileName?.toLowerCase().includes(searchLower);
                     })
                     .map((doc: any) => (
-                    <div key={doc.id} className="flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-white border border-gray-100 hover:border-gray-200 hover:shadow-sm rounded-xl transition-all group">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${
-                          doc.fileName?.toLowerCase().endsWith('.pdf') ? 'bg-red-50 text-red-500 border border-red-100' :
-                          doc.fileName?.toLowerCase().match(/\.(doc|docx)$/) ? 'bg-blue-50 text-blue-500 border border-blue-100' :
-                          doc.fileName?.toLowerCase().match(/\.(xls|xlsx)$/) ? 'bg-green-50 text-green-600 border border-green-100' :
-                          'bg-gray-100 text-gray-500 border border-gray-200'
-                        }`}>
-                          {(doc.fileName?.split('.').pop() || 'FILE').toUpperCase().slice(0, 4)}
-                        </div>
+                    <div key={doc.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <FileText className="h-5 w-5 text-acclaim-teal" />
                         <div>
-                          <p className="font-semibold text-sm text-gray-800">{doc.fileName}</p>
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            {formatDate(doc.createdAt)} · {doc.fileSize ? `${Math.round(doc.fileSize / 1024)}KB` : 'Unknown size'}
+                          <p className="font-medium text-sm">{doc.fileName}</p>
+                          <p className="text-xs text-gray-500">
+                            {formatDate(doc.createdAt)} • {doc.fileSize ? `${Math.round(doc.fileSize / 1024)}KB` : 'Unknown size'}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center space-x-2">
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDownload(doc.id)}
-                          className="text-acclaim-teal hover:text-acclaim-teal hover:bg-teal-50 border border-transparent hover:border-teal-100"
+                          className="text-acclaim-teal hover:text-acclaim-teal"
                         >
                           <Download className="h-4 w-4" />
                         </Button>
@@ -1656,7 +1646,7 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
                                 deleteDocumentMutation.mutate(doc.id);
                               }
                             }}
-                            className="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="text-red-600 hover:text-red-700"
                             disabled={deleteDocumentMutation.isPending}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -1738,15 +1728,15 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
                     .map((message: any) => (
                     <div 
                       key={message.id} 
-                      className="px-4 py-3 border border-gray-100 border-l-4 border-l-acclaim-teal rounded-xl bg-gray-50 hover:bg-white hover:shadow-sm cursor-pointer transition-all group"
+                      className="p-3 border rounded-lg bg-gray-50 border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
                       onClick={() => handleOpenMessage(message)}
                     >
-                      <div className="flex items-start justify-between gap-2 mb-1.5">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <p className="font-semibold text-sm text-gray-900 truncate">{message.subject}</p>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-2">
+                          <p className="font-medium text-sm">{message.subject}</p>
                         </div>
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                          <p className="text-xs text-gray-400">{formatDate(message.createdAt)}</p>
+                        <div className="flex items-center space-x-2">
+                          <p className="text-xs text-gray-500">{formatDate(message.createdAt)}</p>
                           {user?.isAdmin && (
                             <Button
                               variant="ghost"
@@ -1757,23 +1747,23 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
                                   deleteMessageMutation.mutate(message.id);
                                 }
                               }}
-                              className="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
+                              className="text-red-600 hover:text-red-700"
                               disabled={deleteMessageMutation.isPending}
                             >
-                              <Trash2 className="h-3.5 w-3.5" />
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           )}
                         </div>
                       </div>
-                      <p className="text-xs font-medium text-acclaim-teal mb-1.5">{message.senderName || 'Unknown'}</p>
-                      <p className="text-sm text-gray-600 leading-relaxed">{truncateContent(message.content, 250)}</p>
+                      <p className="text-xs text-gray-600 mb-2">From: {message.senderName || 'Unknown'}</p>
+                      <p className="text-sm text-gray-700">{truncateContent(message.content, 250)}</p>
                       {message.attachmentFileName && (
-                        <div className="mt-2 inline-flex items-center gap-1.5 text-xs text-acclaim-teal bg-teal-50 border border-teal-100 px-2.5 py-1 rounded-lg">
+                        <div className="mt-2 flex items-center space-x-2 text-xs text-acclaim-teal">
                           <FileText className="h-3 w-3" />
-                          {message.attachmentFileName}
+                          <span>{message.attachmentFileName}</span>
                         </div>
                       )}
-                      <p className="text-xs text-gray-400 mt-2">Click to read full message →</p>
+                      <p className="text-xs text-acclaim-teal mt-2">Click to read full message</p>
                     </div>
                   ))}
                 </div>
