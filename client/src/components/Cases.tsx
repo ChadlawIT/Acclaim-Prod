@@ -4,11 +4,63 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, User, Building, Store, UserCheck, Filter, Bell, BellOff, ChevronRight } from "lucide-react";
+import { Search, User, Building, Store, UserCheck, Filter, Bell, BellOff, ChevronRight, ArrowUpDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { useAuth } from "@/hooks/use-auth";
 import CaseDetail from "./CaseDetail";
+
+const SORT_STORAGE_KEY = "cases-sort-preference";
+
+type SortOption =
+  | "accountNumber-desc"
+  | "caseName-asc"
+  | "stage-asc"
+  | "status-asc"
+  | "balance-desc"
+  | "balance-asc";
+
+function getSavedSort(): SortOption {
+  try {
+    const saved = localStorage.getItem(SORT_STORAGE_KEY);
+    if (saved) return saved as SortOption;
+  } catch {}
+  return "accountNumber-desc";
+}
+
+function sortCases(cases: any[], sortBy: SortOption): any[] {
+  return [...cases].sort((a, b) => {
+    switch (sortBy) {
+      case "accountNumber-desc": {
+        const aNum = parseFloat(a.accountNumber) || 0;
+        const bNum = parseFloat(b.accountNumber) || 0;
+        if (bNum !== aNum) return bNum - aNum;
+        return b.accountNumber.localeCompare(a.accountNumber);
+      }
+      case "caseName-asc":
+        return (a.caseName || "").localeCompare(b.caseName || "");
+      case "stage-asc":
+        return (a.stage || "").localeCompare(b.stage || "");
+      case "status-asc": {
+        const aActive = a.status !== "resolved" && a.status?.toLowerCase() !== "closed" ? 0 : 1;
+        const bActive = b.status !== "resolved" && b.status?.toLowerCase() !== "closed" ? 0 : 1;
+        return aActive - bActive;
+      }
+      case "balance-desc": {
+        const aAmt = parseFloat(a.outstandingAmount) || 0;
+        const bAmt = parseFloat(b.outstandingAmount) || 0;
+        return bAmt - aAmt;
+      }
+      case "balance-asc": {
+        const aAmt = parseFloat(a.outstandingAmount) || 0;
+        const bAmt = parseFloat(b.outstandingAmount) || 0;
+        return aAmt - bAmt;
+      }
+      default:
+        return 0;
+    }
+  });
+}
 
 export default function Cases() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -16,10 +68,18 @@ export default function Cases() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState("active");
   const [stageFilter, setStageFilter] = useState("all");
+  const [sortBy, setSortBy] = useState<SortOption>(getSavedSort);
   const [currentPage, setCurrentPage] = useState(1);
-  const casesPerPage = 21; // divisible by 3 columns
+  const casesPerPage = 21;
   const { toast } = useToast();
   const { user } = useAuth();
+
+  // Persist sort preference
+  useEffect(() => {
+    try {
+      localStorage.setItem(SORT_STORAGE_KEY, sortBy);
+    } catch {}
+  }, [sortBy]);
 
   const { data: cases, isLoading } = useQuery({
     queryKey: ["/api/cases"],
@@ -79,11 +139,13 @@ export default function Cases() {
     return matchesStatus && matchesStage;
   }) || [];
 
-  const totalPages = Math.ceil(filteredCases.length / casesPerPage);
-  const startIndex = (currentPage - 1) * casesPerPage;
-  const paginatedCases = filteredCases.slice(startIndex, startIndex + casesPerPage);
+  const sortedCases = sortCases(filteredCases, sortBy);
 
-  useEffect(() => { setCurrentPage(1); }, [searchTerm, statusFilter, stageFilter]);
+  const totalPages = Math.ceil(sortedCases.length / casesPerPage);
+  const startIndex = (currentPage - 1) * casesPerPage;
+  const paginatedCases = sortedCases.slice(startIndex, startIndex + casesPerPage);
+
+  useEffect(() => { setCurrentPage(1); }, [searchTerm, statusFilter, stageFilter, sortBy]);
 
   const getStageBadge = (status: string, stage: string) => {
     if (status === "resolved" || status?.toLowerCase() === "closed") {
@@ -139,7 +201,7 @@ export default function Cases() {
             />
           </div>
 
-          {/* Filters */}
+          {/* Filters + Sort */}
           <div className="flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-gray-400 flex-shrink-0" />
@@ -168,6 +230,24 @@ export default function Cases() {
               </SelectContent>
             </Select>
 
+            {/* Sort */}
+            <div className="flex items-center gap-2">
+              <ArrowUpDown className="h-4 w-4 text-gray-400 flex-shrink-0" />
+              <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+                <SelectTrigger className="w-[175px]" data-testid="select-sort-cases">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="accountNumber-desc">Account No. (largest first)</SelectItem>
+                  <SelectItem value="caseName-asc">Case Name (A–Z)</SelectItem>
+                  <SelectItem value="stage-asc">Stage (A–Z)</SelectItem>
+                  <SelectItem value="status-asc">Status (active first)</SelectItem>
+                  <SelectItem value="balance-desc">Balance (highest first)</SelectItem>
+                  <SelectItem value="balance-asc">Balance (lowest first)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             {searchTerm.trim() && (
               <span className="text-xs text-blue-600 bg-blue-50 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-1 rounded">
                 Searching all cases
@@ -179,7 +259,7 @@ export default function Cases() {
         <p className="text-xs text-gray-400 mt-2">
           {isLoading
             ? "Loading cases…"
-            : `Showing ${filteredCases.length === 0 ? 0 : startIndex + 1}–${Math.min(startIndex + casesPerPage, filteredCases.length)} of ${filteredCases.length} case${filteredCases.length !== 1 ? "s" : ""}${filteredCases.length !== (cases?.length || 0) ? ` (filtered from ${cases?.length || 0})` : ""}${user?.isAdmin ? " — Global View" : ""}`
+            : `Showing ${sortedCases.length === 0 ? 0 : startIndex + 1}–${Math.min(startIndex + casesPerPage, sortedCases.length)} of ${sortedCases.length} case${sortedCases.length !== 1 ? "s" : ""}${sortedCases.length !== (cases?.length || 0) ? ` (filtered from ${cases?.length || 0})` : ""}${user?.isAdmin ? " — Global View" : ""}`
           }
         </p>
       </div>
