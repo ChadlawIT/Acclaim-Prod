@@ -5837,17 +5837,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { externalRef } = req.params;
       
       // Support both JSON and form data
-      let message, senderName, messageType, subject, sendNotifications;
+      let message, senderName, messageType, subject, sendNotifications, messageDate;
       
       if (req.headers['content-type']?.includes('application/json')) {
-        ({ message, senderName, messageType, subject, sendNotifications } = req.body);
+        ({ message, senderName, messageType, subject, sendNotifications, messageDate } = req.body);
       } else {
         message = req.body.message;
         senderName = req.body.senderName;
         messageType = req.body.messageType || 'case_update';
         subject = req.body.subject;
         sendNotifications = req.body.sendNotifications === 'true' || req.body.sendNotifications === true;
+        messageDate = req.body.messageDate;
       }
+
+      // Parse optional backdated timestamp — accepts ISO 8601 or any JS-parseable string
+      const resolvedDate = messageDate ? new Date(messageDate) : new Date();
+      const effectiveDate = isNaN(resolvedDate.getTime()) ? new Date() : resolvedDate;
       
       if (!message || !senderName) {
         return res.status(400).json({ 
@@ -5890,7 +5895,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         subject: messageSubject,
         content: contentWithSender,
         isRead: false,
-        createdAt: new Date(),
+        createdAt: effectiveDate,
       });
 
       // Handle email notifications if requested
