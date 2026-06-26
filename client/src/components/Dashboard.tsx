@@ -483,7 +483,7 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
         {/* Recent Cases */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">Recent Cases</CardTitle>
+            <CardTitle className="text-base font-semibold">Recent Cases with Updates</CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             {casesLoading ? (
