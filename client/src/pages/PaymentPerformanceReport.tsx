@@ -224,7 +224,6 @@ export default function PaymentPerformanceReport() {
         ['', ''],
         ['Total Original Debt', formatCurrency(metrics?.totalOriginalDebt || 0)],
         ['Total Outstanding', formatCurrency(metrics?.totalOutstanding || 0)],
-        ['Collection Rate', `${(metrics?.collectionRate || 0).toFixed(1)}%`],
         ['Cases with Payments', metrics?.casesWithPayments || 0],
         ['Total Cases', metrics?.totalCases || 0],
         ['', ''],
@@ -383,11 +382,6 @@ export default function PaymentPerformanceReport() {
                 <div class="metric-label">Total Outstanding</div>
                 <div class="metric-value" style="color:#ea580c">${formatCurrency(metrics?.totalOutstanding || 0)}</div>
                 <div class="metric-label">across ${metrics?.totalCases || 0} cases</div>
-              </div>
-              <div class="metric-card">
-                <div class="metric-label">Collection Rate</div>
-                <div class="metric-value">${(metrics?.collectionRate || 0).toFixed(1)}%</div>
-                <div class="metric-label">of original debt</div>
               </div>
               <div class="metric-card">
                 <div class="metric-label">Cases with Payments</div>
@@ -588,16 +582,6 @@ export default function PaymentPerformanceReport() {
           <CardContent className="px-4 pb-4 pt-0">
             <span className="text-xl sm:text-2xl font-bold text-orange-600">{formatCurrency(metrics?.totalOutstanding || 0)}</span>
             <p className="text-xs text-gray-400 mt-0.5">across {metrics?.totalCases || 0} cases</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-1 pt-4 px-4">
-            <CardTitle className="text-xs text-gray-500 font-medium uppercase tracking-wide">Collection Rate</CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 pb-4 pt-0">
-            <span className="text-xl sm:text-2xl font-bold text-blue-600">{(metrics?.collectionRate || 0).toFixed(1)}%</span>
-            <p className="text-xs text-gray-400 mt-0.5">of original debt</p>
           </CardContent>
         </Card>
 
