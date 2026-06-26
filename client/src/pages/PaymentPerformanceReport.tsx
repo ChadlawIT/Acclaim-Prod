@@ -110,48 +110,77 @@ export default function PaymentPerformanceReport() {
     if (!filteredPayments || !filteredCases) return null;
 
     const now = new Date();
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
-    const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+    const thirtyDaysAgo  = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const sixtyDaysAgo   = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+    const ninetyDaysAgo  = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
 
     const last30Days = filteredPayments.filter((p: any) => new Date(p.paymentDate) >= thirtyDaysAgo);
     const last60Days = filteredPayments.filter((p: any) => new Date(p.paymentDate) >= sixtyDaysAgo);
     const last90Days = filteredPayments.filter((p: any) => new Date(p.paymentDate) >= ninetyDaysAgo);
 
-    const totalPayments = filteredPayments.reduce((sum: number, p: any) => sum + parseFloat(p.amount), 0);
+    const totalPayments    = filteredPayments.reduce((sum: number, p: any) => sum + parseFloat(p.amount), 0);
     const avgPaymentAmount = filteredPayments.length > 0 ? totalPayments / filteredPayments.length : 0;
 
-    // Payment method breakdown
+    // Largest single payment
+    const largestPayment = filteredPayments.reduce((max: number, p: any) => Math.max(max, parseFloat(p.amount)), 0);
+
+    // Most recent payment date
+    const mostRecentPayment = filteredPayments.reduce((latest: string | null, p: any) => {
+      if (!latest) return p.paymentDate;
+      return new Date(p.paymentDate) > new Date(latest) ? p.paymentDate : latest;
+    }, null as string | null);
+
+    // Cases that have at least one payment
+    const casesWithPaymentIds = new Set(filteredPayments.map((p: any) => p.caseId));
+
+    // Total original debt and outstanding across filtered cases
+    const totalOriginalDebt  = filteredCases.reduce((sum: number, c: any) => sum + parseFloat(c.originalAmount || 0), 0);
+    const totalOutstanding   = filteredCases.reduce((sum: number, c: any) => sum + parseFloat(c.outstandingAmount || 0), 0);
+    const collectionRate     = totalOriginalDebt > 0 ? (totalPayments / totalOriginalDebt) * 100 : 0;
+
+    // Payment method breakdown — amount + count
     const methodBreakdown = filteredPayments.reduce((acc: any, payment: any) => {
       const method = payment.paymentMethod || 'Not Specified';
-      acc[method] = (acc[method] || 0) + parseFloat(payment.amount);
+      if (!acc[method]) acc[method] = { total: 0, count: 0 };
+      acc[method].total += parseFloat(payment.amount);
+      acc[method].count += 1;
       return acc;
-    }, {});
+    }, {} as Record<string, { total: number; count: number }>);
 
-    // Monthly payment trends
-    const monthlyTrends = filteredPayments.reduce((acc: any, payment: any) => {
-      const month = new Date(payment.paymentDate).toLocaleString('en-GB', { month: 'short', year: 'numeric' });
-      if (!acc[month]) {
-        acc[month] = { total: 0, count: 0 };
-      }
-      acc[month].total += parseFloat(payment.amount);
-      acc[month].count += 1;
+    // Monthly payment trends — sorted chronologically
+    const monthlyMap = filteredPayments.reduce((acc: any, payment: any) => {
+      const d = new Date(payment.paymentDate);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const label = d.toLocaleString('en-GB', { month: 'short', year: 'numeric' });
+      if (!acc[key]) acc[key] = { label, total: 0, count: 0 };
+      acc[key].total += parseFloat(payment.amount);
+      acc[key].count += 1;
       return acc;
-    }, {});
+    }, {} as Record<string, { label: string; total: number; count: number }>);
 
-
+    const monthlyTrends = Object.entries(monthlyMap)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([, v]) => v);
 
     return {
       totalPayments,
-      totalPaymentCount: filteredPayments.length,
+      totalPaymentCount:  filteredPayments.length,
       avgPaymentAmount,
-      last30DaysTotal: last30Days.reduce((sum: number, p: any) => sum + parseFloat(p.amount), 0),
-      last30DaysCount: last30Days.length,
-      last60DaysTotal: last60Days.reduce((sum: number, p: any) => sum + parseFloat(p.amount), 0),
-      last90DaysTotal: last90Days.reduce((sum: number, p: any) => sum + parseFloat(p.amount), 0),
+      largestPayment,
+      mostRecentPayment,
+      casesWithPayments:  casesWithPaymentIds.size,
+      totalCases:         filteredCases.length,
+      totalOriginalDebt,
+      totalOutstanding,
+      collectionRate,
+      last30DaysTotal:    last30Days.reduce((sum: number, p: any) => sum + parseFloat(p.amount), 0),
+      last30DaysCount:    last30Days.length,
+      last60DaysTotal:    last60Days.reduce((sum: number, p: any) => sum + parseFloat(p.amount), 0),
+      last60DaysCount:    last60Days.length,
+      last90DaysTotal:    last90Days.reduce((sum: number, p: any) => sum + parseFloat(p.amount), 0),
+      last90DaysCount:    last90Days.length,
       methodBreakdown,
       monthlyTrends,
-
     };
   };
 
@@ -187,30 +216,42 @@ export default function PaymentPerformanceReport() {
       // Summary sheet
       const summaryData = [
         ['Metric', 'Value'],
-        ['Total Payments', formatCurrency(metrics?.totalPayments || 0)],
+        ['Total Collected', formatCurrency(metrics?.totalPayments || 0)],
         ['Total Payment Count', metrics?.totalPaymentCount || 0],
         ['Average Payment Amount', formatCurrency(metrics?.avgPaymentAmount || 0)],
+        ['Largest Single Payment', formatCurrency(metrics?.largestPayment || 0)],
+        ['Most Recent Payment', metrics?.mostRecentPayment ? formatDate(metrics.mostRecentPayment) : '—'],
+        ['', ''],
+        ['Total Original Debt', formatCurrency(metrics?.totalOriginalDebt || 0)],
+        ['Total Outstanding', formatCurrency(metrics?.totalOutstanding || 0)],
+        ['Collection Rate', `${(metrics?.collectionRate || 0).toFixed(1)}%`],
+        ['Cases with Payments', metrics?.casesWithPayments || 0],
+        ['Total Cases', metrics?.totalCases || 0],
+        ['', ''],
         ['Last 30 Days Total', formatCurrency(metrics?.last30DaysTotal || 0)],
         ['Last 30 Days Count', metrics?.last30DaysCount || 0],
         ['Last 60 Days Total', formatCurrency(metrics?.last60DaysTotal || 0)],
+        ['Last 60 Days Count', metrics?.last60DaysCount || 0],
         ['Last 90 Days Total', formatCurrency(metrics?.last90DaysTotal || 0)],
-
+        ['Last 90 Days Count', metrics?.last90DaysCount || 0],
       ];
 
       // Method breakdown sheet
       const methodData = Object.entries(metrics?.methodBreakdown || {})
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([method, amount]) => [
-        method,
-        formatCurrency(amount as number),
-      ]);
+        .sort(([, a]: any, [, b]: any) => b.total - a.total)
+        .map(([method, data]: [string, any]) => [
+          method,
+          formatCurrency(data.total),
+          data.count,
+          formatCurrency(data.total / data.count),
+        ]);
 
-      // Monthly trends sheet
-      const monthlyData = Object.entries(metrics?.monthlyTrends || {}).map(([month, data]: [string, any]) => [
-        month,
-        formatCurrency(data.total),
-        data.count,
-        formatCurrency(data.total / data.count),
+      // Monthly trends sheet (already sorted chronologically)
+      const monthlyData = (metrics?.monthlyTrends || []).map((row: any) => [
+        row.label,
+        formatCurrency(row.total),
+        row.count,
+        formatCurrency(row.total / row.count),
       ]);
 
       const wb = XLSX.utils.book_new();
@@ -223,7 +264,7 @@ export default function PaymentPerformanceReport() {
       XLSX.utils.book_append_sheet(wb, paymentDetailsWs, 'Payment Details');
       
       if (methodData.length > 0) {
-        const methodWs = XLSX.utils.aoa_to_sheet([['Payment Method', 'Total Amount'], ...methodData]);
+        const methodWs = XLSX.utils.aoa_to_sheet([['Payment Method', 'Total Amount', 'Count', 'Avg per Payment'], ...methodData]);
         XLSX.utils.book_append_sheet(wb, methodWs, 'Payment Methods');
       }
       
@@ -273,21 +314,23 @@ export default function PaymentPerformanceReport() {
       
       // Generate method breakdown table
       const methodRows = Object.entries(metrics?.methodBreakdown || {})
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([method, amount]) => `
+        .sort(([, a]: any, [, b]: any) => b.total - a.total)
+        .map(([method, data]: [string, any]) => `
         <tr>
           <td>${method}</td>
-          <td class="currency">${formatCurrency(amount as number)}</td>
-        </tr>
-      `).join('');
-
-      // Generate monthly trends table
-      const monthlyRows = Object.entries(metrics?.monthlyTrends || {}).map(([month, data]: [string, any]) => `
-        <tr>
-          <td>${month}</td>
           <td class="currency">${formatCurrency(data.total)}</td>
           <td class="center">${data.count}</td>
           <td class="currency">${formatCurrency(data.total / data.count)}</td>
+        </tr>
+      `).join('');
+
+      // Generate monthly trends table (already sorted chronologically)
+      const monthlyRows = (metrics?.monthlyTrends || []).map((row: any) => `
+        <tr>
+          <td>${row.label}</td>
+          <td class="currency">${formatCurrency(row.total)}</td>
+          <td class="center">${row.count}</td>
+          <td class="currency">${formatCurrency(row.total / row.count)}</td>
         </tr>
       `).join('');
 
@@ -332,20 +375,32 @@ export default function PaymentPerformanceReport() {
             <h2>Key Performance Metrics</h2>
             <div class="metrics-grid">
               <div class="metric-card">
-                <div class="metric-label">Total Payments</div>
+                <div class="metric-label">Total Collected</div>
                 <div class="metric-value">${formatCurrency(metrics?.totalPayments || 0)}</div>
+                <div class="metric-label">${metrics?.totalPaymentCount || 0} payments</div>
               </div>
               <div class="metric-card">
-                <div class="metric-label">Average Payment Amount</div>
+                <div class="metric-label">Total Outstanding</div>
+                <div class="metric-value" style="color:#ea580c">${formatCurrency(metrics?.totalOutstanding || 0)}</div>
+                <div class="metric-label">across ${metrics?.totalCases || 0} cases</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Collection Rate</div>
+                <div class="metric-value">${(metrics?.collectionRate || 0).toFixed(1)}%</div>
+                <div class="metric-label">of original debt</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Cases with Payments</div>
+                <div class="metric-value">${metrics?.casesWithPayments || 0}</div>
+                <div class="metric-label">of ${metrics?.totalCases || 0} total cases</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Average Payment</div>
                 <div class="metric-value">${formatCurrency(metrics?.avgPaymentAmount || 0)}</div>
               </div>
               <div class="metric-card">
-                <div class="metric-label">Total Payment Count</div>
-                <div class="metric-value">${metrics?.totalPaymentCount || 0}</div>
-              </div>
-              <div class="metric-card">
-                <div class="metric-label">Average Days to Payment</div>
-                <div class="metric-value">${metrics?.avgDaysToPayment || 0} days</div>
+                <div class="metric-label">Largest Payment</div>
+                <div class="metric-value">${formatCurrency(metrics?.largestPayment || 0)}</div>
               </div>
             </div>
           </div>
@@ -361,10 +416,12 @@ export default function PaymentPerformanceReport() {
               <div class="breakdown-card">
                 <div class="breakdown-label">Last 60 Days</div>
                 <div class="breakdown-value">${formatCurrency(metrics?.last60DaysTotal || 0)}</div>
+                <div class="breakdown-label">${metrics?.last60DaysCount || 0} payments</div>
               </div>
               <div class="breakdown-card">
                 <div class="breakdown-label">Last 90 Days</div>
                 <div class="breakdown-value">${formatCurrency(metrics?.last90DaysTotal || 0)}</div>
+                <div class="breakdown-label">${metrics?.last90DaysCount || 0} payments</div>
               </div>
             </div>
           </div>
@@ -376,6 +433,8 @@ export default function PaymentPerformanceReport() {
                 <tr>
                   <th>Payment Method</th>
                   <th>Total Amount</th>
+                  <th class="center">Count</th>
+                  <th>Avg per Payment</th>
                 </tr>
               </thead>
               <tbody>
@@ -510,128 +569,140 @@ export default function PaymentPerformanceReport() {
         </Card>
       )}
 
-      {/* Key Metrics */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-6 mb-4 sm:mb-8">
+      {/* Key Metrics — row 1 */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
         <Card>
-          <CardHeader className="pb-2 sm:pb-3">
-            <CardTitle className="text-xs sm:text-sm text-gray-600">Total Payments</CardTitle>
+          <CardHeader className="pb-1 pt-4 px-4">
+            <CardTitle className="text-xs text-gray-500 font-medium uppercase tracking-wide">Total Collected</CardTitle>
           </CardHeader>
-          <CardContent className="pt-0">
-            <div className="flex items-center space-x-2">
-              <CreditCard className="h-5 w-5 sm:h-8 sm:w-8 text-green-600 hidden sm:block" />
-              <span className="text-xl sm:text-3xl font-bold text-green-600">
-                {formatCurrency(metrics?.totalPayments || 0)}
-              </span>
-            </div>
+          <CardContent className="px-4 pb-4 pt-0">
+            <span className="text-xl sm:text-2xl font-bold text-green-600">{formatCurrency(metrics?.totalPayments || 0)}</span>
+            <p className="text-xs text-gray-400 mt-0.5">{metrics?.totalPaymentCount || 0} payments</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="pb-2 sm:pb-3">
-            <CardTitle className="text-xs sm:text-sm text-gray-600">Avg Payment</CardTitle>
+          <CardHeader className="pb-1 pt-4 px-4">
+            <CardTitle className="text-xs text-gray-500 font-medium uppercase tracking-wide">Total Outstanding</CardTitle>
           </CardHeader>
-          <CardContent className="pt-0">
-            <div className="flex items-center space-x-2">
-              <TrendingUp className="h-5 w-5 sm:h-8 sm:w-8 text-blue-600 hidden sm:block" />
-              <span className="text-xl sm:text-3xl font-bold text-blue-600">
-                {formatCurrency(metrics?.avgPaymentAmount || 0)}
-              </span>
-            </div>
+          <CardContent className="px-4 pb-4 pt-0">
+            <span className="text-xl sm:text-2xl font-bold text-orange-600">{formatCurrency(metrics?.totalOutstanding || 0)}</span>
+            <p className="text-xs text-gray-400 mt-0.5">across {metrics?.totalCases || 0} cases</p>
           </CardContent>
         </Card>
 
-        <Card className="col-span-2 sm:col-span-1">
-          <CardHeader className="pb-2 sm:pb-3">
-            <CardTitle className="text-xs sm:text-sm text-gray-600">Payment Count</CardTitle>
+        <Card>
+          <CardHeader className="pb-1 pt-4 px-4">
+            <CardTitle className="text-xs text-gray-500 font-medium uppercase tracking-wide">Collection Rate</CardTitle>
           </CardHeader>
-          <CardContent className="pt-0">
-            <div className="flex items-center space-x-2">
-              <Calendar className="h-5 w-5 sm:h-8 sm:w-8 text-purple-600 hidden sm:block" />
-              <span className="text-xl sm:text-3xl font-bold text-purple-600">
-                {metrics?.totalPaymentCount || 0}
-              </span>
-            </div>
+          <CardContent className="px-4 pb-4 pt-0">
+            <span className="text-xl sm:text-2xl font-bold text-blue-600">{(metrics?.collectionRate || 0).toFixed(1)}%</span>
+            <p className="text-xs text-gray-400 mt-0.5">of original debt</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-1 pt-4 px-4">
+            <CardTitle className="text-xs text-gray-500 font-medium uppercase tracking-wide">Cases with Payments</CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4 pt-0">
+            <span className="text-xl sm:text-2xl font-bold text-purple-600">{metrics?.casesWithPayments || 0}</span>
+            <p className="text-xs text-gray-400 mt-0.5">of {metrics?.totalCases || 0} total cases</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Key Metrics — row 2 */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
+        <Card>
+          <CardHeader className="pb-1 pt-4 px-4">
+            <CardTitle className="text-xs text-gray-500 font-medium uppercase tracking-wide">Avg Payment</CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4 pt-0">
+            <span className="text-xl sm:text-2xl font-bold text-gray-800">{formatCurrency(metrics?.avgPaymentAmount || 0)}</span>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-1 pt-4 px-4">
+            <CardTitle className="text-xs text-gray-500 font-medium uppercase tracking-wide">Largest Payment</CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4 pt-0">
+            <span className="text-xl sm:text-2xl font-bold text-gray-800">{formatCurrency(metrics?.largestPayment || 0)}</span>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-1 pt-4 px-4">
+            <CardTitle className="text-xs text-gray-500 font-medium uppercase tracking-wide">Most Recent Payment</CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4 pt-0">
+            <span className="text-lg sm:text-xl font-bold text-gray-800">
+              {metrics?.mostRecentPayment ? formatDate(metrics.mostRecentPayment) : '—'}
+            </span>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-1 pt-4 px-4">
+            <CardTitle className="text-xs text-gray-500 font-medium uppercase tracking-wide">Original Debt</CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4 pt-0">
+            <span className="text-xl sm:text-2xl font-bold text-gray-800">{formatCurrency(metrics?.totalOriginalDebt || 0)}</span>
           </CardContent>
         </Card>
       </div>
 
       {/* Recent Trends */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6 mb-4 sm:mb-8">
-        <Card>
-          <CardHeader className="pb-2 sm:pb-4">
-            <CardTitle className="flex items-center text-sm sm:text-base">
-              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-              Last 30 Days
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-xs sm:text-sm text-gray-600">Total:</span>
-                <span className="font-bold text-green-600 text-sm sm:text-base">{formatCurrency(metrics?.last30DaysTotal || 0)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-xs sm:text-sm text-gray-600">Payments:</span>
-                <span className="font-bold text-sm sm:text-base">{metrics?.last30DaysCount || 0}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2 sm:pb-4">
-            <CardTitle className="flex items-center text-sm sm:text-base">
-              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-              Last 60 Days
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-xs sm:text-sm text-gray-600">Total:</span>
-                <span className="font-bold text-blue-600 text-sm sm:text-base">{formatCurrency(metrics?.last60DaysTotal || 0)}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2 sm:pb-4">
-            <CardTitle className="flex items-center text-sm sm:text-base">
-              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-              Last 90 Days
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-xs sm:text-sm text-gray-600">Total:</span>
-                <span className="font-bold text-purple-600 text-sm sm:text-base">{formatCurrency(metrics?.last90DaysTotal || 0)}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
+        {[
+          { label: 'Last 30 Days', total: metrics?.last30DaysTotal || 0, count: metrics?.last30DaysCount || 0, colour: 'text-green-600' },
+          { label: 'Last 60 Days', total: metrics?.last60DaysTotal || 0, count: metrics?.last60DaysCount || 0, colour: 'text-blue-600' },
+          { label: 'Last 90 Days', total: metrics?.last90DaysTotal || 0, count: metrics?.last90DaysCount || 0, colour: 'text-purple-600' },
+        ].map(({ label, total, count, colour }) => (
+          <Card key={label}>
+            <CardHeader className="pb-1 pt-4 px-4">
+              <CardTitle className="flex items-center gap-1.5 text-xs text-gray-500 font-medium uppercase tracking-wide">
+                <Clock className="h-3.5 w-3.5" />{label}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 pb-4 pt-0 space-y-1">
+              <p className={`text-xl sm:text-2xl font-bold ${colour}`}>{formatCurrency(total)}</p>
+              <p className="text-xs text-gray-400">{count} payment{count !== 1 ? 's' : ''}</p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* Payment Method Breakdown */}
-      <Card className="mb-4 sm:mb-8">
+      <Card className="mb-4 sm:mb-6">
         <CardHeader className="pb-2 sm:pb-4">
           <CardTitle className="text-base sm:text-lg">Payment Method Breakdown</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
-            {Object.entries(metrics?.methodBreakdown || {})
-              .sort(([a], [b]) => a.localeCompare(b))
-              .map(([method, amount]) => (
-              <div key={method} className="p-2 sm:p-4 border rounded-lg">
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1">
-                  <span className="text-xs sm:text-sm font-medium">{method}</span>
-                  <span className="text-sm sm:text-lg font-bold text-acclaim-teal">
-                    {formatCurrency(amount as number)}
-                  </span>
-                </div>
-              </div>
-            ))}
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs sm:text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-2 font-medium text-gray-600">Method</th>
+                  <th className="text-right p-2 font-medium text-gray-600">Total</th>
+                  <th className="text-center p-2 font-medium text-gray-600">Count</th>
+                  <th className="text-right p-2 font-medium text-gray-600">Avg per Payment</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(metrics?.methodBreakdown || {})
+                  .sort(([, a]: any, [, b]: any) => b.total - a.total)
+                  .map(([method, data]: [string, any]) => (
+                    <tr key={method} className="border-b last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800">
+                      <td className="p-2 font-medium">{method}</td>
+                      <td className="p-2 text-right font-bold text-acclaim-teal">{formatCurrency(data.total)}</td>
+                      <td className="p-2 text-center text-gray-600">{data.count}</td>
+                      <td className="p-2 text-right text-gray-600">{formatCurrency(data.total / data.count)}</td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
           </div>
         </CardContent>
       </Card>
@@ -646,23 +717,19 @@ export default function PaymentPerformanceReport() {
             <table className="w-full text-xs sm:text-sm">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left p-2 font-medium">Month</th>
-                  <th className="text-right p-2 font-medium whitespace-nowrap">Total</th>
-                  <th className="text-center p-2 font-medium">Count</th>
-                  <th className="text-right p-2 font-medium whitespace-nowrap">Average</th>
+                  <th className="text-left p-2 font-medium text-gray-600">Month</th>
+                  <th className="text-right p-2 font-medium text-gray-600 whitespace-nowrap">Total</th>
+                  <th className="text-center p-2 font-medium text-gray-600">Count</th>
+                  <th className="text-right p-2 font-medium text-gray-600 whitespace-nowrap">Average</th>
                 </tr>
               </thead>
               <tbody>
-                {Object.entries(metrics?.monthlyTrends || {}).map(([month, data]: [string, any]) => (
-                  <tr key={month} className="border-b">
-                    <td className="p-2 font-medium whitespace-nowrap">{month}</td>
-                    <td className="p-2 text-right font-bold text-green-600 whitespace-nowrap">
-                      {formatCurrency(data.total)}
-                    </td>
-                    <td className="p-2 text-center">{data.count}</td>
-                    <td className="p-2 text-right whitespace-nowrap">
-                      {formatCurrency(data.total / data.count)}
-                    </td>
+                {(metrics?.monthlyTrends || []).map((row: any) => (
+                  <tr key={row.label} className="border-b last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td className="p-2 font-medium whitespace-nowrap">{row.label}</td>
+                    <td className="p-2 text-right font-bold text-green-600 whitespace-nowrap">{formatCurrency(row.total)}</td>
+                    <td className="p-2 text-center text-gray-600">{row.count}</td>
+                    <td className="p-2 text-right text-gray-600 whitespace-nowrap">{formatCurrency(row.total / row.count)}</td>
                   </tr>
                 ))}
               </tbody>
