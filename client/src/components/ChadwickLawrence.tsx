@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Building2, Briefcase, Users, FileText, Gavel, AlertTriangle, Megaphone, Shield,
   Home, Trophy, ExternalLink, Calendar, Heart, Activity, ScrollText, Scale,
-  Stethoscope, Car, UserCog, Globe, MapPin, Clock, RefreshCw, X, Share2, Send,
+  Stethoscope, Car, UserCog, Globe, MapPin, Clock, RefreshCw, X, Share2, Send, CheckCircle2,
 } from "lucide-react";
 import chadwickLawrenceLogo from "@assets/CL_long_logo_1768312503635.png";
 import { apiRequest } from "@/lib/queryClient";
@@ -261,7 +261,9 @@ export default function ChadwickLawrence() {
   const { toast } = useToast();
   const [selectedSeminar, setSelectedSeminar] = useState<Seminar | null>(null);
   const [bookingSeminar, setBookingSeminar] = useState<Seminar | null>(null);
+  const [bookingConfirmed, setBookingConfirmed] = useState(false);
   const [sharingSeminar, setSharingSeminar] = useState<Seminar | null>(null);
+  const [sharingConfirmedRecipient, setSharingConfirmedRecipient] = useState<string | null>(null);
 
   const { data: seminars = [], isLoading: seminarsLoading } = useQuery<Seminar[]>({
     queryKey: ["/api/cl-seminars"],
@@ -323,8 +325,7 @@ export default function ChadwickLawrence() {
     mutationFn: (formData: BookingFormValues) =>
       apiRequest('POST', '/api/cl-book', { ...formData, seminar: bookingSeminar }),
     onSuccess: () => {
-      toast({ title: 'Booking request sent!', description: 'The Chadwick Lawrence team will be in touch shortly.' });
-      setBookingSeminar(null);
+      setBookingConfirmed(true);
     },
     onError: () => {
       toast({ title: 'Something went wrong', description: 'Please try again or contact us directly.', variant: 'destructive' });
@@ -339,9 +340,8 @@ export default function ChadwickLawrence() {
         senderName: currentUser ? `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() : 'A portal user',
         senderEmail: currentUser?.email || '',
       }),
-    onSuccess: () => {
-      toast({ title: 'Seminar shared!', description: 'An email has been sent to the recipient.' });
-      setSharingSeminar(null);
+    onSuccess: (_data, variables) => {
+      setSharingConfirmedRecipient(variables.recipientName);
     },
     onError: () => {
       toast({ title: 'Something went wrong', description: 'Please try again.', variant: 'destructive' });
@@ -741,7 +741,7 @@ export default function ChadwickLawrence() {
       </Dialog>
 
       {/* ── Booking Dialog ────────────────────────────────────────────── */}
-      <Dialog open={!!bookingSeminar} onOpenChange={(open) => { if (!open) setBookingSeminar(null); }}>
+      <Dialog open={!!bookingSeminar} onOpenChange={(open) => { if (!open) { setBookingSeminar(null); setBookingConfirmed(false); } }}>
         <DialogContent className="max-w-lg p-0 overflow-hidden">
           <div style={{ background: "linear-gradient(135deg, #2e3192 0%, #ba1b6e 100%)" }} className="px-6 py-5">
             <DialogHeader>
@@ -753,6 +753,26 @@ export default function ChadwickLawrence() {
               Free training session · Chadwick Lawrence
             </p>
           </div>
+          {bookingConfirmed ? (
+            <div className="px-6 py-10 text-center">
+              <div className="flex justify-center mb-5">
+                <div className="w-16 h-16 rounded-full flex items-center justify-center bg-green-50 dark:bg-green-900/20">
+                  <CheckCircle2 className="h-9 w-9 text-green-500" />
+                </div>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Booking Enquiry Received</h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed mb-6">
+                Thank you! A member of the seminar team will be in touch with you shortly.
+              </p>
+              <Button
+                onClick={() => { setBookingSeminar(null); setBookingConfirmed(false); }}
+                className="text-white px-6"
+                style={{ background: "#2e3192", border: 'none' }}
+              >
+                Close
+              </Button>
+            </div>
+          ) : (
           <form
             onSubmit={bookingForm.handleSubmit((data) => bookingMutation.mutate(data))}
             className="px-6 py-5 space-y-4 overflow-y-auto max-h-[70vh]"
@@ -829,11 +849,12 @@ export default function ChadwickLawrence() {
               </Button>
             </div>
           </form>
+          )}
         </DialogContent>
       </Dialog>
 
       {/* ── Share Dialog ──────────────────────────────────────────────── */}
-      <Dialog open={!!sharingSeminar} onOpenChange={(open) => { if (!open) setSharingSeminar(null); }}>
+      <Dialog open={!!sharingSeminar} onOpenChange={(open) => { if (!open) { setSharingSeminar(null); setSharingConfirmedRecipient(null); } }}>
         <DialogContent className="max-w-md p-0 overflow-hidden">
           <div style={{ background: "linear-gradient(135deg, #2e3192 0%, #ba1b6e 100%)" }} className="px-6 py-5">
             <DialogHeader>
@@ -843,6 +864,26 @@ export default function ChadwickLawrence() {
             </DialogHeader>
             <p className="text-white/75 text-xs mt-1 line-clamp-1">{sharingSeminar?.name}</p>
           </div>
+          {sharingConfirmedRecipient ? (
+            <div className="px-6 py-10 text-center">
+              <div className="flex justify-center mb-5">
+                <div className="w-16 h-16 rounded-full flex items-center justify-center bg-green-50 dark:bg-green-900/20">
+                  <CheckCircle2 className="h-9 w-9 text-green-500" />
+                </div>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Seminar Shared!</h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed mb-6">
+                Thank you! The seminar has been shared with <strong>{sharingConfirmedRecipient}</strong>. We hope they find it useful.
+              </p>
+              <Button
+                onClick={() => { setSharingSeminar(null); setSharingConfirmedRecipient(null); }}
+                className="text-white px-6"
+                style={{ background: "#2e3192", border: 'none' }}
+              >
+                Close
+              </Button>
+            </div>
+          ) : (
           <form
             onSubmit={shareForm.handleSubmit((data) => shareMutation.mutate(data))}
             className="px-6 py-5 space-y-4"
@@ -921,6 +962,7 @@ export default function ChadwickLawrence() {
               </Button>
             </div>
           </form>
+          )}
         </DialogContent>
       </Dialog>
     </div>
