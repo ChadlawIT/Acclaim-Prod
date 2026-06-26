@@ -5026,7 +5026,7 @@ export default function AdminEnhanced() {
                 </div>
                 <Dialog open={showCreateOrg} onOpenChange={setShowCreateOrg}>
                   <DialogTrigger asChild>
-                    <Button className="bg-acclaim-teal hover:bg-acclaim-teal/90">
+                    <Button className="bg-white hover:bg-acclaim-teal/10 text-[#008a8a] border border-[#008a8a]">
                       <Plus className="h-4 w-4 mr-2" />
                       Create Organisation
                     </Button>
