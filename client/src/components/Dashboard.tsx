@@ -382,68 +382,73 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 rounded-lg bg-amber-100 dark:bg-amber-900/40">
-                  <FolderOpen className="text-amber-600 dark:text-amber-400 h-6 w-6" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-gray-600 dark:text-gray-400 text-sm">Active Cases</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                    {statsLoading ? "..." : stats?.activeCases || 0}
+          {/* Active Cases */}
+          <Card className="border-t-4 border-t-amber-500 dark:border-t-amber-400">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Active Cases</p>
+                  <p className="text-3xl font-bold text-amber-600 dark:text-amber-400 mt-1 leading-none">
+                    {statsLoading ? "—" : stats?.activeCases || 0}
                   </p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">currently open</p>
+                </div>
+                <div className="p-2.5 bg-amber-50 dark:bg-amber-900/30 rounded-lg flex-shrink-0">
+                  <FolderOpen className="h-5 w-5 text-amber-500 dark:text-amber-400" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-start">
-                <div className="p-3 bg-blue-100 dark:bg-blue-900/40 rounded-lg flex-shrink-0">
-                  <PoundSterling className="text-blue-600 dark:text-blue-400 h-6 w-6" />
-                </div>
-                <div className="ml-4 min-w-0 flex-1">
-                  <p className="text-gray-600 dark:text-gray-400 text-sm">Total Outstanding</p>
-                  <p className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100 break-all">
-                    {statsLoading ? "..." : formatCurrency(stats?.totalOutstanding || 0)}
+          {/* Total Outstanding */}
+          <Card className="border-t-4 border-t-blue-500 dark:border-t-blue-400">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Outstanding</p>
+                  <p className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1 leading-none break-all">
+                    {statsLoading ? "—" : formatCurrency(stats?.totalOutstanding || 0)}
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">*Active cases only</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">active cases only</p>
+                </div>
+                <div className="p-2.5 bg-blue-50 dark:bg-blue-900/30 rounded-lg flex-shrink-0">
+                  <PoundSterling className="h-5 w-5 text-blue-500 dark:text-blue-400" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-start">
-                <div className="p-3 bg-purple-100 dark:bg-purple-900/40 rounded-lg flex-shrink-0">
-                  <PoundSterling className="text-purple-600 dark:text-purple-400 h-6 w-6" />
-                </div>
-                <div className="ml-4 min-w-0 flex-1">
-                  <p className="text-gray-600 dark:text-gray-400 text-sm">Total Recovery</p>
-                  <p className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100 break-all">
-                    {statsLoading ? "..." : `£${parseFloat(stats?.totalRecovery || '0').toLocaleString()}`}
+          {/* Total Recovery */}
+          <Card className="border-t-4 border-t-purple-500 dark:border-t-purple-400">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Recovery</p>
+                  <p className="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400 mt-1 leading-none break-all">
+                    {statsLoading ? "—" : formatCurrency(parseFloat(stats?.totalRecovery || '0'))}
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">*Active cases only</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">active cases only</p>
+                </div>
+                <div className="p-2.5 bg-purple-50 dark:bg-purple-900/30 rounded-lg flex-shrink-0">
+                  <PoundSterling className="h-5 w-5 text-purple-500 dark:text-purple-400" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-green-100 dark:bg-green-900/40 rounded-lg">
-                  <CheckCircle className="text-green-600 dark:text-green-400 h-6 w-6" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-gray-600 dark:text-gray-400 text-sm">Closed Cases</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                    {statsLoading ? "..." : stats?.closedCases || 0}
+          {/* Closed Cases */}
+          <Card className="border-t-4 border-t-green-500 dark:border-t-green-400">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Closed Cases</p>
+                  <p className="text-3xl font-bold text-green-600 dark:text-green-400 mt-1 leading-none">
+                    {statsLoading ? "—" : stats?.closedCases || 0}
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">*For reference</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">successfully resolved</p>
+                </div>
+                <div className="p-2.5 bg-green-50 dark:bg-green-900/30 rounded-lg flex-shrink-0">
+                  <CheckCircle className="h-5 w-5 text-green-500 dark:text-green-400" />
                 </div>
               </div>
             </CardContent>
