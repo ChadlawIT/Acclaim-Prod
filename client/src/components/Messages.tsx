@@ -37,6 +37,7 @@ export default function Messages() {
   // Inline reply state (inside the message view dialog)
   const [showViewReply, setShowViewReply] = useState(false);
   const viewReplyRef = useRef<HTMLDivElement>(null);
+  const viewDialogScrollRef = useRef<HTMLDivElement>(null);
   const [viewReplyText, setViewReplyText] = useState("");
   const [viewReplyFile, setViewReplyFile] = useState<File | null>(null);
   const [viewReplyFileError, setViewReplyFileError] = useState<string | null>(null);
@@ -845,7 +846,7 @@ const handleReply = (message: any) => {
           </DialogHeader>
 
           {viewingMessage && (
-            <div className="flex-1 overflow-y-auto py-4 space-y-4">
+            <div ref={viewDialogScrollRef} className="flex-1 overflow-y-auto py-4 space-y-4">
               {/* Sender row + action buttons */}
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div className="flex items-center space-x-3">
@@ -875,7 +876,10 @@ const handleReply = (message: any) => {
                     onClick={() => {
                       setShowViewReply(v => {
                         if (!v) {
-                          setTimeout(() => viewReplyRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+                          setTimeout(() => {
+                            const container = viewDialogScrollRef.current;
+                            if (container) container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+                          }, 80);
                         }
                         return !v;
                       });
