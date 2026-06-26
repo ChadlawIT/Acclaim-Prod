@@ -239,7 +239,8 @@ export default function ChadwickLawrence() {
   const { data: eventDetails = [], isLoading: eventLoading } = useQuery<string[]>({
     queryKey: ["/api/cl-event", selectedSeminar?.infoUrl],
     enabled: !!selectedSeminar?.infoUrl,
-    staleTime: 4 * 60 * 60 * 1000,
+    staleTime: 0,
+    gcTime: 0,
     queryFn: async () => {
       if (!selectedSeminar?.infoUrl) return [];
       const res = await fetch(`/api/cl-event?url=${encodeURIComponent(selectedSeminar.infoUrl)}`, {

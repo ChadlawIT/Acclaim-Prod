@@ -8887,17 +8887,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Event detail scraper — fetches a single CL event page and returns body paragraphs
-  const eventDetailsCache = new Map<string, { paragraphs: string[]; fetchedAt: number }>();
-  const EVENT_DETAIL_TTL = 4 * 60 * 60 * 1000;
+  const eventDetailsCache = new Map<string, string[]>();
 
   app.get('/api/cl-event', isAuthenticated, async (req, res) => {
     const url = req.query.url as string;
     if (!url || !url.startsWith('https://www.chadwicklawrence.co.uk/')) {
       return res.status(400).json({ error: 'Invalid URL' });
-    }
-    const cached = eventDetailsCache.get(url);
-    if (cached && Date.now() - cached.fetchedAt < EVENT_DETAIL_TTL) {
-      return res.json(cached.paragraphs);
     }
     try {
       const r = await fetch(url, {
@@ -8917,7 +8912,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .replace(/\s+/g, ' ').trim()
         )
         .filter(t => t.length > 30 && t.length < 1000 && !t.includes('Copyright') && !t.includes('Website design'));
-      eventDetailsCache.set(url, { paragraphs, fetchedAt: Date.now() });
+      eventDetailsCache.set(url, paragraphs);
       res.json(paragraphs);
     } catch {
       res.json([]);
