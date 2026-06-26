@@ -1725,47 +1725,62 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
                         message.senderName?.toLowerCase().includes(searchLower)
                       );
                     })
-                    .map((message: any) => (
-                    <div 
-                      key={message.id} 
-                      className="p-4 border rounded-lg bg-gray-50 border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
-                      onClick={() => handleOpenMessage(message)}
-                    >
-                      <div className="flex items-start justify-between mb-1.5">
-                        <div className="flex items-center space-x-2 min-w-0">
-                          <p className="font-medium text-sm truncate">{message.subject}</p>
+                    .map((message: any) => {
+                      const fromAdmin = message.senderIsAdmin;
+                      return (
+                      <div
+                        key={message.id}
+                        className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                          fromAdmin
+                            ? "bg-teal-50 border-teal-200 hover:bg-teal-100"
+                            : "bg-blue-50 border-blue-200 hover:bg-blue-100"
+                        }`}
+                        onClick={() => handleOpenMessage(message)}
+                      >
+                        <div className="flex items-start justify-between mb-1.5">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${
+                              fromAdmin
+                                ? "bg-teal-100 text-teal-700 border border-teal-200"
+                                : "bg-blue-100 text-blue-700 border border-blue-200"
+                            }`}>
+                              {fromAdmin ? "Team" : "Client"}
+                            </span>
+                            <p className="font-medium text-sm truncate">{message.subject}</p>
+                          </div>
+                          <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
+                            <p className="text-xs text-gray-500 whitespace-nowrap">{formatDate(message.createdAt)}</p>
+                            {user?.isAdmin && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (confirm("Are you sure you want to delete this message?")) {
+                                    deleteMessageMutation.mutate(message.id);
+                                  }
+                                }}
+                                className="text-red-600 hover:text-red-700"
+                                disabled={deleteMessageMutation.isPending}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
-                          <p className="text-xs text-gray-500 whitespace-nowrap">{formatDate(message.createdAt)}</p>
-                          {user?.isAdmin && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (confirm("Are you sure you want to delete this message?")) {
-                                  deleteMessageMutation.mutate(message.id);
-                                }
-                              }}
-                              className="text-red-600 hover:text-red-700"
-                              disabled={deleteMessageMutation.isPending}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
+                        <p className={`text-xs mb-2 ${fromAdmin ? "text-teal-700" : "text-blue-700"}`}>
+                          {message.senderName || 'Unknown'}
+                        </p>
+                        <p className="text-sm text-gray-700 leading-relaxed">{truncateContent(message.content, 400)}</p>
+                        {message.attachmentFileName && (
+                          <div className={`mt-2.5 flex items-center space-x-2 text-xs ${fromAdmin ? "text-teal-600" : "text-blue-600"}`}>
+                            <FileText className="h-3 w-3" />
+                            <span>{message.attachmentFileName}</span>
+                          </div>
+                        )}
+                        <p className={`text-xs mt-2 ${fromAdmin ? "text-teal-500" : "text-blue-500"}`}>Click to read full message</p>
                       </div>
-                      <p className="text-xs text-gray-500 mb-2">From: {message.senderName || 'Unknown'}</p>
-                      <p className="text-sm text-gray-700 leading-relaxed">{truncateContent(message.content, 400)}</p>
-                      {message.attachmentFileName && (
-                        <div className="mt-2.5 flex items-center space-x-2 text-xs text-acclaim-teal">
-                          <FileText className="h-3 w-3" />
-                          <span>{message.attachmentFileName}</span>
-                        </div>
-                      )}
-                      <p className="text-xs text-acclaim-teal mt-2">Click to read full message</p>
-                    </div>
-                  ))}
+                    )})}
                 </div>
               ) : (
                 <div className="text-center py-8">
