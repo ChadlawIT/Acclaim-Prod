@@ -287,8 +287,9 @@ export default function CaseSummaryReport() {
           return '#4b5563';
         })();
 
+        const isClosed = (caseItem.status || '').toLowerCase() === 'closed';
         return `
-          <tr>
+          <tr${isClosed ? ' style="background-color:#fff5f5;"' : ''}>
             <td>${escapeHtml(caseItem.accountNumber || '')}</td>
             <td>${escapeHtml(caseItem.caseName || '')}${caseItem.organisationName ? ` <span style="font-size: 10px; color: #666;">(${escapeHtml(caseItem.organisationName)})</span>` : ''}</td>
             <td><span style="color: ${statusHtmlColor}; font-weight: 600;">${statusDisplay}</span></td>
@@ -875,7 +876,7 @@ export default function CaseSummaryReport() {
                 {filteredCases?.map((caseItem: any) => {
                   const orderedMsgs = [...(recentMessages?.[String(caseItem.id)] ?? [])].reverse();
                   return (
-                    <tr key={caseItem.id} className="hover:bg-gray-50">
+                    <tr key={caseItem.id} className={`${(caseItem.status || '').toLowerCase() === 'closed' ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-gray-50'}`}>
                       <td className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 text-gray-900 whitespace-nowrap">
                         {caseItem.accountNumber}
                       </td>
