@@ -450,6 +450,7 @@ export default function CaseSummaryReport() {
       const WHITE      = 'FFFFFFFF';
       const ROW_ODD    = 'FFFFFFFF';
       const ROW_EVEN   = 'FFF0FDFA'; // teal-50
+      const ROW_CLOSED = 'FFFFF5F5'; // very light red for closed cases
       const BORDER_CLR = 'FFD1D5DB'; // gray-300
       const GBP_FMT    = '"£"#,##0.00';
 
@@ -537,7 +538,8 @@ export default function CaseSummaryReport() {
         });
 
         row.height = 18;
-        const rowBg = rowIdx % 2 === 0 ? ROW_ODD : ROW_EVEN;
+        const isClosed = s === 'closed';
+        const rowBg = isClosed ? ROW_CLOSED : (rowIdx % 2 === 0 ? ROW_ODD : ROW_EVEN);
 
         row.eachCell({ includeEmpty: true }, (cell) => {
           cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: rowBg } };
