@@ -1234,7 +1234,7 @@ export default function SubmitCase() {
                         <FormItem>
                           <FormLabel>Invoice Date <span className="text-red-500">*</span></FormLabel>
                           <FormControl>
-                            <Input {...field} type="date" />
+                            <Input {...field} type="date" disabled={!singleInvoice} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1250,7 +1250,7 @@ export default function SubmitCase() {
                         <FormItem>
                           <FormLabel>First Overdue Invoice Date <span className="text-red-500">*</span></FormLabel>
                           <FormControl>
-                            <Input {...field} type="date" />
+                            <Input {...field} type="date" disabled={!singleInvoice} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1263,7 +1263,7 @@ export default function SubmitCase() {
                         <FormItem>
                           <FormLabel>Last Overdue Invoice Date <span className="text-red-500">*</span></FormLabel>
                           <FormControl>
-                            <Input {...field} type="date" />
+                            <Input {...field} type="date" disabled={!singleInvoice} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
