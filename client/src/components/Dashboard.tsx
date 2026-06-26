@@ -467,147 +467,155 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
       {/* Recent Cases and Messages */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Recent Cases */}
-        <div>
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Cases</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {casesLoading ? (
-                <div className="space-y-4">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="animate-pulse">
-                      <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold">Recent Cases</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {casesLoading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="animate-pulse flex items-center gap-3 p-3">
+                    <div className="w-9 h-9 rounded-full bg-gray-200 dark:bg-gray-700 shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-3.5 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
+                      <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded w-1/2" />
                     </div>
-                  ))}
-                </div>
-              ) : recentCases.length > 0 ? (
-                <div className="space-y-4">
-                  {recentCases.map((case_: any) => (
-                    <div
-                      key={case_.id}
-                      className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors"
-                      onClick={() => handleCaseClick(case_)}
-                    >
-                      <div className="flex items-center">
-                        <div className="w-10 h-10 rounded-full flex items-center justify-center bg-white dark:bg-gray-700">
-                          {getDebtorIcon(case_.debtorType)}
-                        </div>
-                        <div className="ml-4">
-                          <p className="font-medium text-gray-900 dark:text-gray-100">{case_.caseName}</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Account: {case_.accountNumber}</p>
-                          {case_.organisationName && (
-                            <p className="text-xs text-gray-500 dark:text-gray-500">{case_.organisationName}</p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-gray-900 dark:text-gray-100">
-                          {formatCurrency(case_.outstandingAmount)}
-                        </p>
-                        {getStageBadge(case_.status, case_.stage)}
-                      </div>
+                    <div className="w-16 h-5 bg-gray-200 dark:bg-gray-700 rounded" />
+                  </div>
+                ))}
+              </div>
+            ) : recentCases.length > 0 ? (
+              <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                {recentCases.map((case_: any) => (
+                  <div
+                    key={case_.id}
+                    className="flex items-center gap-3 py-3 first:pt-0 last:pb-0 cursor-pointer group"
+                    onClick={() => handleCaseClick(case_)}
+                  >
+                    {/* left accent + icon */}
+                    <div className={`w-1 self-stretch rounded-full shrink-0 ${case_.status === 'closed' ? 'bg-gray-300 dark:bg-gray-600' : 'bg-teal-500'}`} />
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 bg-teal-50 dark:bg-teal-900/30 ring-1 ring-teal-200 dark:ring-teal-800">
+                      {getDebtorIcon(case_.debtorType)}
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <FolderOpen className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-                  <p className="text-gray-500 dark:text-gray-400">No cases found</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                    {/* text */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
+                        {case_.caseName}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        {case_.accountNumber}
+                        {case_.organisationName && <span className="text-gray-400 dark:text-gray-500"> · {case_.organisationName}</span>}
+                      </p>
+                    </div>
+                    {/* right */}
+                    <div className="text-right shrink-0">
+                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                        {formatCurrency(case_.outstandingAmount)}
+                      </p>
+                      <div className="mt-0.5">{getStageBadge(case_.status, case_.stage)}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <FolderOpen className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                <p className="text-sm text-gray-500 dark:text-gray-400">No cases found</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Recent Messages */}
-        <div>
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Recent Messages</CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    if (setActiveSection) {
-                      setActiveSection("messages");
-                    }
-                  }}
-                  className="text-acclaim-teal border-acclaim-teal hover:bg-acclaim-teal hover:text-white"
-                >
-                  View All Messages
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {messagesLoading ? (
-                <div className="space-y-4">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="animate-pulse">
-                      <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base font-semibold">Recent Messages</CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => { if (setActiveSection) setActiveSection("messages"); }}
+                className="text-xs h-7 px-2 text-acclaim-teal border-acclaim-teal hover:bg-acclaim-teal hover:text-white"
+              >
+                View All
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {messagesLoading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="animate-pulse flex items-start gap-3 p-3">
+                    <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-3.5 bg-gray-200 dark:bg-gray-700 rounded w-2/3" />
+                      <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded w-full" />
+                      <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded w-3/4" />
                     </div>
-                  ))}
-                </div>
-              ) : recentMessages.length > 0 ? (
-                <div className="space-y-4">
-                  {recentMessages.map((message: any) => (
-                    <div 
-                      key={message.id} 
-                      className="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-100 last:border-b-0"
+                  </div>
+                ))}
+              </div>
+            ) : recentMessages.length > 0 ? (
+              <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                {recentMessages.map((message: any) => {
+                  const senderLabel = message.senderName || message.senderEmail || 'Unknown';
+                  const initials = senderLabel.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase();
+                  const caseData = message.caseId ? cases?.find((c: any) => c.id === message.caseId) : null;
+                  return (
+                    <div
+                      key={message.id}
+                      className="flex items-start gap-3 py-3 first:pt-0 last:pb-0 cursor-pointer group"
                       onClick={() => handleMessageClick(message)}
                     >
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center overflow-hidden ${message.senderIsAdmin ? 'bg-white border-2 border-acclaim-teal' : 'bg-white border-2 border-blue-300'}`}>
-                        {message.senderIsAdmin ? (
-                          <img src={acclaimRoseLogo} alt="Acclaim" className="w-6 h-6 object-contain" />
-                        ) : (
-                          <User className="text-acclaim-teal h-4 w-4" />
-                        )}
-                      </div>
+                      {/* avatar */}
+                      {message.senderIsAdmin ? (
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-teal-600 ring-1 ring-teal-400 overflow-hidden">
+                          <img src={acclaimRoseLogo} alt="Acclaim" className="w-5 h-5 object-contain" />
+                        </div>
+                      ) : (
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-slate-600 text-white text-[10px] font-bold ring-1 ring-slate-400">
+                          {initials}
+                        </div>
+                      )}
+                      {/* body */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                            {message.subject || "System Message"}
+                        <div className="flex items-baseline justify-between gap-2 mb-0.5">
+                          <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate">
+                            {senderLabel}
+                            {message.senderIsAdmin && (
+                              <span className="ml-1.5 text-[10px] font-medium text-teal-600 dark:text-teal-400 uppercase tracking-wide">· Acclaim</span>
+                            )}
                           </p>
-                          <p className="text-xs text-gray-500 flex-shrink-0 ml-2">
-                            {formatDate(message.createdAt)}
-                          </p>
+                          <p className="text-[10px] text-gray-400 shrink-0">{formatDate(message.createdAt)}</p>
                         </div>
-                        <div className="flex items-center justify-between mb-1">
-                          <p className="text-xs text-gray-500">
-                            From: {message.senderName || message.senderEmail || 'Unknown'}
+                        {message.subject && (
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors mb-0.5">
+                            {message.subject}
                           </p>
-                          <Badge variant="secondary" className="text-xs bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300">
-                            {message.senderIsAdmin ? "Acclaim" : (message.senderOrganisationName || "User")}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-gray-700 line-clamp-2 leading-relaxed">
+                        )}
+                        <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">
                           {message.content}
                         </p>
-                        {message.caseId && (() => {
-                          const caseData = cases?.find((c: any) => c.id === message.caseId);
-                          return (
-                            <p className="text-xs text-acclaim-teal mt-1 truncate">
-                              {caseData?.caseName || getCaseAccountNumber(message.caseId)}
-                              {caseData?.organisationName && (
-                                <span className="text-gray-500"> ({caseData.organisationName})</span>
-                              )}
-                            </p>
-                          );
-                        })()}
+                        {caseData && (
+                          <span className="inline-flex items-center gap-1 mt-1.5 text-[10px] font-medium text-teal-700 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/30 px-2 py-0.5 rounded-full">
+                            <FileText className="h-2.5 w-2.5" />
+                            {caseData.caseName}
+                          </span>
+                        )}
                       </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">No messages found</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <FileText className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                <p className="text-sm text-gray-500 dark:text-gray-400">No messages found</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Case Detail Dialog */}
