@@ -28,6 +28,39 @@ function getSavedSort(): SortOption {
   return "accountNumber-desc";
 }
 
+function normaliseStage(stage: string): string {
+  return stage?.toLowerCase().replace(/[_\-\s]/g, "") || "";
+}
+
+function stageDisplayLabel(status: string, stage: string): string {
+  if (status === "resolved" || status?.toLowerCase() === "closed") return "Closed";
+  const n = normaliseStage(stage);
+  switch (n) {
+    case "initialcontact":
+    case "prelegal":    return "Pre-Legal";
+    case "claim":       return "Claim";
+    case "judgment":
+    case "judgement":   return "Judgment";
+    case "enforcement": return "Enforcement";
+    case "paymentplan": return "Payment Plan";
+    case "paid":        return "Paid";
+    case "legalaction": return "Legal Action";
+    default:            return stage?.replace(/[_-]/g, " ").replace(/\b\w/g, c => c.toUpperCase()) || "Active";
+  }
+}
+
+function stageMatchesFilter(stage: string, stageFilter: string): boolean {
+  if (stageFilter === "all") return true;
+  const n = normaliseStage(stage);
+  switch (stageFilter) {
+    case "pre-legal":   return n === "prelegal" || n === "initialcontact";
+    case "claim":       return n === "claim";
+    case "judgment":    return n === "judgment" || n === "judgement";
+    case "enforcement": return n === "enforcement";
+    default:            return n === normaliseStage(stageFilter);
+  }
+}
+
 function sortCases(cases: any[], sortBy: SortOption): any[] {
   return [...cases].sort((a, b) => {
     switch (sortBy) {
@@ -40,7 +73,7 @@ function sortCases(cases: any[], sortBy: SortOption): any[] {
       case "caseName-asc":
         return (a.caseName || "").localeCompare(b.caseName || "");
       case "stage-asc":
-        return (a.stage || "").localeCompare(b.stage || "");
+        return stageDisplayLabel(a.status, a.stage).localeCompare(stageDisplayLabel(b.status, b.stage));
       case "status-asc": {
         const aActive = a.status !== "resolved" && a.status?.toLowerCase() !== "closed" ? 0 : 1;
         const bActive = b.status !== "resolved" && b.status?.toLowerCase() !== "closed" ? 0 : 1;
@@ -133,8 +166,7 @@ export default function Cases() {
       (statusFilter === "active" && isActive) ||
       (statusFilter === "closed" && !isActive);
 
-    const caseStage = case_.stage?.toLowerCase() || "";
-    const matchesStage = stageFilter === "all" || caseStage === stageFilter;
+    const matchesStage = stageMatchesFilter(case_.stage, stageFilter);
 
     return matchesStatus && matchesStage;
   }) || [];
@@ -238,7 +270,7 @@ export default function Cases() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="accountNumber-desc">Account No. (largest first)</SelectItem>
+                  <SelectItem value="accountNumber-desc">Acclaim Account No. (largest first)</SelectItem>
                   <SelectItem value="caseName-asc">Case Name (A–Z)</SelectItem>
                   <SelectItem value="stage-asc">Stage (A–Z)</SelectItem>
                   <SelectItem value="status-asc">Status (active first)</SelectItem>
