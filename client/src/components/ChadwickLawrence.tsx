@@ -1,10 +1,12 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import {
   Building2, Briefcase, Users, FileText, Gavel, AlertTriangle, Megaphone, Shield,
   Home, Trophy, ExternalLink, Calendar, Heart, Activity, ScrollText, Scale,
-  Stethoscope, Car, UserCog, Globe, MapPin, Clock, RefreshCw,
+  Stethoscope, Car, UserCog, Globe, MapPin, Clock, RefreshCw, X,
 } from "lucide-react";
 import chadwickLawrenceLogo from "@assets/CL_long_logo_1768312503635.png";
 import { apiRequest } from "@/lib/queryClient";
@@ -225,11 +227,27 @@ export default function ChadwickLawrence() {
     trackEvent("page_view");
   }, []);
 
+  const [selectedSeminar, setSelectedSeminar] = useState<Seminar | null>(null);
+
   const { data: seminars = [], isLoading: seminarsLoading } = useQuery<Seminar[]>({
     queryKey: ["/api/cl-seminars"],
     staleTime: 0,
     gcTime: 0,
     refetchOnMount: "always",
+  });
+
+  const { data: eventDetails = [], isLoading: eventLoading } = useQuery<string[]>({
+    queryKey: ["/api/cl-event", selectedSeminar?.infoUrl],
+    enabled: !!selectedSeminar?.infoUrl,
+    staleTime: 4 * 60 * 60 * 1000,
+    queryFn: async () => {
+      if (!selectedSeminar?.infoUrl) return [];
+      const res = await fetch(`/api/cl-event?url=${encodeURIComponent(selectedSeminar.infoUrl)}`, {
+        credentials: "include",
+      });
+      if (!res.ok) return [];
+      return res.json();
+    },
   });
 
   return (
@@ -412,15 +430,13 @@ export default function ChadwickLawrence() {
                     {/* Actions */}
                     <div className="flex items-center gap-2 flex-shrink-0 self-start pt-0.5">
                       {s.infoUrl && (
-                        <a
-                          href={s.infoUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={() => trackEvent("link_click", `More info: ${s.name}`, s.infoUrl!, "events")}
+                        <button
+                          onClick={() => { trackEvent("link_click", `More info: ${s.name}`, s.infoUrl!, "events"); setSelectedSeminar(s); }}
                           className="text-xs text-[#2e3192] hover:underline font-medium whitespace-nowrap"
+                          data-testid={`button-seminar-more-info-${i}`}
                         >
                           More info
-                        </a>
+                        </button>
                       )}
                       <a
                         href={s.bookUrl}
@@ -475,6 +491,115 @@ export default function ChadwickLawrence() {
 
         </CardContent>
       </Card>
+
+      {/* Event detail dialog */}
+      <Dialog open={!!selectedSeminar} onOpenChange={(open) => { if (!open) setSelectedSeminar(null); }}>
+        <DialogContent className="max-w-2xl p-0 overflow-hidden">
+          {/* Header */}
+          <div
+            className="px-6 py-5"
+            style={{ background: "linear-gradient(135deg, #2e3192 0%, #ba1b6e 100%)" }}
+          >
+            <DialogHeader>
+              <DialogTitle className="text-white text-lg font-semibold leading-snug pr-6">
+                {selectedSeminar?.name}
+              </DialogTitle>
+            </DialogHeader>
+            {selectedSeminar && (
+              <span
+                className="inline-block mt-2 text-xs px-2 py-0.5 rounded-full font-medium"
+                style={selectedSeminar.category === "social-housing"
+                  ? { background: "rgba(255,255,255,0.2)", color: "#fff" }
+                  : { background: "rgba(255,255,255,0.2)", color: "#fff" }}
+              >
+                {selectedSeminar.category === "social-housing" ? "Social Housing" : "Employment Law"}
+              </span>
+            )}
+          </div>
+
+          {/* Body */}
+          <div className="px-6 py-5 overflow-y-auto max-h-[60vh] space-y-4">
+            {/* Key details row */}
+            {selectedSeminar && (
+              <div className="flex flex-wrap gap-4 text-sm">
+                {selectedSeminar.date && selectedSeminar.date !== "TBC" && (
+                  <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-300">
+                    <Calendar className="h-4 w-4 text-[#2e3192]" />
+                    <span>{selectedSeminar.date}</span>
+                    {selectedSeminar.time && selectedSeminar.time !== "TBC" && (
+                      <span className="text-gray-400">· {selectedSeminar.time}</span>
+                    )}
+                  </div>
+                )}
+                {selectedSeminar.location && selectedSeminar.location !== "TBC" && (
+                  <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-300">
+                    <MapPin className="h-4 w-4 text-[#ba1b6e]" />
+                    <span>{selectedSeminar.location}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Divider */}
+            <div className="border-t border-gray-100 dark:border-gray-800" />
+
+            {/* Description from list page (shown if present and not duplicated in fetched content) */}
+            {selectedSeminar?.description && (
+              <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                {selectedSeminar.description}
+              </p>
+            )}
+
+            {/* Additional content fetched from event page */}
+            {eventLoading && (
+              <div className="flex items-center gap-2 text-sm text-gray-400 py-2">
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                Loading event details…
+              </div>
+            )}
+            {!eventLoading && eventDetails.filter(p => p !== selectedSeminar?.description).map((para, idx) => (
+              <p key={idx} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                {para}
+              </p>
+            ))}
+          </div>
+
+          {/* Footer */}
+          <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-800 flex flex-wrap items-center justify-between gap-3 bg-gray-50 dark:bg-gray-900/50">
+            <div className="flex items-center gap-2">
+              {selectedSeminar?.bookUrl && (
+                <a
+                  href={selectedSeminar.bookUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => selectedSeminar && trackEvent("link_click", `Book (modal): ${selectedSeminar.name}`, selectedSeminar.bookUrl, "events")}
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg text-white transition-colors"
+                  style={{ background: "#ba1b6e" }}
+                >
+                  Book now
+                </a>
+              )}
+              {selectedSeminar?.infoUrl && (
+                <a
+                  href={selectedSeminar.infoUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => selectedSeminar && trackEvent("link_click", `View on CL: ${selectedSeminar.name}`, selectedSeminar.infoUrl!, "events")}
+                  className="inline-flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  View on CL website
+                </a>
+              )}
+            </div>
+            <img
+              src={chadwickLawrenceLogo}
+              alt="Chadwick Lawrence"
+              className="h-7 opacity-40 dark:invert"
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

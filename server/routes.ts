@@ -8887,19 +8887,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return results;
   }
 
-  app.get('/api/cl-seminars-debug', async (_req, res) => {
+  // Event detail scraper — fetches a single CL event page and returns body paragraphs
+  const eventDetailsCache = new Map<string, { paragraphs: string[]; fetchedAt: number }>();
+  const EVENT_DETAIL_TTL = 4 * 60 * 60 * 1000;
+
+  app.get('/api/cl-event', isAuthenticated, async (req, res) => {
+    const url = req.query.url as string;
+    if (!url || !url.startsWith('https://www.chadwicklawrence.co.uk/')) {
+      return res.status(400).json({ error: 'Invalid URL' });
+    }
+    const cached = eventDetailsCache.get(url);
+    if (cached && Date.now() - cached.fetchedAt < EVENT_DETAIL_TTL) {
+      return res.json(cached.paragraphs);
+    }
     try {
-      const [employment, socialHousing] = await Promise.allSettled([
-        scrapeSeminarPage('https://www.chadwicklawrence.co.uk/seminars/business-services-seminars/', 'employment'),
-        scrapeSeminarPage('https://www.chadwicklawrence.co.uk/seminars/free-training-sessions/', 'social-housing'),
-      ]);
-      res.json({
-        employment: { status: employment.status, data: employment.status === 'fulfilled' ? employment.value : String((employment as any).reason) },
-        socialHousing: { status: socialHousing.status, data: socialHousing.status === 'fulfilled' ? socialHousing.value : String((socialHousing as any).reason) },
-        cache: seminarsCache ? { count: seminarsCache.data.length, ageMs: Date.now() - seminarsCache.fetchedAt } : null,
+      const r = await fetch(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AcclaimPortal/1.0)' },
+        signal: AbortSignal.timeout(10000),
       });
-    } catch (e: any) {
-      res.json({ error: e.message });
+      if (!r.ok) return res.json([]);
+      const html = await r.text();
+      const bodyPart = html.split('</header>')[1] || html;
+      const footerPart = bodyPart.split('<footer')[0] || bodyPart;
+      const paragraphs = [...footerPart.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/g)]
+        .map(m => m[1]
+          .replace(/<[^>]+>/g, '')
+          .replace(/&amp;/g, '&').replace(/&#038;/g, '&')
+          .replace(/&#8217;/g, "'").replace(/&#8220;/g, '"').replace(/&#8221;/g, '"')
+          .replace(/&nbsp;/g, ' ').replace(/&rsquo;/g, "'").replace(/&copy;/g, '©')
+          .replace(/\s+/g, ' ').trim()
+        )
+        .filter(t => t.length > 30 && t.length < 1000 && !t.includes('Copyright') && !t.includes('Website design'));
+      eventDetailsCache.set(url, { paragraphs, fetchedAt: Date.now() });
+      res.json(paragraphs);
+    } catch {
+      res.json([]);
     }
   });
 
