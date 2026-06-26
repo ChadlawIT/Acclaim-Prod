@@ -1972,7 +1972,22 @@ Need help? Contact us at email@acclaim.law
     }
 
     try {
-      const subject = `New Case Submission #${data.submissionId} - ${data.caseSubmission.caseName}`;
+      // Build the debtor label for the subject line
+      let debtorLabel = '';
+      const cs = data.caseSubmission;
+      if (cs.debtorType === 'organisation') {
+        const orgName = cs.organisationName || 'Unknown';
+        debtorLabel = cs.organisationTradingName
+          ? `${orgName} t/a ${cs.organisationTradingName}`
+          : orgName;
+      } else {
+        // individual or sole trader
+        const fullName = [cs.principalFirstName, cs.principalLastName].filter(Boolean).join(' ') || 'Unknown';
+        debtorLabel = cs.individualType === 'business' && cs.tradingName
+          ? `${fullName} t/a ${cs.tradingName}`
+          : fullName;
+      }
+      const subject = `New Case Submission #${data.submissionId} - ${data.organisationName} -v- ${debtorLabel}`;
 
       // Generate Excel file
       const excelFilePath = await this.generateCaseSubmissionExcel(data);
