@@ -2,7 +2,6 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { OrganisationFilterCombobox } from "@/components/OrganisationFilterCombobox";
 import { ArrowLeft, Download, FileText, TrendingUp, Calendar, PoundSterling, User, CreditCard, Building2, Filter } from "lucide-react";
@@ -10,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { Link } from "wouter";
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
@@ -159,48 +158,151 @@ export default function MonthlyStatementReport() {
     };
   }, [filteredCases, startDate, endDate]);
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (!statementData) return;
 
-    const workbook = XLSX.utils.book_new();
-    
-    // Statement Summary Sheet
-    const summaryData = [
-      ['Statement Report'],
-      ['Period:', getDateRangeLabel()],
-      ['Generated:', new Date().toLocaleDateString('en-GB')],
-      [''],
-      ['Summary'],
-      ['Total Payments', formatCurrency(statementData.totalPayments)],
-      ['Number of Payments', statementData.paymentsCount],
-      [''],
-      ['Payments Received in Period']
-    ];
+    try {
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = 'Acclaim';
+      workbook.created = new Date();
 
-    // Add payment headers
-    summaryData.push(['Account Number', 'Case Name', 'Amount', 'Date', 'Method']);
-    
-    // Add payment data
-    statementData.paymentsInRange.forEach((payment: any) => {
-      summaryData.push([
-        payment.accountNumber,
-        payment.organisationName ? `${payment.caseName} (${payment.organisationName})` : payment.caseName,
-        formatCurrency(payment.amount),
-        formatDate(payment.paymentDate || payment.createdAt),
-        payment.paymentMethod || 'Not specified'
-      ]);
-    });
+      // ── Palette ──────────────────────────────────────────────────────────
+      const TEAL_HDR  = 'FF0F766E';
+      const TEAL_TOT  = 'FF134E4A';
+      const WHITE     = 'FFFFFFFF';
+      const ROW_ODD   = 'FFFFFFFF';
+      const ROW_EVEN  = 'FFF0FDFA';
+      const BORDER_CLR = 'FFD1D5DB';
+      const GBP_FMT   = '"£"#,##0.00';
 
-    const worksheet = XLSX.utils.aoa_to_sheet(summaryData);
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Monthly Statement');
-    
-    const filename = `statement-${startDate}-to-${endDate}.xlsx`;
-    XLSX.writeFile(workbook, filename);
-    
-    toast({
-      title: "Export Successful",
-      description: `Monthly statement exported as ${filename}`,
-    });
+      const thinBorder = {
+        top:    { style: 'thin' as const, color: { argb: BORDER_CLR } },
+        left:   { style: 'thin' as const, color: { argb: BORDER_CLR } },
+        bottom: { style: 'thin' as const, color: { argb: BORDER_CLR } },
+        right:  { style: 'thin' as const, color: { argb: BORDER_CLR } },
+      };
+
+      // ── Summary sheet ────────────────────────────────────────────────────
+      const summaryWs = workbook.addWorksheet('Summary');
+      summaryWs.columns = [
+        { key: 'label', width: 26 },
+        { key: 'value', width: 22 },
+      ];
+
+      const summaryRows = [
+        ['Monthly Statement Report', ''],
+        ['Period', getDateRangeLabel()],
+        ['Generated', new Date().toLocaleDateString('en-GB')],
+        ['', ''],
+        ['Total Payments Received', statementData.totalPayments],
+        ['Number of Payments', statementData.paymentsCount],
+      ];
+
+      summaryRows.forEach(([label, value], i) => {
+        const row = summaryWs.addRow([label, value]);
+        if (i === 0) {
+          row.getCell(1).font = { bold: true, size: 13, color: { argb: 'FF0F766E' }, name: 'Calibri' };
+        } else if (i === 4) {
+          row.getCell(1).font = { bold: true, size: 10, name: 'Calibri' };
+          row.getCell(2).numFmt = GBP_FMT;
+          row.getCell(2).font  = { bold: true, size: 10, color: { argb: 'FF15803D' }, name: 'Calibri' };
+        } else {
+          row.getCell(1).font = { size: 10, name: 'Calibri' };
+          row.getCell(2).font = { size: 10, name: 'Calibri' };
+        }
+      });
+
+      // ── Payments sheet ───────────────────────────────────────────────────
+      const paymentsWs = workbook.addWorksheet('Payments', {
+        views: [{ state: 'frozen', ySplit: 1 }],
+      });
+
+      paymentsWs.columns = [
+        { header: 'Account Number', key: 'accountNumber', width: 20 },
+        { header: 'Case Name',      key: 'caseName',      width: 30 },
+        { header: 'Organisation',   key: 'organisation',  width: 24 },
+        { header: 'Amount',         key: 'amount',        width: 16 },
+        { header: 'Date',           key: 'date',          width: 14 },
+        { header: 'Method',         key: 'method',        width: 18 },
+      ];
+
+      // Style header row
+      const headerRow = paymentsWs.getRow(1);
+      headerRow.height = 28;
+      headerRow.eachCell({ includeEmpty: true }, (cell) => {
+        cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: TEAL_HDR } };
+        cell.font      = { bold: true, color: { argb: WHITE }, size: 10, name: 'Calibri' };
+        cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        cell.border    = thinBorder;
+      });
+
+      // Data rows
+      statementData.paymentsInRange.forEach((payment: any, rowIdx: number) => {
+        const row = paymentsWs.addRow({
+          accountNumber: payment.accountNumber,
+          caseName:      payment.caseName,
+          organisation:  payment.organisationName || '',
+          amount:        parseFloat(payment.amount),
+          date:          formatDate(payment.paymentDate || payment.createdAt),
+          method:        payment.paymentMethod || 'Not specified',
+        });
+
+        row.height = 18;
+        const rowBg = rowIdx % 2 === 0 ? ROW_ODD : ROW_EVEN;
+
+        row.eachCell({ includeEmpty: true }, (cell) => {
+          cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: rowBg } };
+          cell.font      = { size: 10, name: 'Calibri', color: { argb: 'FF111827' } };
+          cell.border    = thinBorder;
+          cell.alignment = { vertical: 'middle' };
+        });
+
+        // GBP format + green for amount
+        const amtCell = row.getCell(4);
+        amtCell.numFmt = GBP_FMT;
+        amtCell.font   = { size: 10, name: 'Calibri', bold: true, color: { argb: 'FF15803D' } };
+      });
+
+      // Totals row
+      const totalRow = paymentsWs.addRow({
+        accountNumber: '',
+        caseName:      'TOTAL',
+        organisation:  '',
+        amount:        parseFloat(statementData.totalPayments),
+        date:          '',
+        method:        `${statementData.paymentsCount} payment${statementData.paymentsCount !== 1 ? 's' : ''}`,
+      });
+      totalRow.height = 22;
+      totalRow.eachCell({ includeEmpty: true }, (cell) => {
+        cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: TEAL_TOT } };
+        cell.font      = { bold: true, color: { argb: WHITE }, size: 10, name: 'Calibri' };
+        cell.border    = thinBorder;
+        cell.alignment = { vertical: 'middle' };
+      });
+      totalRow.getCell(4).numFmt = GBP_FMT;
+
+      // Write file
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob   = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url    = URL.createObjectURL(blob);
+      const a      = document.createElement('a');
+      a.href       = url;
+      a.download   = `statement-${startDate}-to-${endDate}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Export Successful",
+        description: `Monthly statement exported successfully.`,
+      });
+    } catch (error) {
+      console.error('Excel export error:', error);
+      toast({
+        title: "Export Failed",
+        description: "Failed to export the statement.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDownloadPDF = () => {
@@ -483,10 +585,8 @@ export default function MonthlyStatementReport() {
                       <td className="border border-gray-200 px-2 sm:px-4 py-2 whitespace-nowrap">
                         {formatDate(payment.paymentDate || payment.createdAt)}
                       </td>
-                      <td className="border border-gray-200 px-2 sm:px-4 py-2">
-                        <Badge variant="outline" className="text-xs">
-                          {payment.paymentMethod || 'Not specified'}
-                        </Badge>
+                      <td className="border border-gray-200 px-2 sm:px-4 py-2 text-sm text-gray-700">
+                        {payment.paymentMethod || 'Not specified'}
                       </td>
                     </tr>
                   ))}
