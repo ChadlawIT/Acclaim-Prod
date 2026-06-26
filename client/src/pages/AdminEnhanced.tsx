@@ -777,16 +777,7 @@ function CaseManagementTab({ isSuperAdmin = false }: { isSuperAdmin?: boolean })
         </div>
         <PageSizeSelector pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }} />
         <div className="flex gap-2">
-          <Button
-            onClick={() => setShowNewCaseDialog(true)}
-            variant="default"
-            size="sm"
-            className="gap-2"
-            title="Create a new case directly"
-          >
-            <Plus className="h-4 w-4" />
-            Submit New Case
-          </Button>
+
           <Button
             onClick={exportCasesToCSV}
             variant="outline"
