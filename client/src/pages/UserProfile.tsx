@@ -1303,24 +1303,49 @@ export default function UserProfile() {
 
                     return (
                       <>
-                        <div className="text-xs text-gray-500 mb-1">
-                          Showing {paginatedCases.length} of {filteredCases.length} cases
+                        <div className="flex items-center justify-between text-xs text-gray-400 mb-2 px-1">
+                          <span>{filteredCases.length} case{filteredCases.length !== 1 ? 's' : ''}{filteredCases.length !== userCases.length ? ` (filtered)` : ''}</span>
+                          {mutedCasesData?.mutedCaseIds && mutedCasesData.mutedCaseIds.length > 0 && (
+                            <span className="text-orange-500 font-medium">{mutedCasesData.mutedCaseIds.length} muted</span>
+                          )}
                         </div>
-                        <div className="space-y-1">
+                        <div className="divide-y divide-gray-100 dark:divide-gray-800 border border-gray-100 dark:border-gray-800 rounded-lg overflow-hidden">
                           {paginatedCases.map((caseItem: any) => {
                             const isMuted = mutedCasesData?.mutedCaseIds?.includes(caseItem.id);
                             return (
-                              <div 
-                                key={caseItem.id} 
-                                className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded border border-gray-100"
+                              <div
+                                key={caseItem.id}
+                                className="flex items-center gap-3 px-3 py-3 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                               >
-                                <div className="flex-1 min-w-0 mr-3">
-                                  <span className="text-sm font-medium truncate block">{caseItem.caseName}</span>
-                                  <span className="text-xs text-gray-400">{caseItem.accountNumber}</span>
+                                {/* status accent */}
+                                <div className={`w-1 self-stretch rounded-full shrink-0 ${isMuted ? 'bg-gray-300 dark:bg-gray-600' : 'bg-teal-500'}`} />
+                                {/* icon */}
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${isMuted ? 'bg-gray-100 dark:bg-gray-800' : 'bg-teal-50 dark:bg-teal-900/30'}`}>
+                                  {isMuted
+                                    ? <BellOff className="h-3.5 w-3.5 text-gray-400" />
+                                    : <Bell className="h-3.5 w-3.5 text-teal-600 dark:text-teal-400" />
+                                  }
                                 </div>
+                                {/* text */}
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{caseItem.caseName}</p>
+                                  <p className="text-xs text-gray-400 truncate">
+                                    {caseItem.accountNumber}
+                                    {caseItem.organisationName && <span className="ml-1">· {caseItem.organisationName}</span>}
+                                  </p>
+                                </div>
+                                {/* badge */}
+                                <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0 hidden sm:inline-flex ${
+                                  isMuted
+                                    ? 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
+                                    : 'bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400'
+                                }`}>
+                                  {isMuted ? 'Muted' : 'On'}
+                                </span>
+                                {/* switch */}
                                 <Switch
                                   checked={!isMuted}
-                                  onCheckedChange={(checked) => 
+                                  onCheckedChange={(checked) =>
                                     toggleCaseMuteMutation.mutate({ caseId: caseItem.id, mute: !checked })
                                   }
                                   disabled={toggleCaseMuteMutation.isPending}
@@ -1330,21 +1355,23 @@ export default function UserProfile() {
                           })}
                         </div>
                         {totalPages > 1 && (
-                          <div className="flex items-center justify-between pt-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
+                          <div className="flex items-center justify-between pt-3">
+                            <Button
+                              variant="outline"
+                              size="sm"
                               onClick={() => setCasePage(p => Math.max(1, p - 1))}
                               disabled={casePage === 1}
+                              className="h-8 px-3 text-xs text-acclaim-teal border-acclaim-teal hover:bg-acclaim-teal hover:text-white"
                             >
                               Previous
                             </Button>
                             <span className="text-xs text-gray-500">Page {casePage} of {totalPages}</span>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
+                            <Button
+                              variant="outline"
+                              size="sm"
                               onClick={() => setCasePage(p => Math.min(totalPages, p + 1))}
                               disabled={casePage === totalPages}
+                              className="h-8 px-3 text-xs text-acclaim-teal border-acclaim-teal hover:bg-acclaim-teal hover:text-white"
                             >
                               Next
                             </Button>
