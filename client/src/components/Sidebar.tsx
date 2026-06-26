@@ -127,7 +127,12 @@ export default function Sidebar({ activeSection, setActiveSection, collapsed, on
           {!collapsed && seminars && seminars.length > 0 && (
             <div className="px-3 pt-0.5 pb-0.5">
               <span
-                onClick={() => setActiveSection("chadwick-lawrence")}
+                onClick={() => {
+                  setActiveSection("chadwick-lawrence");
+                  setTimeout(() => {
+                    document.getElementById("cl-seminars-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }, 150);
+                }}
                 className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold text-white cursor-pointer hover:opacity-80 transition-opacity"
                 style={{ backgroundColor: "#ba1b6e" }}
               >

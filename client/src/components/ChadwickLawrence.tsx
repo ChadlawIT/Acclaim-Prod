@@ -430,7 +430,7 @@ export default function ChadwickLawrence() {
           </div>
 
           {/* Events — live from chadwicklawrence.co.uk */}
-          <div className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+          <div id="cl-seminars-section" className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
             {/* Header */}
             <div className="p-5 bg-gradient-to-r from-[#ba1b6e] to-[#2e3192] text-white">
               <div className="flex items-center justify-between gap-3">
