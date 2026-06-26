@@ -1504,24 +1504,12 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
               ) : activities && activities.length > 0 ? (
                 <div className="py-2">
                   {activities.map((activity: any, idx: number) => {
-                    const desc = (activity.description || "").toLowerCase();
-                    // Pick icon + colour by keywords in description
-                    const isPayment  = desc.includes("payment") || desc.includes("paid") || desc.includes("£");
-                    const isDoc      = desc.includes("document") || desc.includes("upload") || desc.includes("file") || desc.includes("pdf");
-                    const isMsg      = desc.includes("message") || desc.includes("email") || desc.includes("sent") || desc.includes("contact");
-                    const isStage    = desc.includes("stage") || desc.includes("progress") || desc.includes("claim") || desc.includes("letter");
-                    const isOpen     = desc.includes("open") || desc.includes("creat") || desc.includes("assigned") || idx === activities.length - 1;
-                    const isClosed   = desc.includes("closed") || desc.includes("resolved") || desc.includes("settled") || desc.includes("complete");
-
-                    const { iconEl, ringCls, bgCls, textCls } = (() => {
-                      if (isClosed)  return { iconEl: <Check className="h-4 w-4" />,           ringCls: "ring-green-200",  bgCls: "bg-green-100",  textCls: "text-green-600" };
-                      if (isPayment) return { iconEl: <PoundSterling className="h-4 w-4" />,   ringCls: "ring-emerald-200",bgCls: "bg-emerald-50", textCls: "text-emerald-600" };
-                      if (isDoc)     return { iconEl: <FileText className="h-4 w-4" />,         ringCls: "ring-violet-200", bgCls: "bg-violet-50",  textCls: "text-violet-600" };
-                      if (isMsg)     return { iconEl: <Send className="h-4 w-4" />,             ringCls: "ring-blue-200",   bgCls: "bg-blue-50",    textCls: "text-blue-600" };
-                      if (isStage)   return { iconEl: <RefreshCw className="h-4 w-4" />,        ringCls: "ring-amber-200",  bgCls: "bg-amber-50",   textCls: "text-amber-600" };
-                      if (isOpen)    return { iconEl: <Check className="h-4 w-4" />,            ringCls: "ring-teal-200",   bgCls: "bg-teal-50",    textCls: "text-teal-600" };
-                      return         { iconEl: <Clock className="h-4 w-4" />,                   ringCls: "ring-gray-200",   bgCls: "bg-gray-50",    textCls: "text-gray-500" };
-                    })();
+                    // Alternate between two teal shades
+                    const even = idx % 2 === 0;
+                    const ringCls = even ? "ring-teal-200"    : "ring-teal-100";
+                    const bgCls   = even ? "bg-teal-600"      : "bg-teal-100";
+                    const textCls = even ? "text-white"       : "text-teal-600";
+                    const iconEl  = <Clock className="h-4 w-4" />;
 
                     const isLast = idx === activities.length - 1;
 
