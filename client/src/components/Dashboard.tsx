@@ -383,72 +383,72 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {/* Active Cases */}
-          <Card className="border-t-4 border-t-amber-500 dark:border-t-amber-400">
+          <Card>
             <CardContent className="p-5">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Active Cases</p>
-                  <p className="text-3xl font-bold text-amber-600 dark:text-amber-400 mt-1 leading-none">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">Active Cases</p>
+                  <p className="text-2xl font-bold text-gray-800 dark:text-gray-100 mt-1 leading-none">
                     {statsLoading ? "—" : stats?.activeCases || 0}
                   </p>
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">currently open</p>
                 </div>
-                <div className="p-2.5 bg-amber-50 dark:bg-amber-900/30 rounded-lg flex-shrink-0">
-                  <FolderOpen className="h-5 w-5 text-amber-500 dark:text-amber-400" />
+                <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg flex-shrink-0 mt-0.5">
+                  <FolderOpen className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Total Outstanding */}
-          <Card className="border-t-4 border-t-blue-500 dark:border-t-blue-400">
+          <Card>
             <CardContent className="p-5">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Outstanding</p>
-                  <p className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1 leading-none break-all">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">Total Outstanding</p>
+                  <p className="text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-100 mt-1 leading-none break-all">
                     {statsLoading ? "—" : formatCurrency(stats?.totalOutstanding || 0)}
                   </p>
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">active cases only</p>
                 </div>
-                <div className="p-2.5 bg-blue-50 dark:bg-blue-900/30 rounded-lg flex-shrink-0">
-                  <PoundSterling className="h-5 w-5 text-blue-500 dark:text-blue-400" />
+                <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg flex-shrink-0 mt-0.5">
+                  <PoundSterling className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Total Recovery */}
-          <Card className="border-t-4 border-t-purple-500 dark:border-t-purple-400">
+          <Card>
             <CardContent className="p-5">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Recovery</p>
-                  <p className="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400 mt-1 leading-none break-all">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">Total Recovery</p>
+                  <p className="text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-100 mt-1 leading-none break-all">
                     {statsLoading ? "—" : formatCurrency(parseFloat(stats?.totalRecovery || '0'))}
                   </p>
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">active cases only</p>
                 </div>
-                <div className="p-2.5 bg-purple-50 dark:bg-purple-900/30 rounded-lg flex-shrink-0">
-                  <PoundSterling className="h-5 w-5 text-purple-500 dark:text-purple-400" />
+                <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg flex-shrink-0 mt-0.5">
+                  <PoundSterling className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Closed Cases */}
-          <Card className="border-t-4 border-t-green-500 dark:border-t-green-400">
+          <Card>
             <CardContent className="p-5">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Closed Cases</p>
-                  <p className="text-3xl font-bold text-green-600 dark:text-green-400 mt-1 leading-none">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">Closed Cases</p>
+                  <p className="text-2xl font-bold text-gray-800 dark:text-gray-100 mt-1 leading-none">
                     {statsLoading ? "—" : stats?.closedCases || 0}
                   </p>
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">successfully resolved</p>
                 </div>
-                <div className="p-2.5 bg-green-50 dark:bg-green-900/30 rounded-lg flex-shrink-0">
-                  <CheckCircle className="h-5 w-5 text-green-500 dark:text-green-400" />
+                <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg flex-shrink-0 mt-0.5">
+                  <CheckCircle className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                 </div>
               </div>
             </CardContent>
