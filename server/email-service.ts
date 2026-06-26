@@ -911,7 +911,7 @@ If you have any questions, please contact our support team.
     try {
       await this.transporter.sendMail({
         from: '"Acclaim Credit Management & Recovery" <email@acclaim.law>',
-        to: 'email@acclaim.law',
+        to: 'mattperry@chadlaw.co.uk',
         replyTo: data.email,
         subject: `Seminar Booking Request – ${s.name} | Acclaim Portal`,
         text: textContent,
@@ -1019,7 +1019,7 @@ If you have any questions, please contact our support team.
         }),
         this.transporter.sendMail({
           from: '"Acclaim Credit Management & Recovery" <email@acclaim.law>',
-          to: 'email@acclaim.law',
+          to: 'mattperry@chadlaw.co.uk',
           subject: `Seminar Shared – ${s.name} | Acclaim Portal`,
           text: `Seminar shared via Acclaim Portal\n\nSeminar: ${s.name}\nShared by: ${data.senderName} (${data.senderEmail})${data.senderOrganisation ? ` · ${data.senderOrganisation}` : ''}\nShared with: ${data.recipientName} (${data.recipientEmail})`,
           html: notifHtml,
