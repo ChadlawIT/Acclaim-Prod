@@ -1730,26 +1730,21 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
                       return (
                       <div
                         key={message.id}
-                        className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                          fromAdmin
-                            ? "bg-teal-50 border-teal-200 hover:bg-teal-100"
-                            : "bg-blue-50 border-blue-200 hover:bg-blue-100"
-                        }`}
-                        onClick={() => handleOpenMessage(message)}
+                        className={`flex gap-2 ${fromAdmin ? "flex-row-reverse" : "flex-row"}`}
                       >
-                        <div className="flex items-start justify-between mb-1.5">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${
-                              fromAdmin
-                                ? "bg-teal-100 text-teal-700 border border-teal-200"
-                                : "bg-blue-100 text-blue-700 border border-blue-200"
-                            }`}>
-                              {fromAdmin ? "Team" : "Client"}
-                            </span>
-                            <p className="font-medium text-sm truncate">{message.subject}</p>
-                          </div>
-                          <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
-                            <p className="text-xs text-gray-500 whitespace-nowrap">{formatDate(message.createdAt)}</p>
+                        {/* Avatar */}
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-1 ${
+                          fromAdmin ? "bg-teal-600 text-white" : "bg-gray-200 text-gray-600"
+                        }`}>
+                          {(message.senderName || "?").split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}
+                        </div>
+
+                        {/* Bubble */}
+                        <div className={`max-w-[78%] group`}>
+                          {/* Name + time */}
+                          <div className={`flex items-center gap-2 mb-1 ${fromAdmin ? "flex-row-reverse" : "flex-row"}`}>
+                            <span className="text-xs font-semibold text-gray-600">{message.senderName || 'Unknown'}</span>
+                            <span className="text-[10px] text-gray-400">{formatDate(message.createdAt)}</span>
                             {user?.isAdmin && (
                               <Button
                                 variant="ghost"
@@ -1760,25 +1755,42 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
                                     deleteMessageMutation.mutate(message.id);
                                   }
                                 }}
-                                className="text-red-600 hover:text-red-700"
+                                className="text-red-400 hover:text-red-600 h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
                                 disabled={deleteMessageMutation.isPending}
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="h-3 w-3" />
                               </Button>
                             )}
                           </div>
-                        </div>
-                        <p className={`text-xs mb-2 ${fromAdmin ? "text-teal-700" : "text-blue-700"}`}>
-                          {message.senderName || 'Unknown'}
-                        </p>
-                        <p className="text-sm text-gray-700 leading-relaxed">{truncateContent(message.content, 400)}</p>
-                        {message.attachmentFileName && (
-                          <div className={`mt-2.5 flex items-center space-x-2 text-xs ${fromAdmin ? "text-teal-600" : "text-blue-600"}`}>
-                            <FileText className="h-3 w-3" />
-                            <span>{message.attachmentFileName}</span>
+
+                          {/* Subject line if present */}
+                          {message.subject && (
+                            <p className={`text-[11px] font-semibold mb-1 ${fromAdmin ? "text-right text-teal-700" : "text-left text-gray-500"}`}>
+                              {message.subject}
+                            </p>
+                          )}
+
+                          {/* Bubble body */}
+                          <div
+                            className={`px-4 py-3 rounded-2xl cursor-pointer transition-opacity hover:opacity-90 ${
+                              fromAdmin
+                                ? "bg-teal-600 text-white rounded-tr-sm"
+                                : "bg-white border border-gray-200 text-gray-800 rounded-tl-sm shadow-sm"
+                            }`}
+                            onClick={() => handleOpenMessage(message)}
+                          >
+                            <p className="text-sm leading-relaxed">{truncateContent(message.content, 400)}</p>
+                            {message.attachmentFileName && (
+                              <div className={`mt-2 flex items-center gap-1.5 text-xs ${fromAdmin ? "text-teal-100" : "text-teal-600"}`}>
+                                <FileText className="h-3 w-3 flex-shrink-0" />
+                                <span className="truncate">{message.attachmentFileName}</span>
+                              </div>
+                            )}
                           </div>
-                        )}
-                        <p className={`text-xs mt-2 ${fromAdmin ? "text-teal-500" : "text-blue-500"}`}>Click to read full message</p>
+                          <p className={`text-[10px] text-gray-400 mt-1 ${fromAdmin ? "text-right" : "text-left"}`}>
+                            Click to read full message
+                          </p>
+                        </div>
                       </div>
                     )})}
                 </div>
