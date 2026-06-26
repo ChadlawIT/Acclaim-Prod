@@ -2,7 +2,6 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { OrganisationFilterCombobox } from "@/components/OrganisationFilterCombobox";
 import { ArrowLeft, Download, FileSpreadsheet, FileText, TrendingUp, Calendar, Clock, CreditCard, Building2, Filter } from "lucide-react";
@@ -10,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { Link } from "wouter";
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 export default function PaymentPerformanceReport() {
   const { toast } = useToast();
@@ -184,111 +183,220 @@ export default function PaymentPerformanceReport() {
     };
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (!filteredPayments || filteredPayments.length === 0) {
-      toast({
-        title: "No Data",
-        description: "No payment data available to export.",
-        variant: "destructive",
-      });
+      toast({ title: "No Data", description: "No payment data available to export.", variant: "destructive" });
       return;
     }
 
     try {
       const metrics = getPaymentMetrics();
-      
-      // Payment details sheet
-      const paymentDetailsData = filteredPayments.map((payment: any) => {
-        const case_ = filteredCases.find((c: any) => c.id === payment.caseId);
-        return {
-          'Account Number': case_?.accountNumber || 'N/A',
-          'Case Name': case_?.organisationName ? `${case_.caseName} (${case_.organisationName})` : (case_?.caseName || 'N/A'),
-          'Payment Amount': parseFloat(payment.amount),
-          'Payment Date': formatDate(payment.paymentDate),
-          'Payment Method': payment.paymentMethod || 'Not Specified',
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = 'Acclaim';
+      workbook.created = new Date();
 
-          'Case Status': case_?.status || 'N/A',
-          'Original Amount': case_ ? parseFloat(case_.originalAmount) : 0,
-          'Outstanding Amount': case_ ? parseFloat(case_.outstandingAmount) : 0,
-        };
-      });
+      // ── Palette ──────────────────────────────────────────────────────────
+      const TEAL_HDR   = 'FF0F766E';
+      const TEAL_TOT   = 'FF134E4A';
+      const TEAL_TITLE = 'FF0F766E';
+      const WHITE      = 'FFFFFFFF';
+      const ROW_ODD    = 'FFFFFFFF';
+      const ROW_EVEN   = 'FFF0FDFA';
+      const BORDER_CLR = 'FFD1D5DB';
+      const GBP_FMT    = '"£"#,##0.00';
 
-      // Summary sheet
-      const summaryData = [
-        ['Metric', 'Value'],
-        ['Total Collected', formatCurrency(metrics?.totalPayments || 0)],
-        ['Total Payment Count', metrics?.totalPaymentCount || 0],
-        ['Average Payment Amount', formatCurrency(metrics?.avgPaymentAmount || 0)],
-        ['Largest Single Payment', formatCurrency(metrics?.largestPayment || 0)],
-        ['Most Recent Payment', metrics?.mostRecentPayment ? formatDate(metrics.mostRecentPayment) : '—'],
-        ['', ''],
-        ['Total Original Debt', formatCurrency(metrics?.totalOriginalDebt || 0)],
-        ['Total Outstanding', formatCurrency(metrics?.totalOutstanding || 0)],
-        ['Cases with Payments', metrics?.casesWithPayments || 0],
-        ['Total Cases', metrics?.totalCases || 0],
-        ['', ''],
-        ['Last 30 Days Total', formatCurrency(metrics?.last30DaysTotal || 0)],
-        ['Last 30 Days Count', metrics?.last30DaysCount || 0],
-        ['Last 60 Days Total', formatCurrency(metrics?.last60DaysTotal || 0)],
-        ['Last 60 Days Count', metrics?.last60DaysCount || 0],
-        ['Last 90 Days Total', formatCurrency(metrics?.last90DaysTotal || 0)],
-        ['Last 90 Days Count', metrics?.last90DaysCount || 0],
+      const thinBorder = {
+        top:    { style: 'thin' as const, color: { argb: BORDER_CLR } },
+        left:   { style: 'thin' as const, color: { argb: BORDER_CLR } },
+        bottom: { style: 'thin' as const, color: { argb: BORDER_CLR } },
+        right:  { style: 'thin' as const, color: { argb: BORDER_CLR } },
+      };
+
+      const applyHeader = (ws: ExcelJS.Worksheet) => {
+        const row = ws.getRow(1);
+        row.height = 28;
+        row.eachCell({ includeEmpty: true }, (cell) => {
+          cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: TEAL_HDR } };
+          cell.font      = { bold: true, color: { argb: WHITE }, size: 10, name: 'Calibri' };
+          cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+          cell.border    = thinBorder;
+        });
+      };
+
+      const styleDataRow = (row: ExcelJS.Row, rowIdx: number) => {
+        row.height = 18;
+        const bg = rowIdx % 2 === 0 ? ROW_ODD : ROW_EVEN;
+        row.eachCell({ includeEmpty: true }, (cell) => {
+          cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } };
+          cell.font      = { size: 10, name: 'Calibri', color: { argb: 'FF111827' } };
+          cell.border    = thinBorder;
+          cell.alignment = { vertical: 'middle' };
+        });
+      };
+
+      const addTotalsRow = (ws: ExcelJS.Worksheet, values: any[]) => {
+        const row = ws.addRow(values);
+        row.height = 22;
+        row.eachCell({ includeEmpty: true }, (cell) => {
+          cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: TEAL_TOT } };
+          cell.font      = { bold: true, color: { argb: WHITE }, size: 10, name: 'Calibri' };
+          cell.border    = thinBorder;
+          cell.alignment = { vertical: 'middle' };
+        });
+        return row;
+      };
+
+      // ── 1. Summary sheet ─────────────────────────────────────────────────
+      const sumWs = workbook.addWorksheet('Summary');
+      sumWs.columns = [{ key: 'label', width: 28 }, { key: 'value', width: 22 }];
+
+      const sumRows: [string, any, boolean?][] = [
+        ['Payment Performance Report', '', false],
+        ['Generated', new Date().toLocaleDateString('en-GB'), false],
+        ['', '', false],
+        ['Total Collected', metrics?.totalPayments || 0, true],
+        ['Total Payment Count', metrics?.totalPaymentCount || 0, false],
+        ['Average Payment Amount', metrics?.avgPaymentAmount || 0, true],
+        ['Largest Single Payment', metrics?.largestPayment || 0, true],
+        ['Most Recent Payment', metrics?.mostRecentPayment ? formatDate(metrics.mostRecentPayment) : '—', false],
+        ['', '', false],
+        ['Total Original Debt', metrics?.totalOriginalDebt || 0, true],
+        ['Total Outstanding', metrics?.totalOutstanding || 0, true],
+        ['Cases with Payments', metrics?.casesWithPayments || 0, false],
+        ['Total Cases', metrics?.totalCases || 0, false],
+        ['', '', false],
+        ['Last 30 Days Total', metrics?.last30DaysTotal || 0, true],
+        ['Last 30 Days Count', metrics?.last30DaysCount || 0, false],
+        ['Last 60 Days Total', metrics?.last60DaysTotal || 0, true],
+        ['Last 60 Days Count', metrics?.last60DaysCount || 0, false],
+        ['Last 90 Days Total', metrics?.last90DaysTotal || 0, true],
+        ['Last 90 Days Count', metrics?.last90DaysCount || 0, false],
       ];
 
-      // Method breakdown sheet
-      const methodData = Object.entries(metrics?.methodBreakdown || {})
-        .sort(([, a]: any, [, b]: any) => b.total - a.total)
-        .map(([method, data]: [string, any]) => [
-          method,
-          formatCurrency(data.total),
-          data.count,
-          formatCurrency(data.total / data.count),
-        ]);
-
-      // Monthly trends sheet (already sorted chronologically)
-      const monthlyData = (metrics?.monthlyTrends || []).map((row: any) => [
-        row.label,
-        formatCurrency(row.total),
-        row.count,
-        formatCurrency(row.total / row.count),
-      ]);
-
-      const wb = XLSX.utils.book_new();
-      
-      // Add sheets
-      const summaryWs = XLSX.utils.aoa_to_sheet(summaryData);
-      XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
-      
-      const paymentDetailsWs = XLSX.utils.json_to_sheet(paymentDetailsData);
-      XLSX.utils.book_append_sheet(wb, paymentDetailsWs, 'Payment Details');
-      
-      if (methodData.length > 0) {
-        const methodWs = XLSX.utils.aoa_to_sheet([['Payment Method', 'Total Amount', 'Count', 'Avg per Payment'], ...methodData]);
-        XLSX.utils.book_append_sheet(wb, methodWs, 'Payment Methods');
-      }
-      
-      if (monthlyData.length > 0) {
-        const monthlyWs = XLSX.utils.aoa_to_sheet([['Month', 'Total Amount', 'Payment Count', 'Average Amount'], ...monthlyData]);
-        XLSX.utils.book_append_sheet(wb, monthlyWs, 'Monthly Trends');
-      }
-
-      // Generate filename
-      const now = new Date();
-      const filename = `payment-performance-report-${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}.xlsx`;
-
-      XLSX.writeFile(wb, filename);
-
-      toast({
-        title: "Export Successful",
-        description: "Payment performance report has been exported to Excel.",
+      sumRows.forEach(([label, value, isCurrency], i) => {
+        const row = sumWs.addRow([label, value]);
+        if (i === 0) {
+          row.getCell(1).font = { bold: true, size: 13, color: { argb: TEAL_TITLE }, name: 'Calibri' };
+        } else {
+          row.getCell(1).font = { size: 10, name: 'Calibri' };
+          row.getCell(2).font = { size: 10, name: 'Calibri', color: { argb: isCurrency ? 'FF15803D' : 'FF111827' } };
+          if (isCurrency && typeof value === 'number') row.getCell(2).numFmt = GBP_FMT;
+        }
       });
+
+      // ── 2. Payment Details sheet ─────────────────────────────────────────
+      const detailsWs = workbook.addWorksheet('Payment Details', { views: [{ state: 'frozen', ySplit: 1 }] });
+      detailsWs.columns = [
+        { header: 'Account Number',   key: 'accountNumber',   width: 20 },
+        { header: 'Case Name',        key: 'caseName',        width: 30 },
+        { header: 'Organisation',     key: 'organisation',    width: 24 },
+        { header: 'Payment Amount',   key: 'amount',          width: 16 },
+        { header: 'Payment Date',     key: 'date',            width: 14 },
+        { header: 'Payment Method',   key: 'method',          width: 18 },
+        { header: 'Case Status',      key: 'status',          width: 13 },
+        { header: 'Original Amount',  key: 'originalAmount',  width: 16 },
+        { header: 'Outstanding',      key: 'outstanding',     width: 16 },
+      ];
+      applyHeader(detailsWs);
+
+      filteredPayments.forEach((payment: any, rowIdx: number) => {
+        const case_ = filteredCases.find((c: any) => c.id === payment.caseId);
+        const row = detailsWs.addRow({
+          accountNumber:  case_?.accountNumber || 'N/A',
+          caseName:       case_?.caseName || 'N/A',
+          organisation:   case_?.organisationName || '',
+          amount:         parseFloat(payment.amount),
+          date:           formatDate(payment.paymentDate),
+          method:         payment.paymentMethod || 'Not Specified',
+          status:         case_?.status || 'N/A',
+          originalAmount: case_ ? parseFloat(case_.originalAmount) : 0,
+          outstanding:    case_ ? parseFloat(case_.outstandingAmount) : 0,
+        });
+        styleDataRow(row, rowIdx);
+        row.getCell(4).numFmt = GBP_FMT;
+        row.getCell(4).font   = { size: 10, name: 'Calibri', bold: true, color: { argb: 'FF15803D' } };
+        row.getCell(8).numFmt = GBP_FMT;
+        row.getCell(9).numFmt = GBP_FMT;
+        row.getCell(9).font   = { size: 10, name: 'Calibri', color: { argb: 'FFC2410C' } };
+      });
+
+      // Totals row
+      const detailsTotal = addTotalsRow(detailsWs, [
+        '', 'TOTAL', '', metrics?.totalPayments || 0, '', `${metrics?.totalPaymentCount || 0} payments`, '', '', ''
+      ]);
+      detailsTotal.getCell(4).numFmt = GBP_FMT;
+
+      // ── 3. Payment Methods sheet ─────────────────────────────────────────
+      const methodEntries = Object.entries(metrics?.methodBreakdown || {})
+        .sort(([, a]: any, [, b]: any) => b.total - a.total) as [string, { total: number; count: number }][];
+
+      if (methodEntries.length > 0) {
+        const methodWs = workbook.addWorksheet('Payment Methods', { views: [{ state: 'frozen', ySplit: 1 }] });
+        methodWs.columns = [
+          { header: 'Payment Method',  key: 'method', width: 22 },
+          { header: 'Total Amount',    key: 'total',  width: 16 },
+          { header: 'Count',           key: 'count',  width: 10 },
+          { header: 'Avg per Payment', key: 'avg',    width: 16 },
+        ];
+        applyHeader(methodWs);
+
+        methodEntries.forEach(([method, data], rowIdx) => {
+          const row = methodWs.addRow({ method, total: data.total, count: data.count, avg: data.total / data.count });
+          styleDataRow(row, rowIdx);
+          row.getCell(2).numFmt = GBP_FMT;
+          row.getCell(2).font   = { size: 10, name: 'Calibri', bold: true, color: { argb: 'FF0F766E' } };
+          row.getCell(4).numFmt = GBP_FMT;
+        });
+
+        const grandTotal = methodEntries.reduce((s, [, d]) => s + d.total, 0);
+        const grandCount = methodEntries.reduce((s, [, d]) => s + d.count, 0);
+        const totRow = addTotalsRow(methodWs, ['TOTAL', grandTotal, grandCount, grandTotal / grandCount]);
+        totRow.getCell(2).numFmt = GBP_FMT;
+        totRow.getCell(4).numFmt = GBP_FMT;
+      }
+
+      // ── 4. Monthly Trends sheet ──────────────────────────────────────────
+      const trends = metrics?.monthlyTrends || [];
+      if (trends.length > 0) {
+        const trendsWs = workbook.addWorksheet('Monthly Trends', { views: [{ state: 'frozen', ySplit: 1 }] });
+        trendsWs.columns = [
+          { header: 'Month',          key: 'month', width: 14 },
+          { header: 'Total Amount',   key: 'total', width: 16 },
+          { header: 'Payment Count',  key: 'count', width: 14 },
+          { header: 'Average Amount', key: 'avg',   width: 16 },
+        ];
+        applyHeader(trendsWs);
+
+        trends.forEach((row: any, rowIdx: number) => {
+          const r = trendsWs.addRow({ month: row.label, total: row.total, count: row.count, avg: row.total / row.count });
+          styleDataRow(r, rowIdx);
+          r.getCell(2).numFmt = GBP_FMT;
+          r.getCell(2).font   = { size: 10, name: 'Calibri', bold: true, color: { argb: 'FF15803D' } };
+          r.getCell(4).numFmt = GBP_FMT;
+        });
+
+        const trendTotal = trends.reduce((s: number, r: any) => s + r.total, 0);
+        const trendCount = trends.reduce((s: number, r: any) => s + r.count, 0);
+        const tTotRow = addTotalsRow(trendsWs, ['TOTAL', trendTotal, trendCount, trendTotal / trendCount]);
+        tTotRow.getCell(2).numFmt = GBP_FMT;
+        tTotRow.getCell(4).numFmt = GBP_FMT;
+      }
+
+      // ── Write file ───────────────────────────────────────────────────────
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob   = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url    = URL.createObjectURL(blob);
+      const a      = document.createElement('a');
+      const now    = new Date();
+      a.href       = url;
+      a.download   = `payment-performance-report-${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast({ title: "Export Successful", description: "Payment performance report exported to Excel." });
     } catch (error) {
       console.error('Error exporting to Excel:', error);
-      toast({
-        title: "Export Failed",
-        description: "Failed to export payment performance report.",
-        variant: "destructive",
-      });
+      toast({ title: "Export Failed", description: "Failed to export payment performance report.", variant: "destructive" });
     }
   };
 
