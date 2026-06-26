@@ -9,7 +9,6 @@ import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { useAuth } from "@/hooks/use-auth";
 import CaseDetail from "./CaseDetail";
-import { trackRecentlyViewed } from "@/lib/recentlyViewed";
 
 const SORT_STORAGE_KEY = "cases-sort-preference";
 
@@ -328,7 +327,7 @@ export default function Cases() {
                   <button
                     id={`case-${case_.id}`}
                     data-testid={`card-case-${case_.id}`}
-                    onClick={() => { setSelectedCase(case_); setDialogOpen(true); trackRecentlyViewed(case_.id); }}
+                    onClick={() => { setSelectedCase(case_); setDialogOpen(true); }}
                     className="group text-left bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 hover:border-acclaim-teal hover:shadow-md dark:hover:border-acclaim-teal transition-all duration-150 flex flex-col gap-3 w-full"
                   >
                     {/* Top row: icon + name + bells + chevron */}

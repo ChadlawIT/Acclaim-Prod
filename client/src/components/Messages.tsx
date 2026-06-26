@@ -12,7 +12,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Send, MessageSquare, Plus, User, Paperclip, Download, Trash2, Search, Filter, Calendar, X, FileSpreadsheet, History, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import { trackRecentlyViewed } from "@/lib/recentlyViewed";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
@@ -354,9 +353,9 @@ const handleReply = (message: any) => {
     const caseData = cases?.find((c: any) => c.id === caseId);
     if (caseData) {
       handleCloseMessageView();
+      // Set the selected case and open the case detail dialog
       setSelectedCase(caseData);
       setCaseDialogOpen(true);
-      trackRecentlyViewed(caseId);
     }
   };
 
