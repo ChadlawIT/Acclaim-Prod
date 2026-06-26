@@ -8889,40 +8889,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Event detail scraper — fetches a single CL event page and returns body paragraphs
   const eventDetailsCache = new Map<string, string[]>();
 
-  function parseEventBlocks(html: string): Array<{type: string; text?: string; items?: string[]}> {
-    const clean = (s: string) => s
-      .replace(/<[^>]+>/g, '')
-      .replace(/&amp;/g, '&').replace(/&#038;/g, '&')
-      .replace(/&#8217;/g, "'").replace(/&#8220;/g, '"').replace(/&#8221;/g, '"')
-      .replace(/&nbsp;/g, ' ').replace(/&rsquo;/g, "'").replace(/&copy;/g, '©')
-      .replace(/\s+/g, ' ').trim();
-
-    // Strip from "Get in touch" h4 onwards to avoid footer content
-    const afterHeader = html.split('</header>')[1] || html;
-    const mainContent = afterHeader.split(/<h4[^>]*>[^<]*Get in touch/i)[0] || afterHeader;
-
-    const blocks: Array<{type: string; text?: string; items?: string[]}> = [];
-    const skipText = /^(\*|©|Copyright|Website design|trading names)/;
-    const skipFooterItem = /^(0800|info@|Pricing|Legal About|Client Care|Real Estate|Privacy|Cookie|Terms|Sitemap)/;
-
-    for (const m of mainContent.matchAll(/<(h[23]|p|ul|ol)[^>]*>([\s\S]*?)<\/\1>/g)) {
-      const [, tag, inner] = m;
-      const text = clean(inner);
-
-      if (tag === 'h2' || tag === 'h3') {
-        if (text && text.length < 120) blocks.push({ type: 'heading', text });
-      } else if (tag === 'p') {
-        if (text.length > 5 && !skipText.test(text)) blocks.push({ type: 'paragraph', text });
-      } else if (tag === 'ul' || tag === 'ol') {
-        const items = [...inner.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/g)]
-          .map(li => clean(li[1]))
-          .filter(t => t.length > 5 && !skipFooterItem.test(t));
-        if (items.length > 0) blocks.push({ type: 'list', items });
-      }
-    }
-    return blocks;
-  }
-
   app.get('/api/cl-event', isAuthenticated, async (req, res) => {
     const url = req.query.url as string;
     if (!url || !url.startsWith('https://www.chadwicklawrence.co.uk/')) {
@@ -8935,9 +8901,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       if (!r.ok) return res.json([]);
       const html = await r.text();
-      const blocks = parseEventBlocks(html);
-      eventDetailsCache.set(url, blocks as any);
-      res.json(blocks);
+      const bodyPart = html.split('</header>')[1] || html;
+      const footerPart = bodyPart.split('<footer')[0] || bodyPart;
+      const paragraphs = [...footerPart.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/g)]
+        .map(m => m[1]
+          .replace(/<[^>]+>/g, '')
+          .replace(/&amp;/g, '&').replace(/&#038;/g, '&')
+          .replace(/&#8217;/g, "'").replace(/&#8220;/g, '"').replace(/&#8221;/g, '"')
+          .replace(/&nbsp;/g, ' ').replace(/&rsquo;/g, "'").replace(/&copy;/g, '©')
+          .replace(/\s+/g, ' ').trim()
+        )
+        .filter(t => t.length > 30 && t.length < 1000 && !t.includes('Copyright') && !t.includes('Website design'));
+      eventDetailsCache.set(url, paragraphs);
+      res.json(paragraphs);
     } catch {
       res.json([]);
     }
