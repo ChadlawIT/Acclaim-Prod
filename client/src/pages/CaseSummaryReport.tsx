@@ -101,7 +101,12 @@ export default function CaseSummaryReport() {
     } else if (statusFilter === "closed") {
       result = result.filter((caseItem: any) => caseItem.status === "Closed");
     }
-    
+
+    // Sort by account number — alphabetically then numerically (lowest first)
+    result = [...result].sort((a: any, b: any) =>
+      (a.accountNumber || '').localeCompare(b.accountNumber || '', undefined, { numeric: true, sensitivity: 'base' })
+    );
+
     return result;
   }, [cases, statusFilter, orgFilter]);
 
