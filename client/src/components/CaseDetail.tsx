@@ -1329,62 +1329,62 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
         </DialogContent>
       </Dialog>
       {/* Case Header */}
-      <Card className="overflow-hidden">
-        <CardHeader className="pb-4">
+      <Card>
+        <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <CardTitle className="text-xl">{caseData.caseName}</CardTitle>
             {getStageBadge(caseData.status, caseData.stage)}
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
-            <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Account Number</p>
-              <p className="font-semibold text-gray-900 font-mono text-sm">{caseData.accountNumber}</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+            <div>
+              <p className="text-sm text-gray-600">Account Number</p>
+              <p className="font-medium">{caseData.accountNumber}</p>
             </div>
-            <div className="bg-red-50 rounded-xl p-3 border border-red-100">
-              <p className="text-xs font-medium text-red-400 uppercase tracking-wide mb-1">Outstanding Amount</p>
-              <p className="font-bold text-red-700 text-base">{formatCurrency(getOutstandingAmount())}</p>
-              <p className="text-xs text-red-400 mt-0.5">*May include interest and recovery costs</p>
+            <div>
+              <p className="text-sm text-gray-600">Outstanding Amount</p>
+              <p className="font-medium">{formatCurrency(getOutstandingAmount())}</p>
+              <p className="text-xs text-gray-500 mt-1">*May include interest and recovery costs</p>
             </div>
-            <div className="bg-green-50 rounded-xl p-3 border border-green-100">
-              <p className="text-xs font-medium text-green-500 uppercase tracking-wide mb-1">Total Payments</p>
+            <div>
+              <p className="text-sm text-gray-600">Total Payments</p>
               <button 
                 onClick={handlePaymentsClick}
-                className="font-bold text-green-700 text-base hover:text-green-900 hover:underline cursor-pointer text-left"
+                className="font-medium text-green-600 hover:text-green-800 hover:underline cursor-pointer text-left"
               >
                 {formatCurrency(getTotalPayments())}
               </button>
-              <p className="text-xs text-green-500 mt-0.5">Click to view details</p>
+              <p className="text-xs text-gray-500 mt-1">Click to view details</p>
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
-            <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Original Amount</p>
-              <p className="font-semibold text-gray-800">{formatCurrency(caseData.originalAmount)}</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+            <div>
+              <p className="text-sm text-gray-600">Original Amount</p>
+              <p className="font-medium">{formatCurrency(caseData.originalAmount)}</p>
             </div>
-            <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Case Handler</p>
-              <p className="font-semibold text-gray-800">{caseData.assignedTo || "Unassigned"}</p>
+            <div>
+              <p className="text-sm text-gray-600">Case Handler</p>
+              <p className="font-medium">{caseData.assignedTo || "Unassigned"}</p>
             </div>
-            <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Last Message</p>
+            <div>
+              <p className="text-sm text-gray-600">Last Message</p>
               {getLastMessage() ? (
                 <button 
                   onClick={handleMessagesClick}
-                  className="font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-left"
+                  className="font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-left"
                 >
-                  <p className="truncate max-w-48 text-sm">
+                  <p className="truncate max-w-48">
                     {getLastMessage()?.content || "No content"}
                   </p>
                 </button>
               ) : (
-                <p className="font-medium text-gray-400 text-sm">No messages yet</p>
+                <p className="font-medium text-gray-400">No messages yet</p>
               )}
-              <p className="text-xs text-gray-400 mt-0.5">
+              <p className="text-xs text-gray-500 mt-1">
                 {getLastMessage() ? 
-                  `${formatDate(getLastMessage().createdAt)} · Click to view` : 
+                  `${formatDate(getLastMessage().createdAt)} - Click to view` : 
                   "Start a conversation"
                 }
               </p>
