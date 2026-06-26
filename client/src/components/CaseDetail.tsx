@@ -754,222 +754,237 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
         });
       }
       
+      // SVG clock icon — same as on-screen
+      const clockSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
+
       const htmlContent = `
         <!DOCTYPE html>
         <html>
         <head>
           <title>Case Timeline - ${caseData.accountNumber}</title>
           <style>
-            * {
-              box-sizing: border-box;
-            }
+            * { box-sizing: border-box; margin: 0; padding: 0; }
             body {
               font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-              margin: 0;
-              padding: 40px;
-              background: #f8f9fa;
+              background: #f4f6f8;
               color: #1f2937;
+              padding: 32px 16px;
             }
             .page {
-              max-width: 900px;
+              max-width: 780px;
               margin: 0 auto;
-              background: white;
-              padding: 50px;
-              box-shadow: 0 1px 3px rgba(0,0,0,0.08);
             }
+
+            /* ── Gradient header ── */
             .header {
-              border-bottom: 2px solid #0d9488;
-              padding-bottom: 20px;
-              margin-bottom: 30px;
+              background: linear-gradient(135deg, #064e3b 0%, #0d9488 60%, #0e9f8e 100%);
+              border-radius: 16px;
+              padding: 28px 32px;
+              color: white;
+              margin-bottom: 20px;
+              position: relative;
+              overflow: hidden;
             }
             .header-top {
               display: flex;
               justify-content: space-between;
               align-items: flex-start;
-              margin-bottom: 15px;
+              margin-bottom: 18px;
             }
-            .company-name {
-              font-size: 1.1em;
-              font-weight: 600;
-              color: #0d9488;
-            }
-            .report-date {
-              font-size: 0.85em;
-              color: #6b7280;
-            }
-            .case-title {
-              font-size: 1.5em;
-              font-weight: 600;
-              color: #1f2937;
-              margin: 0;
-            }
-            .case-ref {
-              font-size: 0.95em;
-              color: #6b7280;
-              margin-top: 5px;
-            }
-            .summary-row {
+            .brand { font-size: 0.8em; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; opacity: 0.7; }
+            .report-date { font-size: 0.78em; opacity: 0.55; }
+            .case-title { font-size: 1.25em; font-weight: 700; line-height: 1.3; }
+            .case-ref { font-size: 0.82em; opacity: 0.55; margin-top: 3px; font-family: monospace; }
+
+            /* stat pills */
+            .stats {
               display: flex;
-              gap: 40px;
-              padding: 20px 0;
-              border-bottom: 1px solid #e5e7eb;
-              margin-bottom: 30px;
+              flex-wrap: wrap;
+              gap: 10px;
+              margin-top: 18px;
             }
-            .summary-item {
-              flex: 1;
+            .stat-pill {
+              background: rgba(255,255,255,0.12);
+              border: 1px solid rgba(255,255,255,0.2);
+              border-radius: 10px;
+              padding: 8px 14px;
             }
-            .summary-label {
-              font-size: 0.75em;
-              text-transform: uppercase;
-              letter-spacing: 0.5px;
-              color: #6b7280;
-              margin-bottom: 4px;
-            }
-            .summary-value {
-              font-size: 1.1em;
-              font-weight: 600;
-              color: #1f2937;
-            }
-            .timeline-section {
-              margin-top: 30px;
+            .stat-label { font-size: 0.65em; text-transform: uppercase; letter-spacing: 1px; opacity: 0.55; margin-bottom: 2px; }
+            .stat-value { font-size: 0.9em; font-weight: 700; }
+
+            /* progress bar */
+            .progress-wrap { margin-top: 18px; }
+            .progress-meta { display: flex; justify-content: space-between; font-size: 0.72em; opacity: 0.55; margin-bottom: 6px; }
+            .progress-track { height: 6px; background: rgba(0,0,0,0.2); border-radius: 99px; overflow: hidden; }
+            .progress-fill  { height: 100%; background: rgba(255,255,255,0.85); border-radius: 99px; }
+
+            /* ── Timeline card ── */
+            .timeline-card {
+              background: white;
+              border: 1px solid #e5e7eb;
+              border-radius: 16px;
+              padding: 24px 28px;
+              box-shadow: 0 1px 4px rgba(0,0,0,0.05);
             }
             .timeline-heading {
-              font-size: 1em;
+              font-size: 0.72em;
               text-transform: uppercase;
-              letter-spacing: 1px;
-              color: #6b7280;
-              margin-bottom: 25px;
-              padding-bottom: 10px;
-              border-bottom: 1px solid #e5e7eb;
-            }
-            .timeline {
-              position: relative;
-              padding-left: 30px;
-            }
-            .timeline::before {
-              content: '';
-              position: absolute;
-              left: 6px;
-              top: 5px;
-              bottom: 5px;
-              width: 2px;
-              background: #d1d5db;
-            }
-            .timeline-item {
-              position: relative;
-              padding-bottom: 25px;
-            }
-            .timeline-item:last-child {
-              padding-bottom: 0;
-            }
-            .timeline-marker {
-              position: absolute;
-              left: -26px;
-              top: 5px;
-              width: 10px;
-              height: 10px;
-              background: #0d9488;
-              border-radius: 50%;
-              border: 2px solid white;
-              box-shadow: 0 0 0 2px #0d9488;
-            }
-            .timeline-date {
-              font-size: 0.8em;
-              color: #0d9488;
-              font-weight: 500;
-              margin-bottom: 4px;
-            }
-            .timeline-title {
-              font-size: 0.95em;
-              font-weight: 600;
-              color: #1f2937;
-              margin-bottom: 3px;
-            }
-            .timeline-desc {
-              font-size: 0.85em;
-              color: #6b7280;
-              line-height: 1.5;
-            }
-            .no-events {
-              text-align: center;
-              padding: 40px 20px;
-              color: #6b7280;
-              font-style: italic;
-            }
-            .footer {
-              margin-top: 40px;
-              padding-top: 20px;
-              border-top: 1px solid #e5e7eb;
-              font-size: 0.8em;
+              letter-spacing: 1.5px;
               color: #9ca3af;
-              text-align: center;
+              font-weight: 600;
+              margin-bottom: 24px;
             }
+
+            /* ── Timeline rows ── */
+            .timeline { position: relative; }
+            .tl-row {
+              display: flex;
+              gap: 16px;
+              position: relative;
+            }
+            .tl-left {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              flex-shrink: 0;
+              width: 36px;
+            }
+            /* Alternating circles */
+            .tl-circle {
+              width: 36px;
+              height: 36px;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              flex-shrink: 0;
+              position: relative;
+              z-index: 1;
+            }
+            .tl-circle.even {
+              background: #0d9488;
+              box-shadow: 0 0 0 3px #ccfbf1;
+              color: white;
+            }
+            .tl-circle.odd {
+              background: #ccfbf1;
+              box-shadow: 0 0 0 3px #e4faf5;
+              color: #0d9488;
+            }
+            .tl-line {
+              width: 2px;
+              flex: 1;
+              background: #e5e7eb;
+              margin: 4px 0;
+              min-height: 24px;
+            }
+            /* event card */
+            .tl-content {
+              flex: 1;
+              padding-bottom: 20px;
+            }
+            .tl-card {
+              background: white;
+              border: 1px solid #f3f4f6;
+              border-radius: 12px;
+              padding: 12px 16px;
+              box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            }
+            .tl-title { font-size: 0.9em; font-weight: 600; color: #111827; line-height: 1.4; }
+            .tl-meta  { font-size: 0.75em; color: #9ca3af; margin-top: 5px; }
+
+            .no-events { text-align: center; padding: 40px; color: #9ca3af; font-style: italic; font-size: 0.9em; }
+
+            .footer {
+              text-align: center;
+              font-size: 0.75em;
+              color: #d1d5db;
+              margin-top: 24px;
+              padding-top: 16px;
+            }
+
             @media print {
-              body {
-                background: white;
-                padding: 0;
-              }
-              .page {
-                box-shadow: none;
-                padding: 30px;
-              }
+              body { background: white; padding: 0; }
+              .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              .tl-circle { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             }
           </style>
         </head>
         <body>
           <div class="page">
+
+            <!-- Gradient header -->
             <div class="header">
               <div class="header-top">
-                <div class="company-name">Acclaim</div>
+                <div class="brand">Acclaim</div>
                 <div class="report-date">Generated: ${currentDate}</div>
               </div>
-              <h1 class="case-title">${caseData.caseName}</h1>
-              <div class="case-ref">Account: ${caseData.accountNumber}</div>
-            </div>
-            
-            <div class="summary-row">
-              <div class="summary-item">
-                <div class="summary-label">Status</div>
-                <div class="summary-value">${caseData.status || 'Active'}</div>
+              <div class="case-title">${caseData.caseName}</div>
+              <div class="case-ref">${caseData.accountNumber}</div>
+
+              <div class="stats">
+                <div class="stat-pill">
+                  <div class="stat-label">Outstanding</div>
+                  <div class="stat-value">${formatCurrency(outstandingAmount)}</div>
+                </div>
+                <div class="stat-pill">
+                  <div class="stat-label">Total Paid</div>
+                  <div class="stat-value">${formatCurrency(totalPayments)}</div>
+                </div>
+                <div class="stat-pill">
+                  <div class="stat-label">Stage</div>
+                  <div class="stat-value">${caseData.stage || '—'}</div>
+                </div>
+                <div class="stat-pill">
+                  <div class="stat-label">Events</div>
+                  <div class="stat-value">${timelineEvents.length}</div>
+                </div>
               </div>
-              <div class="summary-item">
-                <div class="summary-label">Outstanding</div>
-                <div class="summary-value">${formatCurrency(outstandingAmount)}</div>
-              </div>
-              <div class="summary-item">
-                <div class="summary-label">Payments</div>
-                <div class="summary-value">${formatCurrency(totalPayments)}</div>
-              </div>
-              <div class="summary-item">
-                <div class="summary-label">Events</div>
-                <div class="summary-value">${timelineEvents.length}</div>
-              </div>
+
+              ${(() => {
+                const total = parseFloat(caseData.totalDebtAmount || caseData.outstandingAmount || '0');
+                const paid  = totalPayments;
+                const pct   = total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0;
+                return `
+                  <div class="progress-wrap">
+                    <div class="progress-meta"><span>Repayment progress</span><span>${pct}% paid</span></div>
+                    <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+                  </div>`;
+              })()}
             </div>
 
-            <div class="timeline-section">
+            <!-- Timeline -->
+            <div class="timeline-card">
               <div class="timeline-heading">Case Timeline</div>
-              
+
               ${timelineEvents.length > 0 ? `
                 <div class="timeline">
-                  ${timelineEvents.map(event => `
-                    <div class="timeline-item">
-                      <div class="timeline-marker"></div>
-                      <div class="timeline-date">${formatDateOnly(event.date)}</div>
-                      <div class="timeline-title">${event.title}</div>
-                      ${event.description ? `<div class="timeline-desc">${event.description}</div>` : ''}
-                    </div>
-                  `).join('')}
+                  ${timelineEvents.map((event, idx) => {
+                    const isLast  = idx === timelineEvents.length - 1;
+                    const shade   = idx % 2 === 0 ? 'even' : 'odd';
+                    const iconCol = idx % 2 === 0 ? 'white' : '#0d9488';
+                    return `
+                      <div class="tl-row">
+                        <div class="tl-left">
+                          <div class="tl-circle ${shade}" style="color:${iconCol}">
+                            ${clockSvg}
+                          </div>
+                          ${isLast ? '' : '<div class="tl-line"></div>'}
+                        </div>
+                        <div class="tl-content" style="${isLast ? 'padding-bottom:0' : ''}">
+                          <div class="tl-card">
+                            <div class="tl-title">${event.title}</div>
+                            <div class="tl-meta">${formatDateOnly(event.date)}${event.description ? ' · ' + event.description : ''}</div>
+                          </div>
+                        </div>
+                      </div>
+                    `;
+                  }).join('')}
                 </div>
-              ` : `
-                <div class="no-events">
-                  No timeline events have been recorded for this case.
-                </div>
-              `}
+              ` : `<div class="no-events">No timeline events have been recorded for this case.</div>`}
             </div>
-            
-            <div class="footer">
-              Acclaim Credit Management & Recovery
-            </div>
+
+            <div class="footer">Acclaim Credit Management &amp; Recovery</div>
           </div>
         </body>
         </html>
