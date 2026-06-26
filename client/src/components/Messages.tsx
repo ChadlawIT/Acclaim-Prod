@@ -34,6 +34,13 @@ export default function Messages() {
   const [selectedCase, setSelectedCase] = useState<any>(null);
   const [caseDialogOpen, setCaseDialogOpen] = useState(false);
 
+  // Inline reply state (inside the message view dialog)
+  const [showViewReply, setShowViewReply] = useState(false);
+  const [viewReplyText, setViewReplyText] = useState("");
+  const [viewReplyFile, setViewReplyFile] = useState<File | null>(null);
+  const [viewReplyFileError, setViewReplyFileError] = useState<string | null>(null);
+  const [viewReplyIsDragOver, setViewReplyIsDragOver] = useState(false);
+
   // Audit dialog state (admin only)
   const [auditDialogOpen, setAuditDialogOpen] = useState(false);
   const [auditMessageId, setAuditMessageId] = useState<number | null>(null);
@@ -107,8 +114,9 @@ export default function Messages() {
         formData.append("caseId", messageData.caseId);
       }
 
-      if (selectedFile) {
-        formData.append("attachment", selectedFile);
+      const attachFile = messageData.attachmentFile || selectedFile;
+      if (attachFile) {
+        formData.append("attachment", attachFile);
         if (customFileName.trim()) {
           formData.append("customFileName", customFileName.trim());
         }
@@ -297,6 +305,31 @@ const handleReply = (message: any) => {
   const handleCloseMessageView = () => {
     setMessageViewOpen(false);
     setViewingMessage(null);
+    setShowViewReply(false);
+    setViewReplyText("");
+    setViewReplyFile(null);
+    setViewReplyFileError(null);
+  };
+
+  const handleViewDialogReply = () => {
+    if (!viewReplyText.trim() || !viewingMessage) return;
+    const fromName = viewingMessage.senderName || viewingMessage.senderEmail || 'Unknown';
+    const content = `${viewReplyText}\n\n--- Original Message ---\nFrom: ${fromName}\nDate: ${formatDate(viewingMessage.createdAt)}\nSubject: ${viewingMessage.subject}\n\n${viewingMessage.content}`;
+    sendMessageMutation.mutate({
+      recipientType: "organisation",
+      recipientId: "support",
+      subject: `Re: ${viewingMessage.subject}`,
+      content,
+      caseId: viewingMessage.caseId ? viewingMessage.caseId.toString() : undefined,
+      attachmentFile: viewReplyFile,
+    }, {
+      onSuccess: () => {
+        setShowViewReply(false);
+        setViewReplyText("");
+        setViewReplyFile(null);
+        setViewReplyFileError(null);
+      }
+    });
   };
 
   const formatDate = (dateString: string) => {
@@ -802,88 +835,85 @@ const handleReply = (message: any) => {
 
       {/* Message View Dialog */}
       <Dialog open={messageViewOpen} onOpenChange={handleCloseMessageView}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold">
+        <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+          {/* Fixed header */}
+          <DialogHeader className="flex-shrink-0 pb-3 border-b">
+            <DialogTitle className="text-lg font-semibold pr-6">
               {viewingMessage?.subject}
             </DialogTitle>
           </DialogHeader>
+
           {viewingMessage && (
-            <div className="space-y-4">
-              <div className="border-b pb-3">
-                {/* Mobile: Stack vertically, Desktop: Side by side */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0 ${viewingMessage.senderIsAdmin ? 'bg-white border-2 border-acclaim-teal' : 'bg-white border-2 border-blue-300'}`}>
-                      {viewingMessage.senderIsAdmin ? (
-                        <img src={acclaimRoseLogo} alt="Acclaim" className="w-8 h-8 object-contain" />
-                      ) : (
-                        <User className="h-5 w-5 text-acclaim-teal" />
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center space-x-2 flex-wrap">
-                        <p className="font-medium text-gray-900 dark:text-gray-100 truncate">
-                          {viewingMessage.senderName || viewingMessage.senderEmail || 'Unknown'}
-                        </p>
-                        <Badge variant="secondary" className="text-xs bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300">
-                          {viewingMessage.senderIsAdmin ? "Acclaim" : (viewingMessage.senderOrganisationName || "User")}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-gray-500">
-                        {formatDate(viewingMessage.createdAt)}
-                      </p>
-                    </div>
-                  </div>
-                  {/* Action buttons - responsive layout */}
-                  <div className="flex items-center space-x-2 sm:flex-shrink-0">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        handleCloseMessageView();
-                        handleReply(viewingMessage);
-                      }}
-                      className="text-acclaim-teal border-acclaim-teal hover:bg-acclaim-teal hover:text-white"
-                    >
-                      <MessageSquare className="h-4 w-4 sm:mr-2" />
-                      <span className="hidden sm:inline">Reply</span>
-                    </Button>
-                    {user?.isAdmin && (
-                      <>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleOpenAuditDialog(viewingMessage.id)}
-                          className="text-purple-600 border-purple-600 hover:bg-purple-600 hover:text-white"
-                          title="View read receipts"
-                        >
-                          <Eye className="h-4 w-4 sm:mr-2" />
-                          <span className="hidden sm:inline">Views</span>
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            if (confirm("Are you sure you want to delete this message?")) {
-                              deleteMessageMutation.mutate(viewingMessage.id);
-                              handleCloseMessageView();
-                            }
-                          }}
-                          className="text-red-600 border-red-600 hover:bg-red-600 hover:text-white"
-                          disabled={deleteMessageMutation.isPending}
-                          title="Delete message"
-                        >
-                          <Trash2 className="h-4 w-4 sm:mr-2" />
-                          <span className="hidden sm:inline">{deleteMessageMutation.isPending ? "Deleting..." : "Delete"}</span>
-                        </Button>
-                      </>
+            <div className="flex-1 overflow-y-auto py-4 space-y-4">
+              {/* Sender row + action buttons */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex items-center space-x-3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0 ${viewingMessage.senderIsAdmin ? 'bg-white border-2 border-acclaim-teal' : 'bg-white border-2 border-blue-300'}`}>
+                    {viewingMessage.senderIsAdmin ? (
+                      <img src={acclaimRoseLogo} alt="Acclaim" className="w-8 h-8 object-contain" />
+                    ) : (
+                      <User className="h-5 w-5 text-acclaim-teal" />
                     )}
                   </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center space-x-2 flex-wrap">
+                      <p className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                        {viewingMessage.senderName || viewingMessage.senderEmail || 'Unknown'}
+                      </p>
+                      <Badge variant="secondary" className="text-xs bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300">
+                        {viewingMessage.senderIsAdmin ? "Acclaim" : (viewingMessage.senderOrganisationName || "User")}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-gray-500">{formatDate(viewingMessage.createdAt)}</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2 sm:flex-shrink-0">
+                  <Button
+                    variant={showViewReply ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setShowViewReply(v => !v)}
+                    className={showViewReply
+                      ? "bg-acclaim-teal text-white hover:bg-acclaim-teal/90"
+                      : "text-acclaim-teal border-acclaim-teal hover:bg-acclaim-teal hover:text-white"}
+                    data-testid="button-view-reply-toggle"
+                  >
+                    <MessageSquare className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">{showViewReply ? "Cancel" : "Reply"}</span>
+                  </Button>
+                  {user?.isAdmin && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleOpenAuditDialog(viewingMessage.id)}
+                        className="text-purple-600 border-purple-600 hover:bg-purple-600 hover:text-white"
+                        title="View read receipts"
+                      >
+                        <Eye className="h-4 w-4 sm:mr-2" />
+                        <span className="hidden sm:inline">Views</span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (confirm("Are you sure you want to delete this message?")) {
+                            deleteMessageMutation.mutate(viewingMessage.id);
+                            handleCloseMessageView();
+                          }
+                        }}
+                        className="text-red-600 border-red-600 hover:bg-red-600 hover:text-white"
+                        disabled={deleteMessageMutation.isPending}
+                        title="Delete message"
+                      >
+                        <Trash2 className="h-4 w-4 sm:mr-2" />
+                        <span className="hidden sm:inline">{deleteMessageMutation.isPending ? "Deleting..." : "Delete"}</span>
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
 
-              {/* Case info - shown prominently after sender */}
+              {/* Case link */}
               {viewingMessage.caseId && (
                 <div className="bg-acclaim-teal/5 border border-acclaim-teal/20 p-3 rounded-lg">
                   <p className="text-sm">
@@ -897,43 +927,120 @@ const handleReply = (message: any) => {
                     {(() => {
                       const caseData = cases?.find((c: any) => c.id === viewingMessage.caseId);
                       return caseData?.caseName ? (
-                        <span className="text-gray-600 dark:text-gray-400 ml-1">
-                          — {caseData.caseName}
-                        </span>
+                        <span className="text-gray-600 dark:text-gray-400 ml-1">— {caseData.caseName}</span>
                       ) : null;
                     })()}
                   </p>
                 </div>
               )}
 
-              <div className="prose max-w-none">
-                <div className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">
+              {/* Message body */}
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                <div className="whitespace-pre-wrap text-gray-700 dark:text-gray-300 text-sm">
                   {viewingMessage.content}
                 </div>
               </div>
+
+              {/* Existing attachment */}
               {viewingMessage.attachmentFileName && (
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Paperclip className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm font-medium text-gray-700">
-                        {viewingMessage.attachmentFileName}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        ({(viewingMessage.attachmentFileSize / 1024 / 1024).toFixed(2)} MB)
-                      </span>
+                <div className="flex items-center justify-between px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl">
+                  <div className="flex items-center gap-3 min-w-0">
+                    {(() => {
+                      const ext = (viewingMessage.attachmentFileName.split('.').pop() || '').toUpperCase();
+                      const extColor = ext === 'PDF' ? 'bg-red-50 text-red-500 border-red-100' : ['DOC','DOCX'].includes(ext) ? 'bg-blue-50 text-blue-500 border-blue-100' : ['XLS','XLSX'].includes(ext) ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : ['PNG','JPG','JPEG','GIF','WEBP'].includes(ext) ? 'bg-green-50 text-green-600 border-green-100' : 'bg-gray-50 text-gray-500 border-gray-100';
+                      return <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 border ${extColor}`}>{ext.slice(0,4) || '?'}</div>;
+                    })()}
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{viewingMessage.attachmentFileName}</p>
+                      <p className="text-xs text-gray-400">{(viewingMessage.attachmentFileSize / 1024 / 1024).toFixed(2)} MB</p>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        window.open(`/api/messages/${viewingMessage.id}/download`, '_blank');
-                      }}
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      Download
-                    </Button>
                   </div>
+                  <Button size="sm" variant="outline" onClick={() => window.open(`/api/messages/${viewingMessage.id}/download`, '_blank')}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Download
+                  </Button>
+                </div>
+              )}
+
+              {/* Inline reply panel */}
+              {showViewReply && (
+                <div className="pt-4 border-t space-y-3">
+                  <Label className="text-sm font-semibold">Reply</Label>
+                  <Textarea
+                    placeholder="Type your reply..."
+                    value={viewReplyText}
+                    onChange={(e) => setViewReplyText(e.target.value)}
+                    rows={4}
+                    data-testid="textarea-view-reply"
+                  />
+
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                      Attachment <span className="font-normal text-gray-400">(optional)</span>
+                    </Label>
+                    <input
+                      id="view-reply-attachment"
+                      type="file"
+                      className="sr-only"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        if (file) {
+                          const v = validateFile(file);
+                          if (!v.isValid) { setViewReplyFileError(v.error!); return; }
+                        }
+                        setViewReplyFileError(null);
+                        setViewReplyFile(file);
+                        e.target.value = '';
+                      }}
+                    />
+                    {!viewReplyFile ? (
+                      <label
+                        htmlFor="view-reply-attachment"
+                        onDragOver={(e) => { e.preventDefault(); setViewReplyIsDragOver(true); }}
+                        onDragLeave={() => setViewReplyIsDragOver(false)}
+                        onDrop={(e) => {
+                          e.preventDefault(); setViewReplyIsDragOver(false);
+                          const file = e.dataTransfer.files?.[0];
+                          if (file) { const v = validateFile(file); if (!v.isValid) { setViewReplyFileError(v.error!); } else { setViewReplyFileError(null); setViewReplyFile(file); } }
+                        }}
+                        className={`flex items-center gap-3 px-4 py-3 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
+                          viewReplyIsDragOver ? "border-teal-400 bg-teal-50 dark:bg-teal-900/20" : "border-gray-200 bg-gray-50 dark:bg-gray-800/50 hover:border-teal-300 hover:bg-teal-50/50"
+                        }`}
+                      >
+                        <Paperclip className={`h-4 w-4 shrink-0 ${viewReplyIsDragOver ? "text-teal-600" : "text-gray-400"}`} />
+                        <span className={`text-sm ${viewReplyIsDragOver ? "text-teal-700 dark:text-teal-300" : "text-gray-500"}`}>
+                          {viewReplyIsDragOver ? "Drop file here" : "Click to browse or drag a file here"}
+                        </span>
+                        <span className="ml-auto text-xs text-gray-400 shrink-0">{ACCEPTED_FILE_TYPES_DISPLAY} · {MAX_FILE_SIZE_MB}MB</span>
+                      </label>
+                    ) : (
+                      <div className="flex items-center gap-3 px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl">
+                        {(() => {
+                          const ext = (viewReplyFile.name.split('.').pop() || '').toUpperCase();
+                          const extColor = ext === 'PDF' ? 'bg-red-50 text-red-500 border-red-100' : ['DOC','DOCX'].includes(ext) ? 'bg-blue-50 text-blue-500 border-blue-100' : ['XLS','XLSX'].includes(ext) ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : ['PNG','JPG','JPEG','GIF','WEBP'].includes(ext) ? 'bg-green-50 text-green-600 border-green-100' : 'bg-gray-50 text-gray-500 border-gray-100';
+                          return <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 border ${extColor}`}>{ext.slice(0,4)}</div>;
+                        })()}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{viewReplyFile.name}</p>
+                          <p className="text-xs text-gray-400">{(viewReplyFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                        </div>
+                        <button onClick={() => { setViewReplyFile(null); setViewReplyFileError(null); }} className="text-gray-300 hover:text-red-400 transition-colors shrink-0 p-1">
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+                    {viewReplyFileError && <p className="text-xs text-red-600">{viewReplyFileError}</p>}
+                  </div>
+
+                  <Button
+                    onClick={handleViewDialogReply}
+                    disabled={!viewReplyText.trim() || sendMessageMutation.isPending}
+                    className="bg-acclaim-teal hover:bg-acclaim-teal/90 w-full"
+                    data-testid="button-view-send-reply"
+                  >
+                    <Send className="h-4 w-4 mr-2" />
+                    {sendMessageMutation.isPending ? "Sending..." : "Send Reply"}
+                  </Button>
                 </div>
               )}
             </div>

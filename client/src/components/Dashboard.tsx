@@ -642,7 +642,7 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
           setReplyFileValidationError(null);
         }
       }}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle>Message Details</DialogTitle>
           </DialogHeader>

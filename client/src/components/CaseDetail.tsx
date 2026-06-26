@@ -24,7 +24,8 @@ import {
   Search,
   Bell,
   Building2,
-  X
+  X,
+  Paperclip
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -60,6 +61,9 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
   const [selectedMessageForView, setSelectedMessageForView] = useState<any | null>(null);
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
   const [dialogReplyMessage, setDialogReplyMessage] = useState("");
+  const [dialogReplyFile, setDialogReplyFile] = useState<File | null>(null);
+  const [dialogReplyFileError, setDialogReplyFileError] = useState<string | null>(null);
+  const [dialogReplyIsDragOver, setDialogReplyIsDragOver] = useState(false);
   const [orgDialogOpen, setOrgDialogOpen] = useState(false);
   const [selectedOrgId, setSelectedOrgId] = useState<string>("");
   const { toast } = useToast();
@@ -335,14 +339,15 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
 
   const sendMessageMutation = useMutation({
     mutationFn: async (messageData: any) => {
-      if (messageAttachment) {
+      const attachFile = messageData.attachmentFile || messageAttachment;
+      if (attachFile) {
         const formData = new FormData();
         formData.append("caseId", messageData.caseId);
         formData.append("recipientType", messageData.recipientType);
         formData.append("recipientId", messageData.recipientId);
         formData.append("subject", messageData.subject);
         formData.append("content", messageData.content);
-        formData.append("attachment", messageAttachment);
+        formData.append("attachment", attachFile);
         
         const response = await fetch("/api/messages", {
           method: "POST",
@@ -555,9 +560,12 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
       recipientId: "support",
       subject: `Re: ${selectedMessageForView.subject || 'Message'}`,
       content: replyContent,
+      attachmentFile: dialogReplyFile,
     }, {
       onSuccess: () => {
         setDialogReplyMessage("");
+        setDialogReplyFile(null);
+        setDialogReplyFileError(null);
         setMessageDialogOpen(false);
       }
     });
@@ -2071,9 +2079,16 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
       </Tabs>
 
       {/* Message View Dialog */}
-      <Dialog open={messageDialogOpen} onOpenChange={setMessageDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
+      <Dialog open={messageDialogOpen} onOpenChange={(open) => {
+        setMessageDialogOpen(open);
+        if (!open) {
+          setDialogReplyMessage("");
+          setDialogReplyFile(null);
+          setDialogReplyFileError(null);
+        }
+      }}>
+        <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+          <DialogHeader className="flex-shrink-0 pb-3 border-b">
             <DialogTitle className="text-lg font-semibold">
               {selectedMessageForView?.subject || "Message"}
             </DialogTitle>
@@ -2081,51 +2096,120 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
               From: {selectedMessageForView?.senderName || "Unknown"} • {selectedMessageForView ? formatDate(selectedMessageForView.createdAt) : ""}
             </DialogDescription>
           </DialogHeader>
-          <div className="mt-4">
-            <p className="text-sm text-gray-700 whitespace-pre-wrap">
-              {selectedMessageForView?.content}
-            </p>
+
+          <div className="flex-1 overflow-y-auto py-4 space-y-4">
+            {/* Message body */}
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+              <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                {selectedMessageForView?.content}
+              </p>
+            </div>
+
+            {/* Attachment */}
             {selectedMessageForView?.attachmentFileName && (
-              <div className="mt-4 p-3 bg-gray-50 rounded-md">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <FileText className="h-4 w-4 text-acclaim-teal" />
-                    <span className="text-sm font-medium">{selectedMessageForView.attachmentFileName}</span>
-                    <span className="text-xs text-gray-500">
-                      ({selectedMessageForView.attachmentFileSize ? Math.round(selectedMessageForView.attachmentFileSize / 1024) : 0}KB)
-                    </span>
+              <div className="flex items-center justify-between px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl">
+                <div className="flex items-center gap-3 min-w-0">
+                  {(() => {
+                    const ext = (selectedMessageForView.attachmentFileName.split('.').pop() || '').toUpperCase();
+                    const extColor = ext === 'PDF' ? 'bg-red-50 text-red-500 border-red-100' : ['DOC','DOCX'].includes(ext) ? 'bg-blue-50 text-blue-500 border-blue-100' : ['XLS','XLSX'].includes(ext) ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : ['PNG','JPG','JPEG','GIF','WEBP'].includes(ext) ? 'bg-green-50 text-green-600 border-green-100' : 'bg-gray-50 text-gray-500 border-gray-100';
+                    return <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 border ${extColor}`}>{ext.slice(0,4) || '?'}</div>;
+                  })()}
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{selectedMessageForView.attachmentFileName}</p>
+                    <p className="text-xs text-gray-400">{selectedMessageForView.attachmentFileSize ? Math.round(selectedMessageForView.attachmentFileSize / 1024) : 0} KB</p>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => window.open(`/api/messages/${selectedMessageForView?.id}/download`, '_blank')}
-                    className="text-acclaim-teal hover:text-acclaim-teal"
-                  >
-                    <Download className="h-4 w-4" />
-                  </Button>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => window.open(`/api/messages/${selectedMessageForView?.id}/download`, '_blank')}
+                  className="text-acclaim-teal hover:text-acclaim-teal/80 shrink-0"
+                >
+                  <Download className="h-4 w-4 mr-1" />
+                  Download
+                </Button>
               </div>
             )}
-          </div>
-          
-          {/* Reply Section */}
-          <div className="mt-4 pt-4 border-t">
-            <Label className="text-sm font-medium">Reply</Label>
-            <Textarea
-              placeholder="Type your reply..."
-              value={dialogReplyMessage}
-              onChange={(e) => setDialogReplyMessage(e.target.value)}
-              className="mt-2"
-              rows={3}
-            />
-            <Button
-              onClick={handleDialogReply}
-              disabled={!dialogReplyMessage.trim() || sendMessageMutation.isPending}
-              className="mt-3 bg-acclaim-teal hover:bg-acclaim-teal/90 w-full"
-            >
-              <Send className="h-4 w-4 mr-2" />
-              {sendMessageMutation.isPending ? "Sending..." : "Send Reply"}
-            </Button>
+
+            {/* Reply Section */}
+            <div className="pt-4 border-t space-y-3">
+              <Label className="text-sm font-semibold">Reply</Label>
+              <Textarea
+                placeholder="Type your reply..."
+                value={dialogReplyMessage}
+                onChange={(e) => setDialogReplyMessage(e.target.value)}
+                rows={4}
+              />
+
+              {/* Attachment */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                  Attachment <span className="font-normal text-gray-400">(optional)</span>
+                </Label>
+                <input
+                  id="dialog-reply-attachment"
+                  type="file"
+                  className="sr-only"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null;
+                    if (file) {
+                      const v = validateFile(file);
+                      if (!v.isValid) { setDialogReplyFileError(v.error!); return; }
+                    }
+                    setDialogReplyFileError(null);
+                    setDialogReplyFile(file);
+                    e.target.value = '';
+                  }}
+                />
+                {!dialogReplyFile ? (
+                  <label
+                    htmlFor="dialog-reply-attachment"
+                    onDragOver={(e) => { e.preventDefault(); setDialogReplyIsDragOver(true); }}
+                    onDragLeave={() => setDialogReplyIsDragOver(false)}
+                    onDrop={(e) => {
+                      e.preventDefault(); setDialogReplyIsDragOver(false);
+                      const file = e.dataTransfer.files?.[0];
+                      if (file) { const v = validateFile(file); if (!v.isValid) { setDialogReplyFileError(v.error!); } else { setDialogReplyFileError(null); setDialogReplyFile(file); } }
+                    }}
+                    className={`flex items-center gap-3 px-4 py-3 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
+                      dialogReplyIsDragOver ? "border-teal-400 bg-teal-50 dark:bg-teal-900/20" : "border-gray-200 bg-gray-50 dark:bg-gray-800/50 hover:border-teal-300 hover:bg-teal-50/50"
+                    }`}
+                  >
+                    <Paperclip className={`h-4 w-4 shrink-0 ${dialogReplyIsDragOver ? "text-teal-600" : "text-gray-400"}`} />
+                    <span className={`text-sm ${dialogReplyIsDragOver ? "text-teal-700 dark:text-teal-300" : "text-gray-500"}`}>
+                      {dialogReplyIsDragOver ? "Drop file here" : "Click to browse or drag a file here"}
+                    </span>
+                    <span className="ml-auto text-xs text-gray-400 shrink-0">{ACCEPTED_FILE_TYPES_DISPLAY} · {MAX_FILE_SIZE_MB}MB</span>
+                  </label>
+                ) : (
+                  <div className="flex items-center gap-3 px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl">
+                    {(() => {
+                      const ext = (dialogReplyFile.name.split('.').pop() || '').toUpperCase();
+                      const extColor = ext === 'PDF' ? 'bg-red-50 text-red-500 border-red-100' : ['DOC','DOCX'].includes(ext) ? 'bg-blue-50 text-blue-500 border-blue-100' : ['XLS','XLSX'].includes(ext) ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : ['PNG','JPG','JPEG','GIF','WEBP'].includes(ext) ? 'bg-green-50 text-green-600 border-green-100' : 'bg-gray-50 text-gray-500 border-gray-100';
+                      return <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 border ${extColor}`}>{ext.slice(0,4)}</div>;
+                    })()}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{dialogReplyFile.name}</p>
+                      <p className="text-xs text-gray-400">{(dialogReplyFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                    </div>
+                    <button onClick={() => { setDialogReplyFile(null); setDialogReplyFileError(null); }} className="text-gray-300 hover:text-red-400 transition-colors shrink-0 p-1">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+                {dialogReplyFileError && <p className="text-xs text-red-600">{dialogReplyFileError}</p>}
+              </div>
+
+              <Button
+                onClick={handleDialogReply}
+                disabled={!dialogReplyMessage.trim() || sendMessageMutation.isPending}
+                className="bg-acclaim-teal hover:bg-acclaim-teal/90 w-full"
+                data-testid="button-dialog-send-reply"
+              >
+                <Send className="h-4 w-4 mr-2" />
+                {sendMessageMutation.isPending ? "Sending..." : "Send Reply"}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
