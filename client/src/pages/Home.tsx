@@ -21,6 +21,17 @@ export default function Home() {
   const [location] = useLocation();
   const isMobile = useIsMobile();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try { return localStorage.getItem("sidebarCollapsed") === "true"; } catch { return false; }
+  });
+
+  const handleToggleCollapse = () => {
+    setSidebarCollapsed(prev => {
+      const next = !prev;
+      try { localStorage.setItem("sidebarCollapsed", String(next)); } catch {}
+      return next;
+    });
+  };
 
   // Close mobile menu when screen size or orientation changes
   useEffect(() => {
@@ -140,15 +151,25 @@ export default function Home() {
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-background">
       {/* Desktop Sidebar */}
-      <div className={`${isMobile ? 'hidden' : 'block'}`}>
-        <Sidebar activeSection={activeSection} setActiveSection={handleSectionChange} />
-      </div>
+      {!isMobile && (
+        <Sidebar
+          activeSection={activeSection}
+          setActiveSection={handleSectionChange}
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={handleToggleCollapse}
+        />
+      )}
       {/* Mobile Sidebar Overlay */}
       {isMobile && mobileMenuOpen && (
         <>
           <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={toggleMobileMenu} />
           <div className="fixed inset-y-0 left-0 z-50 w-64">
-            <Sidebar activeSection={activeSection} setActiveSection={handleSectionChange} />
+            <Sidebar
+              activeSection={activeSection}
+              setActiveSection={handleSectionChange}
+              collapsed={false}
+              onToggleCollapse={() => {}}
+            />
           </div>
         </>
       )}
