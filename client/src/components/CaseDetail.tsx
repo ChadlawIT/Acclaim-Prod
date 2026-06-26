@@ -1487,57 +1487,100 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
             </CardHeader>
             <CardContent>
               {activitiesLoading ? (
-                <div className="space-y-4">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="animate-pulse">
-                      <div className="h-16 bg-gray-200 rounded-lg"></div>
-                    </div>
-                  ))}
-                </div>
-              ) : activities && activities.length > 0 ? (
-                <div className="space-y-4">
-                  {activities.map((activity: any) => (
-                    <div key={activity.id} className="flex items-start space-x-3">
-                      <div className="w-4 h-4 bg-acclaim-teal rounded-full mt-1 flex-shrink-0"></div>
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900">{activity.description}</p>
-                            <div className="flex items-center space-x-2 mt-1">
-                              <Calendar className="h-3 w-3 text-gray-400" />
-                              <p className="text-xs text-gray-500">{formatDateOnly(activity.createdAt)}</p>
-                              {activity.performedBy && (
-                                <>
-                                  <span className="text-xs text-gray-400">•</span>
-                                  <p className="text-xs text-gray-500">by {activity.performedBy}</p>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                          {user?.isAdmin && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                if (confirm("Are you sure you want to delete this timeline entry? This action cannot be undone.")) {
-                                  deleteActivityMutation.mutate(activity.id);
-                                }
-                              }}
-                              className="text-red-600 hover:text-red-700 ml-2"
-                              disabled={deleteActivityMutation.isPending}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
+                <div className="space-y-6 py-2">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="flex gap-4 animate-pulse">
+                      <div className="flex flex-col items-center gap-1">
+                        <div className="w-9 h-9 rounded-full bg-gray-200 flex-shrink-0" />
+                        <div className="w-0.5 h-10 bg-gray-100" />
+                      </div>
+                      <div className="flex-1 pb-2">
+                        <div className="h-4 bg-gray-200 rounded w-2/3 mb-2" />
+                        <div className="h-3 bg-gray-100 rounded w-1/3" />
                       </div>
                     </div>
                   ))}
                 </div>
+              ) : activities && activities.length > 0 ? (
+                <div className="py-2">
+                  {activities.map((activity: any, idx: number) => {
+                    const desc = (activity.description || "").toLowerCase();
+                    // Pick icon + colour by keywords in description
+                    const isPayment  = desc.includes("payment") || desc.includes("paid") || desc.includes("£");
+                    const isDoc      = desc.includes("document") || desc.includes("upload") || desc.includes("file") || desc.includes("pdf");
+                    const isMsg      = desc.includes("message") || desc.includes("email") || desc.includes("sent") || desc.includes("contact");
+                    const isStage    = desc.includes("stage") || desc.includes("progress") || desc.includes("claim") || desc.includes("letter");
+                    const isOpen     = desc.includes("open") || desc.includes("creat") || desc.includes("assigned") || idx === activities.length - 1;
+                    const isClosed   = desc.includes("closed") || desc.includes("resolved") || desc.includes("settled") || desc.includes("complete");
+
+                    const { iconEl, ringCls, bgCls, textCls } = (() => {
+                      if (isClosed)  return { iconEl: <Check className="h-4 w-4" />,           ringCls: "ring-green-200",  bgCls: "bg-green-100",  textCls: "text-green-600" };
+                      if (isPayment) return { iconEl: <PoundSterling className="h-4 w-4" />,   ringCls: "ring-emerald-200",bgCls: "bg-emerald-50", textCls: "text-emerald-600" };
+                      if (isDoc)     return { iconEl: <FileText className="h-4 w-4" />,         ringCls: "ring-violet-200", bgCls: "bg-violet-50",  textCls: "text-violet-600" };
+                      if (isMsg)     return { iconEl: <Send className="h-4 w-4" />,             ringCls: "ring-blue-200",   bgCls: "bg-blue-50",    textCls: "text-blue-600" };
+                      if (isStage)   return { iconEl: <RefreshCw className="h-4 w-4" />,        ringCls: "ring-amber-200",  bgCls: "bg-amber-50",   textCls: "text-amber-600" };
+                      if (isOpen)    return { iconEl: <Check className="h-4 w-4" />,            ringCls: "ring-teal-200",   bgCls: "bg-teal-50",    textCls: "text-teal-600" };
+                      return         { iconEl: <Clock className="h-4 w-4" />,                   ringCls: "ring-gray-200",   bgCls: "bg-gray-50",    textCls: "text-gray-500" };
+                    })();
+
+                    const isLast = idx === activities.length - 1;
+
+                    return (
+                      <div key={activity.id} className="flex gap-4 group">
+                        {/* Left: icon + connector line */}
+                        <div className="flex flex-col items-center flex-shrink-0">
+                          <div className={`w-9 h-9 rounded-full flex items-center justify-center ring-2 ${ringCls} ${bgCls} ${textCls} z-10`}>
+                            {iconEl}
+                          </div>
+                          {!isLast && (
+                            <div className="w-px flex-1 bg-gray-200 my-1" style={{ minHeight: "2rem" }} />
+                          )}
+                        </div>
+
+                        {/* Right: content card */}
+                        <div className={`flex-1 ${isLast ? "pb-0" : "pb-5"}`}>
+                          <div className="bg-white border border-gray-100 rounded-xl px-4 py-3 shadow-sm hover:shadow-md hover:border-gray-200 transition-all">
+                            <div className="flex items-start justify-between gap-2">
+                              <p className="text-sm font-semibold text-gray-900 leading-snug flex-1">
+                                {activity.description}
+                              </p>
+                              {user?.isAdmin && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    if (confirm("Are you sure you want to delete this timeline entry? This action cannot be undone.")) {
+                                      deleteActivityMutation.mutate(activity.id);
+                                    }
+                                  }}
+                                  className="h-7 w-7 p-0 text-gray-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                                  disabled={deleteActivityMutation.isPending}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                              <span className="flex items-center gap-1 text-xs text-gray-400">
+                                <Calendar className="h-3 w-3" />
+                                {formatDateOnly(activity.createdAt)}
+                              </span>
+                              {activity.performedBy && (
+                                <span className="text-xs text-gray-400">
+                                  · {activity.performedBy}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               ) : (
-                <div className="text-center py-8">
-                  <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">No timeline activities found</p>
+                <div className="text-center py-12">
+                  <Clock className="h-10 w-10 text-gray-200 mx-auto mb-3" />
+                  <p className="text-sm text-gray-400">No timeline activities found</p>
                 </div>
               )}
             </CardContent>
