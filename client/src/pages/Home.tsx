@@ -168,7 +168,7 @@ export default function Home() {
               activeSection={activeSection}
               setActiveSection={handleSectionChange}
               collapsed={false}
-              onToggleCollapse={() => {}}
+              onToggleCollapse={toggleMobileMenu}
             />
           </div>
         </>

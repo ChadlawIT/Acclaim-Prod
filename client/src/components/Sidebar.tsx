@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface SidebarProps {
   activeSection: string;
@@ -16,6 +17,7 @@ interface SidebarProps {
 export default function Sidebar({ activeSection, setActiveSection, collapsed, onToggleCollapse }: SidebarProps) {
   const { user, logoutMutation } = useAuth();
   const [, setLocation] = useLocation();
+  const isMobile = useIsMobile();
 
   const handleLogout = () => {
     logoutMutation.mutate();
@@ -142,24 +144,26 @@ export default function Sidebar({ activeSection, setActiveSection, collapsed, on
           )}
         </div>
 
-        {/* Collapse toggle */}
-        <div className="pt-3 mt-3 border-t border-teal-700/50 dark:border-gray-700">
-          <button
-            onClick={onToggleCollapse}
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            className={`flex items-center w-full px-3 py-2.5 text-teal-200 hover:text-white rounded-lg transition-colors hover:bg-teal-700 dark:hover:bg-gray-800 ${
-              collapsed ? 'justify-center' : ''
-            }`}
-          >
-            {collapsed
-              ? <ChevronRight className="w-4 h-4 flex-shrink-0" />
-              : <>
-                  <ChevronLeft className="w-4 h-4 mr-3 flex-shrink-0" />
-                  <span className="text-sm truncate">Collapse</span>
-                </>
-            }
-          </button>
-        </div>
+        {/* Collapse toggle — desktop only */}
+        {!isMobile && (
+          <div className="pt-3 mt-3 border-t border-teal-700/50 dark:border-gray-700">
+            <button
+              onClick={onToggleCollapse}
+              title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              className={`flex items-center w-full px-3 py-2.5 text-teal-200 hover:text-white rounded-lg transition-colors hover:bg-teal-700 dark:hover:bg-gray-800 ${
+                collapsed ? 'justify-center' : ''
+              }`}
+            >
+              {collapsed
+                ? <ChevronRight className="w-4 h-4 flex-shrink-0" />
+                : <>
+                    <ChevronLeft className="w-4 h-4 mr-3 flex-shrink-0" />
+                    <span className="text-sm truncate">Collapse</span>
+                  </>
+              }
+            </button>
+          </div>
+        )}
       </nav>
 
       {/* User Profile */}
