@@ -702,7 +702,7 @@ Portal: https://acclaim-api-prod-uks-001.azurewebsites.net/auth
                           const reasonText = r.reason === 'reply'
                             ? `because the client replied to a message previously sent by <strong>${r.name}</strong>`
                             : `because the client addressed <strong>${r.name}</strong> by name in the opening of their message`;
-                          return `<p style="margin: 6px 0 0 0; color: #78350f; font-size: 13px; line-height: 1.6;">A copy of this notification has also been sent to <strong>${r.name}</strong> ${reasonText}.</p>`;
+                          return `<p style="margin: 6px 0 0 0; color: #78350f; font-size: 13px; line-height: 1.6;">A copy of this notification has also been sent to <strong>${r.name}</strong> ${reasonText}. It remains your responsibility as Case Handler to ensure this message is actioned — please liaise with <strong>${r.name}</strong> accordingly.</p>`;
                         }).join('') : `<p style="margin: 0; color: #78350f; font-size: 13px; line-height: 1.6;">No other team members have directly received this notification — it is your responsibility to either action this message yourself or distribute it accordingly if necessary.</p>`}
                       </div>
                       ` : ''}
