@@ -1,12 +1,19 @@
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 import {
   Building2, Briefcase, Users, FileText, Gavel, AlertTriangle, Megaphone, Shield,
   Home, Trophy, ExternalLink, Calendar, Heart, Activity, ScrollText, Scale,
-  Stethoscope, Car, UserCog, Globe, MapPin, Clock, RefreshCw, X,
+  Stethoscope, Car, UserCog, Globe, MapPin, Clock, RefreshCw, X, Share2, Send,
 } from "lucide-react";
 import chadwickLawrenceLogo from "@assets/CL_long_logo_1768312503635.png";
 import { apiRequest } from "@/lib/queryClient";
@@ -228,12 +235,31 @@ interface EventBlock {
   items?: string[];
 }
 
+const bookingSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  email: z.string().email('Valid email address required'),
+  organisation: z.string().min(1, 'Organisation is required'),
+  jobTitle: z.string().optional(),
+  phone: z.string().optional(),
+  notes: z.string().optional(),
+});
+type BookingFormValues = z.infer<typeof bookingSchema>;
+
+const shareSchema = z.object({
+  recipientName: z.string().min(1, "Recipient's name is required"),
+  recipientEmail: z.string().email('Valid email address required'),
+});
+type ShareFormValues = z.infer<typeof shareSchema>;
+
 export default function ChadwickLawrence() {
   useEffect(() => {
     trackEvent("page_view");
   }, []);
 
+  const { toast } = useToast();
   const [selectedSeminar, setSelectedSeminar] = useState<Seminar | null>(null);
+  const [bookingSeminar, setBookingSeminar] = useState<Seminar | null>(null);
+  const [sharingSeminar, setSharingSeminar] = useState<Seminar | null>(null);
 
   const { data: seminars = [], isLoading: seminarsLoading } = useQuery<Seminar[]>({
     queryKey: ["/api/cl-seminars"],
@@ -254,6 +280,66 @@ export default function ChadwickLawrence() {
       });
       if (!res.ok) return [];
       return res.json();
+    },
+  });
+
+  const { data: currentUser } = useQuery<{ id: string; firstName: string; lastName: string; email: string }>({
+    queryKey: ["/api/user"],
+  });
+
+  const bookingForm = useForm<BookingFormValues>({
+    resolver: zodResolver(bookingSchema),
+    defaultValues: { name: '', email: '', organisation: '', jobTitle: '', phone: '', notes: '' },
+  });
+
+  const shareForm = useForm<ShareFormValues>({
+    resolver: zodResolver(shareSchema),
+    defaultValues: { recipientName: '', recipientEmail: '' },
+  });
+
+  useEffect(() => {
+    if (bookingSeminar) {
+      bookingForm.reset({
+        name: currentUser ? `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() : '',
+        email: currentUser?.email || '',
+        organisation: '',
+        jobTitle: '',
+        phone: '',
+        notes: '',
+      });
+    }
+  }, [bookingSeminar]);
+
+  useEffect(() => {
+    if (!sharingSeminar) shareForm.reset();
+  }, [sharingSeminar]);
+
+  const bookingMutation = useMutation({
+    mutationFn: (formData: BookingFormValues) =>
+      apiRequest('POST', '/api/cl-book', { ...formData, seminar: bookingSeminar }),
+    onSuccess: () => {
+      toast({ title: 'Booking request sent!', description: 'The Chadwick Lawrence team will be in touch shortly.' });
+      setBookingSeminar(null);
+    },
+    onError: () => {
+      toast({ title: 'Something went wrong', description: 'Please try again or contact us directly.', variant: 'destructive' });
+    },
+  });
+
+  const shareMutation = useMutation({
+    mutationFn: (formData: ShareFormValues) =>
+      apiRequest('POST', '/api/cl-share', {
+        ...formData,
+        seminar: sharingSeminar,
+        senderName: currentUser ? `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() : 'A portal user',
+        senderEmail: currentUser?.email || '',
+      }),
+    onSuccess: () => {
+      toast({ title: 'Seminar shared!', description: 'An email has been sent to the recipient.' });
+      setSharingSeminar(null);
+    },
+    onError: () => {
+      toast({ title: 'Something went wrong', description: 'Please try again.', variant: 'destructive' });
     },
   });
 
@@ -445,16 +531,14 @@ export default function ChadwickLawrence() {
                           More info
                         </button>
                       )}
-                      <a
-                        href={s.bookUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => trackEvent("link_click", `Book: ${s.name}`, s.bookUrl, "events")}
+                      <button
+                        onClick={() => { trackEvent("link_click", `Book: ${s.name}`, s.bookUrl, "events"); setBookingSeminar(s); }}
                         className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg text-white transition-colors whitespace-nowrap"
                         style={{ background: "#ba1b6e" }}
+                        data-testid={`button-seminar-book-${i}`}
                       >
                         Book now
-                      </a>
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -602,19 +686,25 @@ export default function ChadwickLawrence() {
 
           {/* Footer */}
           <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-800 flex flex-wrap items-center justify-between gap-3 bg-gray-50 dark:bg-gray-900/50">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {selectedSeminar?.bookUrl && (
-                <a
-                  href={selectedSeminar.bookUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => selectedSeminar && trackEvent("link_click", `Book (modal): ${selectedSeminar.name}`, selectedSeminar.bookUrl, "events")}
+                <button
+                  onClick={() => { if (selectedSeminar) { trackEvent("link_click", `Book (modal): ${selectedSeminar.name}`, selectedSeminar.bookUrl, "events"); setBookingSeminar(selectedSeminar); setSelectedSeminar(null); } }}
                   className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg text-white transition-colors"
                   style={{ background: "#ba1b6e" }}
+                  data-testid="button-seminar-book-modal"
                 >
                   Book now
-                </a>
+                </button>
               )}
+              <button
+                onClick={() => { if (selectedSeminar) { setSharingSeminar(selectedSeminar); setSelectedSeminar(null); } }}
+                className="inline-flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                data-testid="button-seminar-share-modal"
+              >
+                <Share2 className="h-3.5 w-3.5" />
+                Share
+              </button>
               {selectedSeminar?.infoUrl && (
                 <a
                   href={selectedSeminar.infoUrl}
@@ -634,6 +724,158 @@ export default function ChadwickLawrence() {
               className="h-7 opacity-40 dark:invert"
             />
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Booking Dialog ────────────────────────────────────────────── */}
+      <Dialog open={!!bookingSeminar} onOpenChange={(open) => { if (!open) setBookingSeminar(null); }}>
+        <DialogContent className="max-w-lg p-0 overflow-hidden">
+          <div style={{ background: "linear-gradient(135deg, #2e3192 0%, #ba1b6e 100%)" }} className="px-6 py-5">
+            <DialogHeader>
+              <DialogTitle className="text-white text-base font-semibold leading-snug pr-6">
+                {bookingSeminar?.name}
+              </DialogTitle>
+            </DialogHeader>
+            <p className="text-white/75 text-xs mt-1.5 font-medium tracking-wide uppercase">
+              Free training session · Chadwick Lawrence
+            </p>
+          </div>
+          <form
+            onSubmit={bookingForm.handleSubmit((data) => bookingMutation.mutate(data))}
+            className="px-6 py-5 space-y-4 overflow-y-auto max-h-[70vh]"
+          >
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="b-name" className="text-xs font-medium">
+                  Full Name <span className="text-red-500">*</span>
+                </Label>
+                <Input id="b-name" {...bookingForm.register('name')} placeholder="Your full name" data-testid="input-booking-name" />
+                {bookingForm.formState.errors.name && (
+                  <p className="text-red-500 text-xs">{bookingForm.formState.errors.name.message}</p>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="b-email" className="text-xs font-medium">
+                  Email Address <span className="text-red-500">*</span>
+                </Label>
+                <Input id="b-email" type="email" {...bookingForm.register('email')} placeholder="your@email.com" data-testid="input-booking-email" />
+                {bookingForm.formState.errors.email && (
+                  <p className="text-red-500 text-xs">{bookingForm.formState.errors.email.message}</p>
+                )}
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="b-org" className="text-xs font-medium">
+                Organisation <span className="text-red-500">*</span>
+              </Label>
+              <Input id="b-org" {...bookingForm.register('organisation')} placeholder="Your company or organisation" data-testid="input-booking-organisation" />
+              {bookingForm.formState.errors.organisation && (
+                <p className="text-red-500 text-xs">{bookingForm.formState.errors.organisation.message}</p>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="b-job" className="text-xs font-medium">Job Title</Label>
+                <Input id="b-job" {...bookingForm.register('jobTitle')} placeholder="Optional" data-testid="input-booking-job-title" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="b-phone" className="text-xs font-medium">Telephone</Label>
+                <Input id="b-phone" {...bookingForm.register('phone')} placeholder="Optional" data-testid="input-booking-phone" />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="b-notes" className="text-xs font-medium">Additional Information</Label>
+              <Textarea
+                id="b-notes"
+                {...bookingForm.register('notes')}
+                placeholder="Any questions, specific requirements, or number of attendees…"
+                rows={3}
+                data-testid="textarea-booking-notes"
+              />
+            </div>
+            <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800">
+              <button
+                type="button"
+                onClick={() => setBookingSeminar(null)}
+                className="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                data-testid="button-booking-cancel"
+              >
+                Cancel
+              </button>
+              <Button
+                type="submit"
+                disabled={bookingMutation.isPending}
+                className="text-white text-sm font-semibold px-5 gap-2"
+                style={{ background: "#ba1b6e", border: 'none' }}
+                data-testid="button-booking-submit"
+              >
+                {bookingMutation.isPending
+                  ? <><RefreshCw className="h-4 w-4 animate-spin" /> Sending…</>
+                  : <><Send className="h-4 w-4" /> Send Booking Request</>}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Share Dialog ──────────────────────────────────────────────── */}
+      <Dialog open={!!sharingSeminar} onOpenChange={(open) => { if (!open) setSharingSeminar(null); }}>
+        <DialogContent className="max-w-md p-0 overflow-hidden">
+          <div style={{ background: "linear-gradient(135deg, #2e3192 0%, #ba1b6e 100%)" }} className="px-6 py-5">
+            <DialogHeader>
+              <DialogTitle className="text-white text-base font-semibold leading-snug pr-6">
+                Share this seminar
+              </DialogTitle>
+            </DialogHeader>
+            <p className="text-white/75 text-xs mt-1 line-clamp-1">{sharingSeminar?.name}</p>
+          </div>
+          <form
+            onSubmit={shareForm.handleSubmit((data) => shareMutation.mutate(data))}
+            className="px-6 py-5 space-y-4"
+          >
+            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+              Enter the details of the person you'd like to share this with. They'll receive an email from Chadwick Lawrence with the seminar information on your behalf.
+            </p>
+            <div className="space-y-1.5">
+              <Label htmlFor="s-name" className="text-xs font-medium">
+                Recipient's Name <span className="text-red-500">*</span>
+              </Label>
+              <Input id="s-name" {...shareForm.register('recipientName')} placeholder="Their full name" data-testid="input-share-name" />
+              {shareForm.formState.errors.recipientName && (
+                <p className="text-red-500 text-xs">{shareForm.formState.errors.recipientName.message}</p>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="s-email" className="text-xs font-medium">
+                Recipient's Email Address <span className="text-red-500">*</span>
+              </Label>
+              <Input id="s-email" type="email" {...shareForm.register('recipientEmail')} placeholder="their@email.com" data-testid="input-share-email" />
+              {shareForm.formState.errors.recipientEmail && (
+                <p className="text-red-500 text-xs">{shareForm.formState.errors.recipientEmail.message}</p>
+              )}
+            </div>
+            <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800">
+              <button
+                type="button"
+                onClick={() => setSharingSeminar(null)}
+                className="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                data-testid="button-share-cancel"
+              >
+                Cancel
+              </button>
+              <Button
+                type="submit"
+                disabled={shareMutation.isPending}
+                className="text-white text-sm font-semibold px-5 gap-2"
+                style={{ background: "#2e3192", border: 'none' }}
+                data-testid="button-share-submit"
+              >
+                {shareMutation.isPending
+                  ? <><RefreshCw className="h-4 w-4 animate-spin" /> Sending…</>
+                  : <><Share2 className="h-4 w-4" /> Share Seminar</>}
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

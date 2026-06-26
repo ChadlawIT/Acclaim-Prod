@@ -856,6 +856,177 @@ If you have any questions, please contact our support team.
       return false;
     }
   }
+
+  async sendSeminarBooking(data: {
+    name: string;
+    email: string;
+    organisation: string;
+    jobTitle?: string;
+    phone?: string;
+    notes?: string;
+    seminar: { name: string; category: string; date?: string; time?: string; location?: string; description?: string; infoUrl?: string | null };
+  }): Promise<boolean> {
+    const s = data.seminar;
+    const category = s.category === 'social-housing' ? 'Social Housing' : 'Employment Law';
+
+    if (!this.initialized || !this.transporter) {
+      console.log(`\n[CL BOOKING] ${data.name} <${data.email}> requested booking for: ${s.name}`);
+      return true;
+    }
+
+    const htmlContent = `
+      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+        <div style="background:linear-gradient(135deg,#2e3192 0%,#ba1b6e 100%);background-color:#2e3192;padding:28px 40px;text-align:center;">
+          <h1 style="color:white;margin:0 0 4px;font-size:22px;font-weight:800;letter-spacing:2px;">CHADWICK LAWRENCE</h1>
+          <p style="color:rgba(255,255,255,0.75);margin:0;font-size:10px;letter-spacing:3px;text-transform:uppercase;">Yorkshire's Legal People</p>
+          <p style="color:white;margin:14px 0 0;font-size:17px;font-weight:600;">Seminar Booking Request</p>
+        </div>
+        <div style="padding:30px 40px;background:#f8f8fc;border:1px solid #e8e8f0;">
+          <div style="background:#f0f1fb;border-left:4px solid #2e3192;padding:16px 20px;margin:0 0 24px;border-radius:0 8px 8px 0;">
+            <p style="color:#2e3192;margin:0 0 4px;font-size:10px;text-transform:uppercase;letter-spacing:1px;font-weight:600;">${category}</p>
+            <h3 style="color:#1a1a3e;margin:0 0 10px;font-size:16px;">${s.name}</h3>
+            ${s.date && s.date !== 'TBC' && s.date !== 'N/A' ? `<p style="color:#555;margin:3px 0;font-size:13px;">📅 <strong>${s.date}</strong>${s.time && s.time !== 'TBC' ? ` at ${s.time}` : ''}</p>` : ''}
+            ${s.location && s.location !== 'TBC' ? `<p style="color:#555;margin:3px 0;font-size:13px;">📍 ${s.location}</p>` : ''}
+          </div>
+          <div style="background:white;padding:20px;border-radius:8px;border:1px solid #e8e8f0;">
+            <h2 style="color:#2e3192;margin:0 0 16px;font-size:15px;border-bottom:2px solid #e8e8f0;padding-bottom:8px;">Booking Details</h2>
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+              <tr><td style="padding:6px 0;font-weight:bold;color:#555;width:130px;">Name:</td><td style="padding:6px 0;color:#1a1a3e;">${data.name}</td></tr>
+              <tr><td style="padding:6px 0;font-weight:bold;color:#555;">Email:</td><td style="padding:6px 0;color:#1a1a3e;">${data.email}</td></tr>
+              <tr><td style="padding:6px 0;font-weight:bold;color:#555;">Organisation:</td><td style="padding:6px 0;color:#1a1a3e;">${data.organisation}</td></tr>
+              ${data.jobTitle ? `<tr><td style="padding:6px 0;font-weight:bold;color:#555;">Job Title:</td><td style="padding:6px 0;color:#1a1a3e;">${data.jobTitle}</td></tr>` : ''}
+              ${data.phone ? `<tr><td style="padding:6px 0;font-weight:bold;color:#555;">Telephone:</td><td style="padding:6px 0;color:#1a1a3e;">${data.phone}</td></tr>` : ''}
+              ${data.notes ? `<tr><td colspan="2" style="padding:12px 0 6px;font-weight:bold;color:#555;">Additional Information:</td></tr><tr><td colspan="2"><div style="background:#f8f8fc;padding:12px;border-radius:6px;border-left:3px solid #ba1b6e;color:#1a1a3e;line-height:1.6;">${data.notes.replace(/\n/g, '<br>')}</div></td></tr>` : ''}
+            </table>
+          </div>
+          <p style="color:#777;font-size:12px;margin:20px 0 0;text-align:center;">Please respond directly to the requester at <a href="mailto:${data.email}" style="color:#2e3192;">${data.email}</a></p>
+        </div>
+        <div style="background:#1a1a3e;color:white;padding:16px 40px;text-align:center;">
+          <p style="margin:0 0 4px;font-size:12px;font-weight:600;">Chadwick Lawrence LLP · Yorkshire's Legal People</p>
+          <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.55);">Submitted via Acclaim Credit Management &amp; Recovery Portal</p>
+        </div>
+      </div>`;
+
+    const textContent = `SEMINAR BOOKING REQUEST\n\nSeminar: ${s.name}\nCategory: ${category}\n${s.date && s.date !== 'TBC' ? `Date: ${s.date}${s.time && s.time !== 'TBC' ? ' at ' + s.time : ''}\n` : ''}${s.location && s.location !== 'TBC' ? `Location: ${s.location}\n` : ''}\nBooking Details:\nName: ${data.name}\nEmail: ${data.email}\nOrganisation: ${data.organisation}\n${data.jobTitle ? `Job Title: ${data.jobTitle}\n` : ''}${data.phone ? `Telephone: ${data.phone}\n` : ''}${data.notes ? `\nAdditional Information:\n${data.notes}\n` : ''}\nSubmitted via Acclaim Credit Management & Recovery Portal`;
+
+    try {
+      await this.transporter.sendMail({
+        from: '"Acclaim Credit Management & Recovery" <email@acclaim.law>',
+        to: 'email@acclaim.law',
+        replyTo: data.email,
+        subject: `Seminar Booking Request – ${s.name} | Acclaim Portal`,
+        text: textContent,
+        html: htmlContent,
+      });
+      console.log('Seminar booking request email sent');
+      return true;
+    } catch (error) {
+      console.error('Failed to send seminar booking email:', error);
+      return false;
+    }
+  }
+
+  async sendSeminarShare(data: {
+    recipientName: string;
+    recipientEmail: string;
+    seminar: { name: string; category: string; date?: string; time?: string; location?: string; description?: string; infoUrl?: string | null };
+    senderName: string;
+    senderEmail: string;
+    senderOrganisation?: string;
+  }): Promise<boolean> {
+    const s = data.seminar;
+    const category = s.category === 'social-housing' ? 'Social Housing' : 'Employment Law';
+
+    if (!this.initialized || !this.transporter) {
+      console.log(`\n[CL SHARE] ${data.senderName} sharing "${s.name}" with ${data.recipientName} <${data.recipientEmail}>`);
+      return true;
+    }
+
+    const seminarBlock = `
+      <div style="background:#f0f1fb;border-left:4px solid #2e3192;padding:16px 20px;margin:0 0 24px;border-radius:0 8px 8px 0;">
+        <p style="color:#2e3192;margin:0 0 4px;font-size:10px;text-transform:uppercase;letter-spacing:1px;font-weight:600;">${category}</p>
+        <h3 style="color:#1a1a3e;margin:0 0 10px;font-size:16px;">${s.name}</h3>
+        ${s.date && s.date !== 'TBC' && s.date !== 'N/A' ? `<p style="color:#555;margin:3px 0;font-size:13px;">📅 <strong>${s.date}</strong>${s.time && s.time !== 'TBC' ? ` at ${s.time}` : ''}</p>` : ''}
+        ${s.location && s.location !== 'TBC' ? `<p style="color:#555;margin:3px 0;font-size:13px;">📍 ${s.location}</p>` : ''}
+        ${s.description ? `<p style="color:#555;margin:10px 0 0;font-size:13px;line-height:1.5;">${s.description}</p>` : ''}
+      </div>`;
+
+    const clHeader = (title: string) => `
+      <div style="background:linear-gradient(135deg,#2e3192 0%,#ba1b6e 100%);background-color:#2e3192;padding:28px 40px;text-align:center;">
+        <h1 style="color:white;margin:0 0 4px;font-size:22px;font-weight:800;letter-spacing:2px;">CHADWICK LAWRENCE</h1>
+        <p style="color:rgba(255,255,255,0.75);margin:0;font-size:10px;letter-spacing:3px;text-transform:uppercase;">Yorkshire's Legal People</p>
+        <p style="color:white;margin:14px 0 0;font-size:17px;font-weight:600;">${title}</p>
+      </div>`;
+
+    const clFooter = (sub: string) => `
+      <div style="background:#1a1a3e;color:white;padding:16px 40px;text-align:center;">
+        <p style="margin:0 0 4px;font-size:12px;font-weight:600;">Chadwick Lawrence LLP · Yorkshire's Legal People</p>
+        <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.55);">${sub}</p>
+      </div>`;
+
+    const recipientHtml = `
+      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+        ${clHeader('A Training Session Has Been Shared With You')}
+        <div style="padding:30px 40px;background:#f8f8fc;border:1px solid #e8e8f0;">
+          <p style="color:#1a1a3e;font-size:15px;margin:0 0 8px;">Dear ${data.recipientName},</p>
+          <p style="color:#444;font-size:14px;line-height:1.6;margin:0 0 24px;"><strong>${data.senderName}</strong>${data.senderOrganisation ? ` from <strong>${data.senderOrganisation}</strong>` : ''} thought you might be interested in the following free training session from Chadwick Lawrence, and has shared it with you through the Acclaim Client Portal.</p>
+          ${seminarBlock}
+          ${s.infoUrl ? `<div style="text-align:center;margin:0 0 28px;"><a href="${s.infoUrl}" style="background:linear-gradient(135deg,#2e3192,#ba1b6e);background-color:#2e3192;color:white;padding:13px 30px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600;display:inline-block;">Find Out More &amp; Book →</a></div>` : ''}
+          <div style="background:#e8eaf8;border-radius:8px;padding:16px 20px;">
+            <p style="margin:0 0 6px;font-weight:600;color:#2e3192;font-size:12px;font-family:Arial,sans-serif;">About Acclaim</p>
+            <p style="margin:0;font-size:12px;color:#555;line-height:1.6;font-family:Arial,sans-serif;">Acclaim Credit Management &amp; Recovery is part of <strong>Chadwick Lawrence LLP</strong>, Yorkshire's Legal People. The Acclaim portal is a client management platform through which Chadwick Lawrence clients manage their credit recovery and legal cases. This session was shared with you by a portal user who believed it might be of interest.</p>
+          </div>
+        </div>
+        ${clFooter('0800 015 0340 · <a href="https://www.chadwicklawrence.co.uk" style="color:rgba(255,255,255,0.6);">chadwicklawrence.co.uk</a>')}
+      </div>`;
+
+    const notifHtml = `
+      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+        ${clHeader('Seminar Shared via Acclaim Portal')}
+        <div style="padding:30px 40px;background:#f8f8fc;border:1px solid #e8e8f0;">
+          ${seminarBlock}
+          <div style="display:flex;gap:16px;">
+            <div style="flex:1;background:white;padding:18px 20px;border-radius:8px;border:1px solid #e8e8f0;margin-right:8px;">
+              <h3 style="color:#2e3192;margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:1px;">Shared By</h3>
+              <p style="margin:3px 0;font-size:13px;color:#1a1a3e;"><strong>${data.senderName}</strong></p>
+              <p style="margin:3px 0;font-size:13px;color:#555;">${data.senderEmail}</p>
+              ${data.senderOrganisation ? `<p style="margin:3px 0;font-size:13px;color:#555;">${data.senderOrganisation}</p>` : ''}
+            </div>
+            <div style="flex:1;background:white;padding:18px 20px;border-radius:8px;border:1px solid #e8e8f0;">
+              <h3 style="color:#ba1b6e;margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:1px;">Shared With</h3>
+              <p style="margin:3px 0;font-size:13px;color:#1a1a3e;"><strong>${data.recipientName}</strong></p>
+              <p style="margin:3px 0;font-size:13px;color:#555;">${data.recipientEmail}</p>
+            </div>
+          </div>
+        </div>
+        ${clFooter('Acclaim Credit Management &amp; Recovery · Part of Chadwick Lawrence LLP')}
+      </div>`;
+
+    try {
+      await Promise.all([
+        this.transporter.sendMail({
+          from: '"Chadwick Lawrence via Acclaim Portal" <email@acclaim.law>',
+          to: data.recipientEmail,
+          replyTo: data.senderEmail,
+          subject: `${data.senderName} has shared a Chadwick Lawrence training session with you`,
+          text: `Dear ${data.recipientName},\n\n${data.senderName} thought you might be interested in this Chadwick Lawrence training session:\n\n${s.name}\n${s.date && s.date !== 'TBC' ? `Date: ${s.date}\n` : ''}${s.location && s.location !== 'TBC' ? `Location: ${s.location}\n` : ''}${s.description ? `\n${s.description}\n` : ''}${s.infoUrl ? `\nMore information & booking: ${s.infoUrl}\n` : ''}\nAbout Acclaim: Acclaim Credit Management & Recovery is part of Chadwick Lawrence LLP, Yorkshire's Legal People.\n\n0800 015 0340 | chadwicklawrence.co.uk`,
+          html: recipientHtml,
+        }),
+        this.transporter.sendMail({
+          from: '"Acclaim Credit Management & Recovery" <email@acclaim.law>',
+          to: 'email@acclaim.law',
+          subject: `Seminar Shared – ${s.name} | Acclaim Portal`,
+          text: `Seminar shared via Acclaim Portal\n\nSeminar: ${s.name}\nShared by: ${data.senderName} (${data.senderEmail})${data.senderOrganisation ? ` · ${data.senderOrganisation}` : ''}\nShared with: ${data.recipientName} (${data.recipientEmail})`,
+          html: notifHtml,
+        }),
+      ]);
+      console.log('Seminar share emails sent successfully');
+      return true;
+    } catch (error) {
+      console.error('Failed to send seminar share emails:', error);
+      return false;
+    }
+  }
 }
 
 export const emailService = new EmailService();
