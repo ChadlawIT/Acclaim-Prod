@@ -125,7 +125,7 @@ export default function Sidebar({ activeSection, setActiveSection, collapsed, on
             {!collapsed && <span className="truncate">Chadwick Lawrence</span>}
           </button>
           {!collapsed && seminars && seminars.length > 0 && (
-            <p className="px-3 pt-1 pb-0.5 text-xs" style={{ color: "#ba1b6e" }}>
+            <p className="px-3 pt-1 pb-0.5 text-xs" style={{ color: "#f472b6" }}>
               {seminars.length} seminar{seminars.length !== 1 ? 's' : ''} available
             </p>
           )}
