@@ -8824,8 +8824,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // CL seminars scraper — cached 1 hour, scrapes both employment + social housing pages
-  let seminarsCache: { data: any[]; fetchedAt: number } | null = null;
-  const SEMINARS_TTL = 60 * 60 * 1000;
+  let seminarsCache: { data: any[] } | null = null;
 
   function stripHtml(raw: string): string {
     return raw
@@ -8927,11 +8926,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/cl-seminars', isAuthenticated, async (_req, res) => {
     try {
-      if (seminarsCache && Date.now() - seminarsCache.fetchedAt < SEMINARS_TTL) {
-        console.log('[cl-seminars] cache hit, count:', seminarsCache.data.length);
-        return res.json(seminarsCache.data);
-      }
-
       console.log('[cl-seminars] fetching live...');
       const [employment, socialHousing] = await Promise.allSettled([
         scrapeSeminarPage('https://www.chadwicklawrence.co.uk/seminars/business-services-seminars/', 'employment'),
@@ -8947,7 +8941,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ];
 
       console.log('[cl-seminars] total:', seminars.length);
-      if (seminars.length > 0) seminarsCache = { data: seminars, fetchedAt: Date.now() };
+      if (seminars.length > 0) seminarsCache = { data: seminars };
       res.json(seminars);
     } catch (err: any) {
       console.log('[cl-seminars] error:', err.message);
@@ -8970,7 +8964,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...(socialHousing.status === 'fulfilled' ? socialHousing.value : []),
       ];
       console.log('[cl-seminars] cache warmed with', all.length, 'total events');
-      if (all.length > 0) seminarsCache = { data: all, fetchedAt: Date.now() };
+      if (all.length > 0) seminarsCache = { data: all };
     } catch (e: any) {
       console.log('[cl-seminars] startup warm failed:', e.message);
     }
