@@ -347,7 +347,7 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
         </div>
         {user?.canSubmitCases !== false && (
           <Button 
-            className="bg-acclaim-teal hover:bg-acclaim-teal/90 text-white"
+            className="bg-white hover:bg-acclaim-teal/10 text-[#008a8a] border border-[#008a8a]"
             onClick={() => setLocation("/submit-case")}
           >
             <Plus className="h-4 w-4 mr-2" />
