@@ -663,15 +663,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteOrganisation(id: number): Promise<void> {
-    // First, check if there are any users or cases associated with this organisation
-    const [userCount, caseCount] = await Promise.all([
-      db.select({ count: sql<number>`count(*)` }).from(users).where(eq(users.organisationId, id)),
+    // Check active memberships via junction table (source of truth) and cases
+    const [junctionUserCount, caseCount] = await Promise.all([
+      db.select({ count: sql<number>`count(*)` }).from(userOrganisations).where(eq(userOrganisations.organisationId, id)),
       db.select({ count: sql<number>`count(*)` }).from(cases).where(eq(cases.organisationId, id))
     ]);
 
-    if (userCount[0].count > 0 || caseCount[0].count > 0) {
+    if (Number(junctionUserCount[0].count) > 0 || Number(caseCount[0].count) > 0) {
       throw new Error("Cannot delete organisation with associated users or cases");
     }
+
+    // Clear any stale legacy organisationId references that weren't cleaned up on removal
+    await db.update(users).set({ organisationId: null }).where(eq(users.organisationId, id));
 
     await db.delete(organisations).where(eq(organisations.id, id));
   }
@@ -698,7 +701,7 @@ export class DatabaseStorage implements IStorage {
     totalRecovered: string;
   }> {
     const [userCount, caseCount, activeCaseCount] = await Promise.all([
-      db.select({ count: sql<number>`count(*)` }).from(users).where(eq(users.organisationId, id)),
+      db.select({ count: sql<number>`count(*)` }).from(userOrganisations).where(eq(userOrganisations.organisationId, id)),
       db.select({ count: sql<number>`count(*)` }).from(cases).where(and(eq(cases.organisationId, id), eq(cases.isArchived, false))),
       db.select({ count: sql<number>`count(*)` }).from(cases).where(and(eq(cases.organisationId, id), eq(cases.isArchived, false), or(eq(cases.status, "new"), eq(cases.status, "in_progress"))))
     ]);
