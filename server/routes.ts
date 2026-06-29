@@ -5615,6 +5615,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Unique activity descriptions for the stuck-activity report picker
+  app.get("/api/admin/reports/activity-descriptions", isAuthenticated, isAdmin, isSuperAdmin, async (req, res) => {
+    try {
+      const descriptions = await storage.getUniqueActivityDescriptions();
+      res.json({ descriptions });
+    } catch (error) {
+      console.error("Error fetching activity descriptions:", error);
+      res.status(500).json({ message: "Failed to fetch activity descriptions" });
+    }
+  });
+
+  // On-demand stuck-at-activity report trigger
+  app.post("/api/admin/reports/stuck-activity/trigger", isAuthenticated, isAdmin, isSuperAdmin, async (req, res) => {
+    try {
+      const { descriptions, days, recipientEmail } = req.body;
+      if (!Array.isArray(descriptions) || descriptions.length === 0) {
+        return res.status(400).json({ message: "Please select at least one activity description" });
+      }
+      const minDays = Number(days);
+      if (!minDays || minDays < 1) {
+        return res.status(400).json({ message: "Please provide a valid number of days (minimum 1)" });
+      }
+      if (!recipientEmail || typeof recipientEmail !== "string" || !recipientEmail.includes("@")) {
+        return res.status(400).json({ message: "Please provide a valid recipient email address" });
+      }
+      const { runStuckActivityReportOnDemand } = await import("./stuck-activity-report");
+      const result = await runStuckActivityReportOnDemand(descriptions, minDays, recipientEmail.trim());
+      if (result.count === 0) {
+        return res.json({ sent: false, count: 0, message: `No cases found matching those activities with no follow-up for ${minDays}+ day${minDays !== 1 ? "s" : ""} — report not sent` });
+      }
+      if (!result.sent) {
+        return res.status(500).json({ message: "Failed to send stuck-activity report email" });
+      }
+      res.json({ sent: true, count: result.count, message: `Report sent — ${result.count} case${result.count !== 1 ? "s" : ""}` });
+    } catch (error) {
+      console.error("Error running stuck-activity report:", error);
+      res.status(500).json({ message: "Failed to run stuck-activity report" });
+    }
+  });
+
   // On-demand inactive cases report trigger with custom days + recipient
   app.post("/api/admin/reports/inactive-cases/trigger", isAuthenticated, isAdmin, isSuperAdmin, async (req, res) => {
     try {

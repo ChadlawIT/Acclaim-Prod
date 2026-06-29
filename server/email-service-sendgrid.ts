@@ -4145,3 +4145,167 @@ export async function sendPendingSubmissionsReportEmail(
     return false;
   }
 }
+
+// ── Stuck-at-Activity report email ────────────────────────────────────────────
+
+export async function sendStuckActivityReportEmail(
+  cases: Array<{
+    caseId: number; caseName: string; accountNumber: string;
+    assignedTo: string | null; outstandingAmount: string;
+    status: string; stage: string;
+    lastActivityDescription: string; lastActivityDate: Date; daysSinceActivity: number;
+  }>,
+  selectedDescriptions: string[],
+  minDays: number,
+  excelBuffer: Buffer,
+  excelFileName: string,
+  htmlContent: string,
+  htmlFileName: string,
+  recipientEmail?: string,
+): Promise<boolean> {
+  const APIM_KEY = process.env.APIM_SUBSCRIPTION_KEY;
+  const RECIPIENT = recipientEmail || 'email@acclaim.law';
+
+  if (!APIM_KEY && !process.env.SENDGRID_API_KEY) {
+    console.error('[StuckActivity] No email transport configured');
+    return false;
+  }
+
+  try {
+    const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    const totalCases = cases.length;
+    const longestCase = [...cases].sort((a, b) => b.daysSinceActivity - a.daysSinceActivity)[0];
+
+    const logoPath = path.join(process.cwd(), 'attached_assets', 'acclaim_rose_transparent_1768474381340.png');
+    let logoBase64 = '';
+    try {
+      logoBase64 = fs.readFileSync(logoPath).toString('base64');
+    } catch { /* logo optional */ }
+
+    const attachments: any[] = [];
+
+    if (logoBase64) {
+      attachments.push({
+        content: logoBase64,
+        type: 'image/png',
+        filename: 'logo.png',
+        disposition: 'inline',
+        content_id: 'logo',
+      });
+    }
+
+    attachments.push({
+      content: excelBuffer.toString('base64'),
+      filename: excelFileName,
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      disposition: 'attachment',
+    });
+
+    attachments.push({
+      content: Buffer.from(htmlContent).toString('base64'),
+      filename: htmlFileName,
+      type: 'text/html',
+      disposition: 'attachment',
+    });
+
+    const descList = selectedDescriptions.map(d => `<li style="margin-bottom:4px;">${d}</li>`).join('');
+
+    const htmlBody = `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+      <body style="margin:0;padding:0;background-color:#f1f5f9;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f1f5f9;">
+          <tr>
+            <td align="center" style="padding:40px 20px;">
+              <table role="presentation" width="620" cellspacing="0" cellpadding="0" style="max-width:620px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+                <tr>
+                  <td style="background:linear-gradient(135deg,#6D28D9 0%,#4C1D95 100%);padding:36px 40px;text-align:center;">
+                    <img src="cid:logo" alt="Acclaim" style="height:36px;width:auto;margin-bottom:14px;" />
+                    <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">&#x23F3; Stuck Cases Report</h1>
+                    <p style="margin:8px 0 0 0;color:rgba(255,255,255,0.85);font-size:14px;">${today}</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:36px 40px;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:28px;">
+                      <tr>
+                        <td style="background:#F5F3FF;border-radius:12px;padding:20px 24px;border-top:4px solid #7C3AED;text-align:center;">
+                          <div style="font-size:36px;font-weight:800;color:#4C1D95;line-height:1;">${totalCases}</div>
+                          <div style="font-size:13px;color:#6D28D9;font-weight:500;margin-top:4px;">Cases matching criteria</div>
+                          ${longestCase ? `<div style="font-size:12px;color:#8B5CF6;margin-top:4px;">Longest gap: ${longestCase.daysSinceActivity} days (${longestCase.caseName})</div>` : ''}
+                        </td>
+                      </tr>
+                    </table>
+                    <p style="font-size:14px;color:#374151;margin:0 0 12px 0;font-weight:600;">Activities searched (no follow-up for ${minDays}+ days):</p>
+                    <ul style="margin:0 0 24px 0;padding:0 0 0 20px;font-size:14px;color:#374151;">
+                      ${descList}
+                    </ul>
+                    <p style="font-size:14px;color:#374151;margin:0 0 20px 0;">
+                      Please find attached the full report as an Excel spreadsheet and a detailed HTML file showing each case with its last activity and recent messages.
+                    </p>
+                    <p style="font-size:12px;color:#9CA3AF;margin:0;">
+                      This is an on-demand report triggered manually. It does not affect any automatic report schedules.
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="background:#F9FAFB;padding:20px 40px;text-align:center;border-top:1px solid #E5E7EB;">
+                    <p style="margin:0;font-size:12px;color:#9CA3AF;">Acclaim Credit Management &bull; ${today}</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>`;
+
+    const subject = `⏳ Stuck Cases Report — ${totalCases} case${totalCases !== 1 ? 's' : ''} — ${today}`;
+
+    const emailPayload = {
+      personalizations: [{ to: [{ email: RECIPIENT }] }],
+      from: { email: 'email@acclaim.law', name: 'Acclaim Credit Management' },
+      subject,
+      content: [{ type: 'text/html', value: htmlBody }],
+      attachments,
+    };
+
+    if (APIM_KEY) {
+      try {
+        const resp = await fetch('https://acclaimlaw.azure-api.net/send-email/v1/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Ocp-Apim-Subscription-Key': APIM_KEY },
+          body: JSON.stringify(emailPayload),
+        });
+        if (resp.ok || resp.status === 202) {
+          console.log(`[StuckActivity] Report sent via APIM to ${RECIPIENT}`);
+          return true;
+        }
+        console.warn(`[StuckActivity] APIM returned ${resp.status}`);
+      } catch (e) {
+        console.warn(`[StuckActivity] APIM unreachable — ${e}`);
+      }
+    }
+
+    if (process.env.SENDGRID_API_KEY) {
+      const resp = await fetch('https://api.sendgrid.com/v3/mail/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.SENDGRID_API_KEY}` },
+        body: JSON.stringify(emailPayload),
+      });
+      if (resp.ok || resp.status === 202) {
+        console.log(`[StuckActivity] Report sent via SendGrid to ${RECIPIENT}`);
+        return true;
+      }
+      console.error(`[StuckActivity] SendGrid failed: ${resp.status}`);
+      return false;
+    }
+
+    console.error('[StuckActivity] No working email transport');
+    return false;
+  } catch (error) {
+    console.error('[StuckActivity] Error sending report email:', error);
+    return false;
+  }
+}

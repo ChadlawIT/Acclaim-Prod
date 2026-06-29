@@ -100,6 +100,20 @@ export interface IStorage {
   }[]>;
   getLatestCaseActivitiesBatch(caseIds: number[]): Promise<Map<number, { description: string; code: string; createdAt: Date }>>;
   getLastMessagesBatch(caseIds: number[], limit?: number, adminOnly?: boolean): Promise<Map<number, Array<{ sender: string; isAdmin: boolean; subject: string | null; content: string; createdAt: Date }>>>;
+  getUniqueActivityDescriptions(): Promise<string[]>;
+  getCasesStuckAtActivity(descriptions: string[], minDays: number): Promise<{
+    caseId: number;
+    caseName: string;
+    accountNumber: string;
+    organisationId: number;
+    assignedTo: string | null;
+    outstandingAmount: string;
+    status: string;
+    stage: string;
+    lastActivityDescription: string;
+    lastActivityDate: Date;
+    daysSinceActivity: number;
+  }[]>;
 
   // Organisation operations
   getOrganisation(id: number): Promise<Organization | undefined>;
@@ -3577,6 +3591,78 @@ export class DatabaseStorage implements IStorage {
       });
     }
     return result;
+  }
+
+  async getUniqueActivityDescriptions(): Promise<string[]> {
+    const rows = await db.execute(sql`
+      SELECT DISTINCT description
+      FROM case_activities
+      WHERE description IS NOT NULL AND description != ''
+      ORDER BY description ASC
+    `);
+    return (rows.rows as any[]).map(r => String(r.description));
+  }
+
+  async getCasesStuckAtActivity(descriptions: string[], minDays: number): Promise<{
+    caseId: number;
+    caseName: string;
+    accountNumber: string;
+    organisationId: number;
+    assignedTo: string | null;
+    outstandingAmount: string;
+    status: string;
+    stage: string;
+    lastActivityDescription: string;
+    lastActivityDate: Date;
+    daysSinceActivity: number;
+  }[]> {
+    if (descriptions.length === 0) return [];
+
+    const cutoffDate = new Date(Date.now() - minDays * 24 * 60 * 60 * 1000);
+
+    const rows = await db.execute(sql`
+      WITH latest_activity AS (
+        SELECT DISTINCT ON (ca.case_id)
+          ca.case_id,
+          ca.description,
+          ca.created_at
+        FROM case_activities ca
+        ORDER BY ca.case_id, ca.created_at DESC
+      )
+      SELECT
+        c.id              AS case_id,
+        c.case_name,
+        c.account_number,
+        c.organisation_id,
+        c.assigned_to,
+        c.outstanding_amount,
+        c.status,
+        c.stage,
+        la.description    AS last_activity_description,
+        la.created_at     AS last_activity_date
+      FROM cases c
+      JOIN latest_activity la ON la.case_id = c.id
+      WHERE c.status != 'closed'
+        AND (c.is_archived = false OR c.is_archived IS NULL)
+        AND la.description = ANY(${descriptions})
+        AND la.created_at < ${cutoffDate}
+      ORDER BY la.created_at ASC
+    `);
+
+    const now = new Date();
+    return (rows.rows as any[]).map(r => ({
+      caseId:                  Number(r.case_id),
+      caseName:                String(r.case_name),
+      accountNumber:           String(r.account_number),
+      organisationId:          Number(r.organisation_id),
+      assignedTo:              r.assigned_to ? String(r.assigned_to) : null,
+      outstandingAmount:       String(r.outstanding_amount),
+      status:                  String(r.status),
+      stage:                   String(r.stage),
+      lastActivityDescription: String(r.last_activity_description),
+      lastActivityDate:        new Date(r.last_activity_date),
+      daysSinceActivity:       Math.floor((now.getTime() - new Date(r.last_activity_date).getTime()) / (1000 * 60 * 60 * 24)),
+    }));
   }
 
   async getLastMessagesBatch(caseIds: number[], limit = 3, adminOnly = false): Promise<Map<number, Array<{ sender: string; isAdmin: boolean; subject: string | null; content: string; createdAt: Date }>>> {
