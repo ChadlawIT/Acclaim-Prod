@@ -885,9 +885,8 @@ If you have any questions, please contact our support team.
       <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
         ${CL_LOGO_HEADER}
         <div style="background:linear-gradient(135deg,#2e3192 0%,#ba1b6e 100%);background-color:#2e3192;padding:28px 40px;text-align:center;">
-          <h1 style="color:white;margin:0 0 4px;font-size:22px;font-weight:800;letter-spacing:2px;">CHADWICK LAWRENCE</h1>
-          <p style="color:rgba(255,255,255,0.75);margin:0;font-size:10px;letter-spacing:3px;text-transform:uppercase;">Yorkshire's Legal People</p>
-          <p style="color:white;margin:14px 0 0;font-size:17px;font-weight:600;">Seminar Booking Request</p>
+          <h1 style="color:white;margin:0 0 14px;font-size:22px;font-weight:800;letter-spacing:2px;">CHADWICK LAWRENCE</h1>
+          <p style="color:white;margin:0;font-size:17px;font-weight:600;">Seminar Booking Request</p>
         </div>
         <div style="padding:30px 40px;background:#f8f8fc;border:1px solid #e8e8f0;">
           <div style="background:#f0f1fb;border-left:4px solid #2e3192;padding:16px 20px;margin:0 0 24px;border-radius:0 8px 8px 0;">
@@ -964,9 +963,8 @@ If you have any questions, please contact our support team.
     const clHeader = (title: string) => `
       ${CL_LOGO_HEADER}
       <div style="background:linear-gradient(135deg,#2e3192 0%,#ba1b6e 100%);background-color:#2e3192;padding:28px 40px;text-align:center;">
-        <h1 style="color:white;margin:0 0 4px;font-size:22px;font-weight:800;letter-spacing:2px;">CHADWICK LAWRENCE</h1>
-        <p style="color:rgba(255,255,255,0.75);margin:0;font-size:10px;letter-spacing:3px;text-transform:uppercase;">Yorkshire's Legal People</p>
-        <p style="color:white;margin:14px 0 0;font-size:17px;font-weight:600;">${title}</p>
+        <h1 style="color:white;margin:0 0 14px;font-size:22px;font-weight:800;letter-spacing:2px;">CHADWICK LAWRENCE</h1>
+        <p style="color:white;margin:0;font-size:17px;font-weight:600;">${title}</p>
       </div>`;
 
     const clFooter = (sub: string) => `
