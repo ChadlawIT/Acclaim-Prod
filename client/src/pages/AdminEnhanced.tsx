@@ -29,6 +29,7 @@ import UserGuideWordDownload from "@/components/UserGuideWordDownload";
 import CaseManagementGuideDownload from "@/components/CaseManagementGuideDownload";
 import ClosedCaseManagement from "@/components/ClosedCaseManagement";
 import { EmailBroadcast } from "@/components/EmailBroadcast";
+import { EscalationReportsTrigger } from "@/components/EscalationReportsTrigger";
 
 // Documents List Component
 function DocumentsList({ submissionId }: { submissionId: number }) {
@@ -4297,6 +4298,12 @@ export default function AdminEnhanced() {
               <span className="hidden sm:inline">Scheduled Reports</span>
               <span className="sm:hidden">Reports</span>
             </TabsTrigger>
+            {isSuperAdmin && (
+              <TabsTrigger value="escalation" className="flex-1 text-xs sm:text-sm">
+                <span className="hidden sm:inline">Escalation Reports</span>
+                <span className="sm:hidden">Escalate</span>
+              </TabsTrigger>
+            )}
           </TabsList>
         </div>
 
@@ -5684,6 +5691,13 @@ export default function AdminEnhanced() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Escalation Reports Tab */}
+        {isSuperAdmin && (
+        <TabsContent value="escalation" className="space-y-6">
+          <EscalationReportsTrigger />
+        </TabsContent>
+        )}
 
       </Tabs>
 

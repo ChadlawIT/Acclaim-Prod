@@ -3594,7 +3594,8 @@ export async function sendEscalationReportEmail(
     messageCreatedAt: Date; senderName: string; senderEmail: string; daysOverdue: number;
   }>,
   excelBuffer: Buffer,
-  fileName: string
+  fileName: string,
+  recipientEmail?: string,
 ): Promise<boolean> {
   try {
     const APIM_KEY = process.env.APIM_SUBSCRIPTION_KEY;
@@ -3716,7 +3717,7 @@ export async function sendEscalationReportEmail(
       disposition: 'attachment',
     });
 
-    const RECIPIENT = 'email@acclaim.law';
+    const RECIPIENT = recipientEmail || 'email@acclaim.law';
     const subject = `⚠️ Escalation Report — ${totalMsgs} message${totalMsgs !== 1 ? 's' : ''} across ${totalCases} case${totalCases !== 1 ? 's' : ''} — ${today}`;
 
     const emailPayload = {
@@ -3781,6 +3782,7 @@ export async function sendInactiveCasesReportEmail(
   excelFileName: string,
   htmlContent: string,
   htmlFileName: string,
+  recipientEmail?: string,
 ): Promise<boolean> {
   try {
     const APIM_KEY = process.env.APIM_SUBSCRIPTION_KEY;
@@ -3891,7 +3893,7 @@ export async function sendInactiveCasesReportEmail(
       disposition: 'attachment',
     });
 
-    const RECIPIENT = 'email@acclaim.law';
+    const RECIPIENT = recipientEmail || 'email@acclaim.law';
     const subject = `\u{1F550} Inactive Cases Report \u2014 ${totalCases} case${totalCases !== 1 ? 's' : ''} \u2014 ${today}`;
 
     const emailPayload = {

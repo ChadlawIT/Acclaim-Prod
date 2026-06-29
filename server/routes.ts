@@ -5589,6 +5589,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // On-demand escalation report trigger with custom days + recipient
+  app.post("/api/admin/reports/escalation/trigger", isAuthenticated, isAdmin, isSuperAdmin, async (req, res) => {
+    try {
+      const { days, recipientEmail } = req.body;
+      const minDays = Number(days);
+      if (!minDays || minDays < 1) {
+        return res.status(400).json({ message: "Please provide a valid number of days (minimum 1)" });
+      }
+      if (!recipientEmail || typeof recipientEmail !== "string" || !recipientEmail.includes("@")) {
+        return res.status(400).json({ message: "Please provide a valid recipient email address" });
+      }
+      const { runEscalationReportOnDemand } = await import("./escalation-reports");
+      const result = await runEscalationReportOnDemand(minDays, recipientEmail.trim());
+      if (result.count === 0) {
+        return res.json({ sent: false, count: 0, cases: 0, message: `No unanswered messages found older than ${minDays} day${minDays !== 1 ? "s" : ""} — report not sent` });
+      }
+      if (!result.sent) {
+        return res.status(500).json({ message: "Failed to send escalation report email" });
+      }
+      res.json({ sent: true, count: result.count, cases: result.cases, message: `Report sent — ${result.count} message${result.count !== 1 ? "s" : ""} across ${result.cases} case${result.cases !== 1 ? "s" : ""}` });
+    } catch (error) {
+      console.error("Error running on-demand escalation report:", error);
+      res.status(500).json({ message: "Failed to run escalation report" });
+    }
+  });
+
+  // On-demand inactive cases report trigger with custom days + recipient
+  app.post("/api/admin/reports/inactive-cases/trigger", isAuthenticated, isAdmin, isSuperAdmin, async (req, res) => {
+    try {
+      const { days, recipientEmail } = req.body;
+      const daysThreshold = Number(days);
+      if (!daysThreshold || daysThreshold < 1) {
+        return res.status(400).json({ message: "Please provide a valid number of days (minimum 1)" });
+      }
+      if (!recipientEmail || typeof recipientEmail !== "string" || !recipientEmail.includes("@")) {
+        return res.status(400).json({ message: "Please provide a valid recipient email address" });
+      }
+      const { runInactiveCasesReportCustom } = await import("./inactive-cases-report");
+      const result = await runInactiveCasesReportCustom(daysThreshold, recipientEmail.trim());
+      if (result.count === 0) {
+        return res.json({ sent: false, count: 0, message: `No cases found inactive for ${daysThreshold}+ day${daysThreshold !== 1 ? "s" : ""} — report not sent` });
+      }
+      if (!result.sent) {
+        return res.status(500).json({ message: "Failed to send inactive cases report email" });
+      }
+      res.json({ sent: true, count: result.count, message: `Report sent — ${result.count} inactive case${result.count !== 1 ? "s" : ""}` });
+    } catch (error) {
+      console.error("Error running on-demand inactive cases report (custom):", error);
+      res.status(500).json({ message: "Failed to run inactive cases report" });
+    }
+  });
+
   // External API endpoints for case management system integration
 
   // Check whether a case exists by external reference (read-only, no side effects)

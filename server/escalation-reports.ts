@@ -198,6 +198,35 @@ export async function generateEscalationExcel(msgs: EscalatedMessage[]): Promise
   return Buffer.from(await workbook.xlsx.writeBuffer());
 }
 
+// ── On-demand trigger with custom params ─────────────────────────────────────
+
+export async function runEscalationReportOnDemand(
+  minDays: number,
+  recipientEmail: string,
+): Promise<{ sent: boolean; count: number; cases: number }> {
+  console.log(`[Escalation] Running on-demand report — minDays=${minDays}, recipient=${recipientEmail}`);
+
+  const escalatedMsgs = await storage.getEscalatedCaseMessages(ESCALATION_ACTIVE_FROM, minDays);
+
+  if (escalatedMsgs.length === 0) {
+    console.log("[Escalation] No escalated messages found — skipping report");
+    return { sent: false, count: 0, cases: 0 };
+  }
+
+  const excelBuffer = await generateEscalationExcel(escalatedMsgs);
+  const dateStr = new Date().toISOString().split("T")[0];
+  const fileName = `Acclaim_Escalation_Report_${dateStr}.xlsx`;
+
+  const sent = await sendEscalationReportEmail(escalatedMsgs, excelBuffer, fileName, recipientEmail);
+  if (sent) {
+    const caseCount = new Set(escalatedMsgs.map(m => m.caseId)).size;
+    console.log(`[Escalation] On-demand report sent — ${escalatedMsgs.length} messages across ${caseCount} cases`);
+    return { sent: true, count: escalatedMsgs.length, cases: caseCount };
+  }
+  console.error("[Escalation] Failed to send on-demand escalation report email");
+  return { sent: false, count: escalatedMsgs.length, cases: 0 };
+}
+
 // ── Main processor ───────────────────────────────────────────────────────────
 
 export async function processEscalationReport(): Promise<void> {
