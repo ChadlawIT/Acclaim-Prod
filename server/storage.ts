@@ -530,7 +530,7 @@ export class DatabaseStorage implements IStorage {
           eq(users.isAdmin, false),
           gte(messages.createdAt, activationDate),
           lt(messages.createdAt, cutoffDate),
-          ne(cases.status, 'closed'),
+          eq(cases.status, 'active'),
           or(eq(cases.isArchived, false), isNull(cases.isArchived))
         )
       );
@@ -3547,7 +3547,7 @@ export class DatabaseStorage implements IStorage {
             COALESCE((SELECT MAX(d.created_at)  FROM documents d         WHERE d.case_id  = c.id), c.updated_at)
           ) AS last_activity_date
         FROM cases c
-        WHERE c.status != 'closed'
+        WHERE c.status = 'active'
           AND (c.is_archived = false OR c.is_archived IS NULL)
       )
       SELECT * FROM case_last_activity
