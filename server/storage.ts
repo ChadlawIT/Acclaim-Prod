@@ -673,8 +673,19 @@ export class DatabaseStorage implements IStorage {
       throw new Error("Cannot delete organisation with associated users or cases");
     }
 
-    // Clear any stale legacy organisationId references that weren't cleaned up on removal
-    await db.update(users).set({ organisationId: null }).where(eq(users.organisationId, id));
+    // Clean up all FK references before deleting (non-cascade tables)
+    await Promise.all([
+      // Clear stale legacy organisationId on users
+      db.update(users).set({ organisationId: null }).where(eq(users.organisationId, id)),
+      // Null out audit log organisation references (nullable column)
+      db.update(auditLog).set({ organisationId: null }).where(eq(auditLog.organisationId, id)),
+      // Delete external API credentials for this org
+      db.delete(externalApiCredentials).where(eq(externalApiCredentials.organisationId, id)),
+      // Delete any org-level documents (no cases exist so these are orphans)
+      db.delete(documents).where(eq(documents.organisationId, id)),
+      // Delete any case submissions for this org
+      db.delete(caseSubmissions).where(eq(caseSubmissions.organisationId, id)),
+    ]);
 
     await db.delete(organisations).where(eq(organisations.id, id));
   }
