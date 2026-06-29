@@ -3595,10 +3595,15 @@ export class DatabaseStorage implements IStorage {
 
   async getUniqueActivityDescriptions(): Promise<string[]> {
     const rows = await db.execute(sql`
-      SELECT DISTINCT description
+      SELECT MIN(description) AS description
       FROM case_activities
-      WHERE description IS NOT NULL AND description != ''
-      ORDER BY description ASC
+      JOIN cases c ON c.id = case_activities.case_id
+      WHERE case_activities.description IS NOT NULL
+        AND case_activities.description != ''
+        AND c.status = 'active'
+        AND (c.is_archived = false OR c.is_archived IS NULL)
+      GROUP BY LOWER(description)
+      ORDER BY LOWER(MIN(description)) ASC
     `);
     return (rows.rows as any[]).map(r => String(r.description));
   }
@@ -3619,6 +3624,8 @@ export class DatabaseStorage implements IStorage {
     if (descriptions.length === 0) return [];
 
     const cutoffDate = new Date(Date.now() - minDays * 24 * 60 * 60 * 1000);
+
+    const lowerDescriptions = descriptions.map(d => d.toLowerCase());
 
     const rows = await db.execute(sql`
       WITH latest_activity AS (
@@ -3642,9 +3649,9 @@ export class DatabaseStorage implements IStorage {
         la.created_at     AS last_activity_date
       FROM cases c
       JOIN latest_activity la ON la.case_id = c.id
-      WHERE c.status != 'closed'
+      WHERE c.status = 'active'
         AND (c.is_archived = false OR c.is_archived IS NULL)
-        AND la.description = ANY(${descriptions})
+        AND LOWER(la.description) = ANY(${lowerDescriptions})
         AND la.created_at < ${cutoffDate}
       ORDER BY la.created_at ASC
     `);
