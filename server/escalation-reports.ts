@@ -198,6 +198,156 @@ export async function generateEscalationExcel(msgs: EscalatedMessage[]): Promise
   return Buffer.from(await workbook.xlsx.writeBuffer());
 }
 
+// ── HTML report generation ───────────────────────────────────────────────────
+
+export function generateEscalationHtml(msgs: EscalatedMessage[]): string {
+  const today = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+  const totalCases = new Set(msgs.map(m => m.caseId)).size;
+  const totalMsgs = msgs.length;
+  const ackMsgs = msgs.filter(m => isLikelyAcknowledgement(m.messageContent)).length;
+
+  const bands = [
+    { label: "7–14 days", min: 7,  max: 14 },
+    { label: "14–21 days", min: 14, max: 21 },
+    { label: "21–28 days", min: 21, max: 28 },
+    { label: "28+ days",   min: 28, max: Infinity },
+  ];
+
+  const handlerMap = new Map<string, number>();
+  for (const m of msgs) {
+    const key = m.caseHandler || "Unassigned";
+    handlerMap.set(key, (handlerMap.get(key) ?? 0) + 1);
+  }
+
+  // Group by case, sorted by oldest first (highest daysOverdue)
+  const grouped = new Map<number, EscalatedMessage[]>();
+  for (const m of msgs) {
+    if (!grouped.has(m.caseId)) grouped.set(m.caseId, []);
+    grouped.get(m.caseId)!.push(m);
+  }
+  const sortedCaseIds = [...grouped.keys()].sort((a, b) => {
+    const aMax = Math.max(...grouped.get(a)!.map(m => m.daysOverdue));
+    const bMax = Math.max(...grouped.get(b)!.map(m => m.daysOverdue));
+    return bMax - aMax;
+  });
+
+  const ageBandRows = bands.map(b => {
+    const count = msgs.filter(m => m.daysOverdue >= b.min && m.daysOverdue < b.max).length;
+    const bg = b.min >= 28 ? "#FEE2E2" : b.min >= 21 ? "#FEF3C7" : b.min >= 14 ? "#FFFBEB" : "#F9FAFB";
+    return `<tr style="background:${bg}"><td style="padding:6px 14px;color:#374151">${b.label}</td><td style="padding:6px 14px;color:#374151;font-weight:600">${count}</td></tr>`;
+  }).join("");
+
+  const handlerRows = [...handlerMap.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([h, c]) => `<tr><td style="padding:6px 14px;color:#374151">${escHtml(h)}</td><td style="padding:6px 14px;color:#374151;font-weight:600">${c}</td></tr>`)
+    .join("");
+
+  const caseRows = sortedCaseIds.map(caseId => {
+    const caseMsgs = grouped.get(caseId)!.sort((a, b) => b.daysOverdue - a.daysOverdue);
+    const first = caseMsgs[0];
+    const msgRows = caseMsgs.map(m => {
+      const ack = isLikelyAcknowledgement(m.messageContent);
+      const rowBg = ack ? "#F3F4F6" : m.daysOverdue >= 28 ? "#FEE2E2" : m.daysOverdue >= 21 ? "#FEF3C7" : "#FFFBEB";
+      const statusBadge = ack
+        ? `<span style="background:#E5E7EB;color:#6B7280;padding:2px 8px;border-radius:9999px;font-size:12px">Likely Acknowledgement</span>`
+        : `<span style="background:#FEE2E2;color:#991B1B;padding:2px 8px;border-radius:9999px;font-size:12px;font-weight:600">Awaiting Response</span>`;
+      const truncated = m.messageContent.length > 400 ? m.messageContent.slice(0, 400) + "…" : m.messageContent;
+      return `
+        <tr style="background:${rowBg};border-bottom:1px solid #E5E7EB">
+          <td style="padding:10px 14px;color:#374151;font-size:13px;vertical-align:top;white-space:nowrap">${m.messageCreatedAt.toLocaleDateString("en-GB")}</td>
+          <td style="padding:10px 14px;color:#374151;font-size:13px;vertical-align:top;white-space:nowrap;font-weight:600">${m.daysOverdue}d</td>
+          <td style="padding:10px 14px;color:#374151;font-size:13px;vertical-align:top">${escHtml(m.senderName)}<br><span style="color:#9CA3AF;font-size:12px">${escHtml(m.senderEmail)}</span></td>
+          <td style="padding:10px 14px;color:#374151;font-size:13px;vertical-align:top;max-width:320px;word-break:break-word">${m.messageSubject ? `<strong>${escHtml(m.messageSubject)}</strong><br>` : ""}${escHtml(truncated)}</td>
+          <td style="padding:10px 14px;vertical-align:top;white-space:nowrap">${statusBadge}</td>
+        </tr>`;
+    }).join("");
+
+    return `
+      <tr style="background:#1E3A5F">
+        <td colspan="5" style="padding:10px 14px;color:#FFFFFF;font-weight:700;font-size:13px">
+          ${escHtml(first.caseName)} &nbsp;·&nbsp; ${escHtml(first.accountNumber)} &nbsp;·&nbsp; Handler: ${escHtml(first.caseHandler || "Unassigned")}
+        </td>
+      </tr>
+      ${msgRows}`;
+  }).join("");
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Escalation Report — ${today}</title>
+<style>
+  body{margin:0;padding:24px;background:#F3F4F6;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif}
+  h1,h2,h3{margin:0}
+  table{border-collapse:collapse;width:100%}
+  th{text-align:left}
+</style>
+</head>
+<body>
+  <div style="max-width:900px;margin:0 auto;background:#FFFFFF;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08)">
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#B45309 0%,#92400E 100%);padding:36px 40px;text-align:center">
+      <h1 style="color:#FFFFFF;font-size:22px;font-weight:700">Daily Escalation Report — Unanswered Messages</h1>
+      <p style="color:rgba(255,255,255,0.85);font-size:14px;margin:8px 0 0">${today}</p>
+    </div>
+    <!-- Summary cards -->
+    <div style="display:flex;gap:16px;padding:32px 40px 0">
+      <div style="flex:1;background:#FEF3C7;border:1px solid #F59E0B;border-radius:10px;padding:20px;text-align:center">
+        <p style="margin:0;font-size:36px;font-weight:800;color:#92400E">${totalMsgs}</p>
+        <p style="margin:4px 0 0;font-size:13px;color:#78350F">Unanswered Messages</p>
+      </div>
+      <div style="flex:1;background:#FEE2E2;border:1px solid #EF4444;border-radius:10px;padding:20px;text-align:center">
+        <p style="margin:0;font-size:36px;font-weight:800;color:#991B1B">${totalCases}</p>
+        <p style="margin:4px 0 0;font-size:13px;color:#7F1D1D">Cases Affected</p>
+      </div>
+      <div style="flex:1;background:#F3F4F6;border:1px solid #D1D5DB;border-radius:10px;padding:20px;text-align:center">
+        <p style="margin:0;font-size:36px;font-weight:800;color:#6B7280">${ackMsgs}</p>
+        <p style="margin:4px 0 0;font-size:13px;color:#6B7280">Likely Acknowledgements</p>
+      </div>
+    </div>
+    <!-- Breakdown tables -->
+    <div style="display:flex;gap:24px;padding:28px 40px">
+      <div style="flex:1">
+        <h3 style="font-size:13px;font-weight:700;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">By Age</h3>
+        <table style="border-radius:8px;overflow:hidden;border:1px solid #E5E7EB;font-size:13px">
+          <tr style="background:#F9FAFB"><th style="padding:8px 14px;color:#6B7280;font-weight:600">Age Band</th><th style="padding:8px 14px;color:#6B7280;font-weight:600">Messages</th></tr>
+          ${ageBandRows}
+        </table>
+      </div>
+      <div style="flex:1">
+        <h3 style="font-size:13px;font-weight:700;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">By Case Handler</h3>
+        <table style="border-radius:8px;overflow:hidden;border:1px solid #E5E7EB;font-size:13px">
+          <tr style="background:#F9FAFB"><th style="padding:8px 14px;color:#6B7280;font-weight:600">Handler</th><th style="padding:8px 14px;color:#6B7280;font-weight:600">Messages</th></tr>
+          ${handlerRows}
+        </table>
+      </div>
+    </div>
+    <!-- Case detail table -->
+    <div style="padding:0 40px 40px">
+      <h3 style="font-size:13px;font-weight:700;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Full Case Detail</h3>
+      <table style="border-radius:8px;overflow:hidden;border:1px solid #E5E7EB;font-size:13px">
+        <tr style="background:#F9FAFB">
+          <th style="padding:8px 14px;color:#6B7280;font-weight:600">Date</th>
+          <th style="padding:8px 14px;color:#6B7280;font-weight:600">Age</th>
+          <th style="padding:8px 14px;color:#6B7280;font-weight:600">Sender</th>
+          <th style="padding:8px 14px;color:#6B7280;font-weight:600">Message</th>
+          <th style="padding:8px 14px;color:#6B7280;font-weight:600">Status</th>
+        </tr>
+        ${caseRows}
+      </table>
+    </div>
+    <!-- Footer -->
+    <div style="background:#1F2937;padding:20px 40px;text-align:center">
+      <p style="margin:0;color:#9CA3AF;font-size:12px">Automated escalation report — Acclaim Client Portal</p>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+function escHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 // ── On-demand trigger with custom params ─────────────────────────────────────
 
 export async function runEscalationReportOnDemand(
@@ -213,11 +363,13 @@ export async function runEscalationReportOnDemand(
     return { sent: false, count: 0, cases: 0 };
   }
 
-  const excelBuffer = await generateEscalationExcel(escalatedMsgs);
   const dateStr = new Date().toISOString().split("T")[0];
-  const fileName = `Acclaim_Escalation_Report_${dateStr}.xlsx`;
+  const excelBuffer = await generateEscalationExcel(escalatedMsgs);
+  const excelFileName = `Acclaim_Escalation_Report_${dateStr}.xlsx`;
+  const htmlContent = generateEscalationHtml(escalatedMsgs);
+  const htmlFileName = `Acclaim_Escalation_Report_${dateStr}.html`;
 
-  const sent = await sendEscalationReportEmail(escalatedMsgs, excelBuffer, fileName, recipientEmail);
+  const sent = await sendEscalationReportEmail(escalatedMsgs, excelBuffer, excelFileName, htmlContent, htmlFileName, recipientEmail);
   if (sent) {
     const caseCount = new Set(escalatedMsgs.map(m => m.caseId)).size;
     console.log(`[Escalation] On-demand report sent — ${escalatedMsgs.length} messages across ${caseCount} cases`);
@@ -248,11 +400,13 @@ export async function processEscalationReport(): Promise<void> {
       return;
     }
 
-    const excelBuffer = await generateEscalationExcel(escalatedMsgs);
     const dateStr = now.toISOString().split("T")[0];
-    const fileName = `Acclaim_Escalation_Report_${dateStr}.xlsx`;
+    const excelBuffer = await generateEscalationExcel(escalatedMsgs);
+    const excelFileName = `Acclaim_Escalation_Report_${dateStr}.xlsx`;
+    const htmlContent = generateEscalationHtml(escalatedMsgs);
+    const htmlFileName = `Acclaim_Escalation_Report_${dateStr}.html`;
 
-    const sent = await sendEscalationReportEmail(escalatedMsgs, excelBuffer, fileName);
+    const sent = await sendEscalationReportEmail(escalatedMsgs, excelBuffer, excelFileName, htmlContent, htmlFileName);
     if (sent) {
       console.log(`[Escalation] Report sent — ${escalatedMsgs.length} messages across ${new Set(escalatedMsgs.map(m => m.caseId)).size} cases`);
     } else {

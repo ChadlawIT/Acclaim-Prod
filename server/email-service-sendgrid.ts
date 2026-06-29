@@ -3595,6 +3595,8 @@ export async function sendEscalationReportEmail(
   }>,
   excelBuffer: Buffer,
   fileName: string,
+  htmlReportContent?: string,
+  htmlReportFileName?: string,
   recipientEmail?: string,
 ): Promise<boolean> {
   try {
@@ -3716,6 +3718,14 @@ export async function sendEscalationReportEmail(
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       disposition: 'attachment',
     });
+    if (htmlReportContent && htmlReportFileName) {
+      attachments.push({
+        content: Buffer.from(htmlReportContent, 'utf8').toString('base64'),
+        filename: htmlReportFileName,
+        type: 'text/html',
+        disposition: 'attachment',
+      });
+    }
 
     const RECIPIENT = recipientEmail || 'email@acclaim.law';
     const subject = `⚠️ Escalation Report — ${totalMsgs} message${totalMsgs !== 1 ? 's' : ''} across ${totalCases} case${totalCases !== 1 ? 's' : ''} — ${today}`;
@@ -3726,6 +3736,7 @@ export async function sendEscalationReportEmail(
       subject,
       content: [
         { type: 'text/plain', value: textContent },
+        { type: 'text/html', value: htmlContent },
       ],
       attachments,
     };
