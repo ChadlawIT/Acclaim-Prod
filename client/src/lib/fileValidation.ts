@@ -6,12 +6,13 @@ export const ACCEPTED_FILE_EXTENSIONS = [
   '.jpg', '.jpeg', '.png', '.gif', '.heic', '.heif',
   '.xls', '.xlsx', '.csv',
   '.zip', '.rar',
-  '.mp4', '.mov', '.avi', '.webm', '.mkv', '.m4v', '.3gp', '.3gpp'
+  '.mp4', '.mov', '.avi', '.webm', '.mkv', '.m4v', '.3gp', '.3gpp',
+  '.eml', '.msg'
 ];
 
 export const ACCEPTED_FILE_TYPES_STRING = ACCEPTED_FILE_EXTENSIONS.join(',');
 
-export const ACCEPTED_FILE_TYPES_DISPLAY = 'PDF, DOC, DOCX, TXT, JPG, JPEG, PNG, GIF, HEIC, XLS, XLSX, CSV, ZIP, RAR, MP4, MOV, AVI, WEBM, MKV, M4V, 3GP';
+export const ACCEPTED_FILE_TYPES_DISPLAY = 'PDF, DOC, DOCX, TXT, JPG, JPEG, PNG, GIF, HEIC, XLS, XLSX, CSV, ZIP, RAR, MP4, MOV, AVI, WEBM, MKV, M4V, 3GP, EML, MSG';
 
 export interface FileValidationResult {
   isValid: boolean;
