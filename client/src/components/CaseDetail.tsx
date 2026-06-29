@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import acclaimRoseLogo from "@assets/acclaim_rose_transparent_1768474381340.png";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -1816,10 +1817,14 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
                         className={`flex gap-2 ${fromAdmin ? "flex-row-reverse" : "flex-row"}`}
                       >
                         {/* Avatar */}
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-1 ${
-                          fromAdmin ? "bg-teal-600 text-white" : "bg-gray-200 text-gray-600"
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-1 overflow-hidden ${
+                          fromAdmin ? "bg-white border-2 border-acclaim-teal" : "bg-gray-200 text-gray-600"
                         }`}>
-                          {(message.senderName || "?").split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}
+                          {fromAdmin ? (
+                            <img src={acclaimRoseLogo} alt="Acclaim" className="w-5 h-5 object-contain" />
+                          ) : (
+                            (message.senderName || "?").split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
+                          )}
                         </div>
 
                         {/* Bubble */}
