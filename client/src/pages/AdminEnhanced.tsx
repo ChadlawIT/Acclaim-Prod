@@ -4270,42 +4270,42 @@ export default function AdminEnhanced() {
       {/* Main Content Tabs */}
       <Tabs defaultValue="users" className="space-y-4">
         <div className="overflow-x-auto rounded-xl border bg-muted/40 dark:bg-muted/20 p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <TabsList className="inline-flex w-max sm:flex sm:w-full bg-transparent gap-0.5 h-auto">
-            <TabsTrigger value="users" className="shrink-0 sm:flex-1 flex items-center gap-1.5 text-xs sm:text-sm px-3 py-2 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:shadow-sm data-[state=active]:text-teal-700 dark:data-[state=active]:text-teal-400 font-medium whitespace-nowrap">
-              <Users className="h-3.5 w-3.5 shrink-0" />
+          <TabsList className="inline-flex w-max bg-transparent gap-0.5 h-auto">
+            <TabsTrigger value="users" className="flex items-center gap-1.5 text-xs sm:text-sm px-3 py-2 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:shadow-sm data-[state=active]:text-teal-700 dark:data-[state=active]:text-teal-400 font-medium whitespace-nowrap">
+              <Users className="h-3.5 w-3.5 flex-none" />
               Users
             </TabsTrigger>
-            <TabsTrigger value="organisations" className="shrink-0 sm:flex-1 flex items-center gap-1.5 text-xs sm:text-sm px-3 py-2 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:shadow-sm data-[state=active]:text-teal-700 dark:data-[state=active]:text-teal-400 font-medium whitespace-nowrap">
-              <Building className="h-3.5 w-3.5 shrink-0" />
+            <TabsTrigger value="organisations" className="flex items-center gap-1.5 text-xs sm:text-sm px-3 py-2 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:shadow-sm data-[state=active]:text-teal-700 dark:data-[state=active]:text-teal-400 font-medium whitespace-nowrap">
+              <Building className="h-3.5 w-3.5 flex-none" />
               Orgs
             </TabsTrigger>
-            <TabsTrigger value="cases" className="shrink-0 sm:flex-1 flex items-center gap-1.5 text-xs sm:text-sm px-3 py-2 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:shadow-sm data-[state=active]:text-teal-700 dark:data-[state=active]:text-teal-400 font-medium whitespace-nowrap">
-              <FileText className="h-3.5 w-3.5 shrink-0" />
+            <TabsTrigger value="cases" className="flex items-center gap-1.5 text-xs sm:text-sm px-3 py-2 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:shadow-sm data-[state=active]:text-teal-700 dark:data-[state=active]:text-teal-400 font-medium whitespace-nowrap">
+              <FileText className="h-3.5 w-3.5 flex-none" />
               Cases
             </TabsTrigger>
-            <TabsTrigger value="case-submissions" className="shrink-0 sm:flex-1 flex items-center gap-1.5 text-xs sm:text-sm px-3 py-2 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:shadow-sm data-[state=active]:text-teal-700 dark:data-[state=active]:text-teal-400 font-medium whitespace-nowrap">
-              <ClipboardList className="h-3.5 w-3.5 shrink-0" />
+            <TabsTrigger value="case-submissions" className="flex items-center gap-1.5 text-xs sm:text-sm px-3 py-2 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:shadow-sm data-[state=active]:text-teal-700 dark:data-[state=active]:text-teal-400 font-medium whitespace-nowrap">
+              <ClipboardList className="h-3.5 w-3.5 flex-none" />
               Submissions
             </TabsTrigger>
             {isSuperAdmin && (
-              <TabsTrigger value="integration" className="shrink-0 sm:flex-1 flex items-center gap-1.5 text-xs sm:text-sm px-3 py-2 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:shadow-sm data-[state=active]:text-teal-700 dark:data-[state=active]:text-teal-400 font-medium whitespace-nowrap">
-                <Zap className="h-3.5 w-3.5 shrink-0" />
+              <TabsTrigger value="integration" className="flex items-center gap-1.5 text-xs sm:text-sm px-3 py-2 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:shadow-sm data-[state=active]:text-teal-700 dark:data-[state=active]:text-teal-400 font-medium whitespace-nowrap">
+                <Zap className="h-3.5 w-3.5 flex-none" />
                 Integration
               </TabsTrigger>
             )}
             {isSuperAdmin && (
-              <TabsTrigger value="broadcast" className="shrink-0 sm:flex-1 flex items-center gap-1.5 text-xs sm:text-sm px-3 py-2 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:shadow-sm data-[state=active]:text-teal-700 dark:data-[state=active]:text-teal-400 font-medium whitespace-nowrap">
-                <Mail className="h-3.5 w-3.5 shrink-0" />
+              <TabsTrigger value="broadcast" className="flex items-center gap-1.5 text-xs sm:text-sm px-3 py-2 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:shadow-sm data-[state=active]:text-teal-700 dark:data-[state=active]:text-teal-400 font-medium whitespace-nowrap">
+                <Mail className="h-3.5 w-3.5 flex-none" />
                 Broadcast
               </TabsTrigger>
             )}
-            <TabsTrigger value="reports" className="shrink-0 sm:flex-1 flex items-center gap-1.5 text-xs sm:text-sm px-3 py-2 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:shadow-sm data-[state=active]:text-teal-700 dark:data-[state=active]:text-teal-400 font-medium whitespace-nowrap">
-              <Calendar className="h-3.5 w-3.5 shrink-0" />
+            <TabsTrigger value="reports" className="flex items-center gap-1.5 text-xs sm:text-sm px-3 py-2 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:shadow-sm data-[state=active]:text-teal-700 dark:data-[state=active]:text-teal-400 font-medium whitespace-nowrap">
+              <Calendar className="h-3.5 w-3.5 flex-none" />
               Reports
             </TabsTrigger>
             {isSuperAdmin && (
-              <TabsTrigger value="escalation" className="shrink-0 sm:flex-1 flex items-center gap-1.5 text-xs sm:text-sm px-3 py-2 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:shadow-sm data-[state=active]:text-teal-700 dark:data-[state=active]:text-teal-400 font-medium whitespace-nowrap">
-                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+              <TabsTrigger value="escalation" className="flex items-center gap-1.5 text-xs sm:text-sm px-3 py-2 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:shadow-sm data-[state=active]:text-teal-700 dark:data-[state=active]:text-teal-400 font-medium whitespace-nowrap">
+                <AlertTriangle className="h-3.5 w-3.5 flex-none" />
                 Escalation
               </TabsTrigger>
             )}
