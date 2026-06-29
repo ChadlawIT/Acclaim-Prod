@@ -3757,90 +3757,96 @@ export default function AdminEnhanced() {
   return (
     <div className="space-y-6 p-4 sm:p-6">
       {/* Header */}
-      <div className="space-y-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold">Admin Panel</h1>
-          <p className="text-gray-600 text-sm sm:text-base">Comprehensive user and organisation management.</p>
-        </div>
-        <div className="flex flex-wrap gap-2 sm:items-center">
-          <Link href="/">
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Home
+      <div className="rounded-xl bg-gradient-to-r from-teal-700 to-teal-600 dark:from-teal-900 dark:to-teal-800 p-5 sm:p-6 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-white/15 rounded-lg">
+              <ShieldCheck className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-white">Admin Centre</h1>
+              <p className="text-teal-100 text-xs sm:text-sm">User, organisation &amp; system management</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Link href="/">
+              <Button variant="secondary" size="sm" className="bg-white/15 hover:bg-white/25 text-white border-0 backdrop-blur-sm">
+                <ArrowLeft className="h-4 w-4 mr-1.5" />
+                <span className="hidden sm:inline">Back</span>
+              </Button>
+            </Link>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              data-testid="button-admin-refresh"
+              className="bg-white/15 hover:bg-white/25 text-white border-0 backdrop-blur-sm"
+            >
+              <RefreshCw className={`h-4 w-4 mr-1.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">{isRefreshing ? 'Refreshing…' : 'Refresh'}</span>
             </Button>
-          </Link>
+          </div>
+        </div>
+
+        {/* Quick-access links */}
+        <div className="mt-4 pt-4 border-t border-white/20 flex flex-wrap gap-2">
           <Link href="/system-monitoring">
-            <Button variant="outline" size="sm">
-              <Activity className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">System Monitoring</span>
-              <span className="sm:hidden">System</span>
+            <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs h-7">
+              <Activity className="h-3.5 w-3.5 mr-1.5" />
+              System Monitoring
             </Button>
           </Link>
           <Link href="/admin-payment-performance-report">
-            <Button variant="outline" size="sm">
-              <CreditCard className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Payment Performance</span>
-              <span className="sm:hidden">Payments</span>
+            <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs h-7">
+              <CreditCard className="h-3.5 w-3.5 mr-1.5" />
+              Payment Performance
             </Button>
           </Link>
           <Link href="/recovery-analysis-report">
-            <Button variant="outline" size="sm">
-              <BarChart3 className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Recovery Analysis</span>
-              <span className="sm:hidden">Recovery</span>
+            <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs h-7">
+              <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
+              Recovery Analysis
             </Button>
           </Link>
           <Button
-            variant="outline"
             size="sm"
+            variant="secondary"
+            className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs h-7"
             onClick={() => setShowRecoveryPerformance(true)}
             data-testid="button-recovery-performance"
           >
-            <Clock className="h-4 w-4 mr-2" />
-            <span className="hidden sm:inline">Recovery Performance</span>
-            <span className="sm:hidden">Performance</span>
+            <Clock className="h-3.5 w-3.5 mr-1.5" />
+            Recovery Performance
           </Button>
           <Link href="/messages-report">
-            <Button variant="outline" size="sm">
-              <Mail className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Messages Report</span>
-              <span className="sm:hidden">Messages</span>
+            <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs h-7">
+              <Mail className="h-3.5 w-3.5 mr-1.5" />
+              Messages Report
             </Button>
           </Link>
           <Link href="/cl-analytics">
-            <Button variant="outline" size="sm">
-              <Scale className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">CL Page Analytics</span>
-              <span className="sm:hidden">CL</span>
+            <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs h-7">
+              <Scale className="h-3.5 w-3.5 mr-1.5" />
+              CL Analytics
             </Button>
           </Link>
           {isSuperAdmin && (
             <Link href="/audit-management">
-              <Button variant="outline" size="sm">
-                <Shield className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Audit Management</span>
-                <span className="sm:hidden">Audit</span>
+              <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs h-7">
+                <Shield className="h-3.5 w-3.5 mr-1.5" />
+                Audit Management
               </Button>
             </Link>
           )}
-          <Button 
-            variant="outline" 
+          <Button
             size="sm"
+            variant="secondary"
+            className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs h-7"
             onClick={() => setShowClosedCaseManagement(true)}
           >
-            <Archive className="h-4 w-4 mr-2" />
-            <span className="hidden sm:inline">Closed Case Management</span>
-            <span className="sm:hidden">Closed Cases</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            data-testid="button-admin-refresh"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-            {isRefreshing ? 'Refreshing…' : 'Refresh'}
+            <Archive className="h-3.5 w-3.5 mr-1.5" />
+            Closed Cases
           </Button>
         </div>
       </div>
@@ -4211,97 +4217,96 @@ export default function AdminEnhanced() {
       ) : (
       <>
       {/* Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{users?.length || 0}</div>
-            <p className="text-xs text-muted-foreground">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white dark:bg-card rounded-xl border border-border shadow-sm p-4 flex items-center gap-4">
+          <div className="p-3 rounded-lg bg-teal-50 dark:bg-teal-900/30 shrink-0">
+            <Users className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+          </div>
+          <div>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Total Users</p>
+            <p className="text-2xl font-bold text-foreground mt-0.5">{users?.length || 0}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
               {users?.filter((u: User) => !u.organisationId).length || 0} unassigned
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Organisations</CardTitle>
-            <Building className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{organisations?.length || 0}</div>
-            <p className="text-xs text-muted-foreground">Active organisations</p>
-          </CardContent>
-        </Card>
+        <div className="bg-white dark:bg-card rounded-xl border border-border shadow-sm p-4 flex items-center gap-4">
+          <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/30 shrink-0">
+            <Building className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Organisations</p>
+            <p className="text-2xl font-bold text-foreground mt-0.5">{organisations?.length || 0}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Active organisations</p>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Admin Users</CardTitle>
-            <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{users?.filter((u: User) => u.isAdmin).length || 0}</div>
-            <p className="text-xs text-muted-foreground">With admin privileges</p>
-          </CardContent>
-        </Card>
+        <div className="bg-white dark:bg-card rounded-xl border border-border shadow-sm p-4 flex items-center gap-4">
+          <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/30 shrink-0">
+            <ShieldCheck className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+          </div>
+          <div>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Admin Users</p>
+            <p className="text-2xl font-bold text-foreground mt-0.5">{users?.filter((u: User) => u.isAdmin).length || 0}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">With admin privileges</p>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">@chadlaw Users</CardTitle>
-            <Shield className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
+        <div className="bg-white dark:bg-card rounded-xl border border-border shadow-sm p-4 flex items-center gap-4">
+          <div className="p-3 rounded-lg bg-violet-50 dark:bg-violet-900/30 shrink-0">
+            <Shield className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+          </div>
+          <div>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">@chadlaw Users</p>
+            <p className="text-2xl font-bold text-foreground mt-0.5">
               {users?.filter((u: User) => u.email?.endsWith('@chadlaw.co.uk')).length || 0}
-            </div>
-            <p className="text-xs text-muted-foreground">Internal users</p>
-          </CardContent>
-        </Card>
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">Internal users</p>
+          </div>
+        </div>
       </div>
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="users" className="space-y-4">
-        <div className="overflow-x-auto">
-          <TabsList className="flex w-full min-w-max sm:w-full sm:min-w-0">
-            <TabsTrigger value="users" className="flex-1 text-xs sm:text-sm">
-              <span className="hidden sm:inline">User Management</span>
-              <span className="sm:hidden">Users</span>
+        <div className="overflow-x-auto rounded-xl border bg-muted/40 dark:bg-muted/20 p-1">
+          <TabsList className="flex w-full min-w-max sm:w-full sm:min-w-0 bg-transparent gap-0.5 h-auto">
+            <TabsTrigger value="users" className="flex-1 flex items-center gap-1.5 text-xs sm:text-sm px-2 sm:px-3 py-2 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:shadow-sm data-[state=active]:text-teal-700 dark:data-[state=active]:text-teal-400 font-medium">
+              <Users className="h-3.5 w-3.5 shrink-0" />
+              <span className="hidden sm:inline">Users</span>
             </TabsTrigger>
-            <TabsTrigger value="organisations" className="flex-1 text-xs sm:text-sm">
+            <TabsTrigger value="organisations" className="flex-1 flex items-center gap-1.5 text-xs sm:text-sm px-2 sm:px-3 py-2 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:shadow-sm data-[state=active]:text-teal-700 dark:data-[state=active]:text-teal-400 font-medium">
+              <Building className="h-3.5 w-3.5 shrink-0" />
               <span className="hidden sm:inline">Organisations</span>
-              <span className="sm:hidden">Orgs</span>
             </TabsTrigger>
-            <TabsTrigger value="cases" className="flex-1 text-xs sm:text-sm">
-              <span className="hidden sm:inline">Case Management</span>
-              <span className="sm:hidden">Cases</span>
+            <TabsTrigger value="cases" className="flex-1 flex items-center gap-1.5 text-xs sm:text-sm px-2 sm:px-3 py-2 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:shadow-sm data-[state=active]:text-teal-700 dark:data-[state=active]:text-teal-400 font-medium">
+              <FileText className="h-3.5 w-3.5 shrink-0" />
+              <span className="hidden sm:inline">Cases</span>
             </TabsTrigger>
-            <TabsTrigger value="case-submissions" className="flex-1 text-xs sm:text-sm">
-              <span className="hidden sm:inline">Case Submissions</span>
-              <span className="sm:hidden">Submits</span>
+            <TabsTrigger value="case-submissions" className="flex-1 flex items-center gap-1.5 text-xs sm:text-sm px-2 sm:px-3 py-2 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:shadow-sm data-[state=active]:text-teal-700 dark:data-[state=active]:text-teal-400 font-medium">
+              <ClipboardList className="h-3.5 w-3.5 shrink-0" />
+              <span className="hidden sm:inline">Submissions</span>
             </TabsTrigger>
-
             {isSuperAdmin && (
-              <TabsTrigger value="integration" className="flex-1 text-xs sm:text-sm">
+              <TabsTrigger value="integration" className="flex-1 flex items-center gap-1.5 text-xs sm:text-sm px-2 sm:px-3 py-2 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:shadow-sm data-[state=active]:text-teal-700 dark:data-[state=active]:text-teal-400 font-medium">
+                <Zap className="h-3.5 w-3.5 shrink-0" />
                 <span className="hidden sm:inline">Integration</span>
-                <span className="sm:hidden">API</span>
               </TabsTrigger>
             )}
             {isSuperAdmin && (
-              <TabsTrigger value="broadcast" className="flex-1 text-xs sm:text-sm">
-                <span className="hidden sm:inline">Email Broadcast</span>
-                <span className="sm:hidden">Email</span>
+              <TabsTrigger value="broadcast" className="flex-1 flex items-center gap-1.5 text-xs sm:text-sm px-2 sm:px-3 py-2 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:shadow-sm data-[state=active]:text-teal-700 dark:data-[state=active]:text-teal-400 font-medium">
+                <Mail className="h-3.5 w-3.5 shrink-0" />
+                <span className="hidden sm:inline">Broadcast</span>
               </TabsTrigger>
             )}
-            <TabsTrigger value="reports" className="flex-1 text-xs sm:text-sm">
-              <span className="hidden sm:inline">Scheduled Reports</span>
-              <span className="sm:hidden">Reports</span>
+            <TabsTrigger value="reports" className="flex-1 flex items-center gap-1.5 text-xs sm:text-sm px-2 sm:px-3 py-2 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:shadow-sm data-[state=active]:text-teal-700 dark:data-[state=active]:text-teal-400 font-medium">
+              <Calendar className="h-3.5 w-3.5 shrink-0" />
+              <span className="hidden sm:inline">Reports</span>
             </TabsTrigger>
             {isSuperAdmin && (
-              <TabsTrigger value="escalation" className="flex-1 text-xs sm:text-sm">
-                <span className="hidden sm:inline">Escalation Reports</span>
-                <span className="sm:hidden">Escalate</span>
+              <TabsTrigger value="escalation" className="flex-1 flex items-center gap-1.5 text-xs sm:text-sm px-2 sm:px-3 py-2 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:shadow-sm data-[state=active]:text-teal-700 dark:data-[state=active]:text-teal-400 font-medium">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                <span className="hidden sm:inline">Escalation</span>
               </TabsTrigger>
             )}
           </TabsList>
