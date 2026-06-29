@@ -6,7 +6,7 @@ import fs from 'fs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const _clLogoPath = path.join(__dirname, 'assets', 'chadlaw-logo.jpg');
+const _clLogoPath = path.join(process.cwd(), 'server', 'assets', 'chadlaw-logo.jpg');
 const _clLogoB64 = fs.existsSync(_clLogoPath) ? fs.readFileSync(_clLogoPath).toString('base64') : '';
 const CL_LOGO_HEADER = _clLogoB64
   ? `<div style="background:#ffffff;padding:18px 40px;text-align:center;border-bottom:1px solid #e8e8f0;"><img src="data:image/jpeg;base64,${_clLogoB64}" alt="Chadwick Lawrence" style="height:64px;width:auto;display:inline-block;" /></div>`
