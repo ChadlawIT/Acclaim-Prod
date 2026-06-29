@@ -506,78 +506,52 @@ export class DatabaseStorage implements IStorage {
   }[]> {
     const cutoffDate = new Date(Date.now() - minDaysOld * 24 * 60 * 60 * 1000);
 
-    // Step 1: user messages on active, non-archived cases after activation date, older than cutoff
-    const userMsgs = await db
-      .select({
-        messageId: messages.id,
-        caseId: messages.caseId,
-        content: messages.content,
-        subject: messages.subject,
-        createdAt: messages.createdAt,
-        senderFirstName: users.firstName,
-        senderLastName: users.lastName,
-        senderEmail: users.email,
-        caseName: cases.caseName,
-        accountNumber: cases.accountNumber,
-        caseHandler: cases.assignedTo,
-      })
-      .from(messages)
-      .innerJoin(users, eq(messages.senderId, users.id))
-      .innerJoin(cases, eq(messages.caseId, cases.id))
-      .where(
-        and(
-          isNotNull(messages.caseId),
-          eq(users.isAdmin, false),
-          gte(messages.createdAt, activationDate),
-          lt(messages.createdAt, cutoffDate),
-          eq(cases.status, 'active'),
-          or(eq(cases.isArchived, false), isNull(cases.isArchived))
-        )
-      );
+    // Find cases where the LAST message (after activation date) is from a non-admin user
+    // and that message is older than minDaysOld — meaning the team hasn't replied since.
+    const rows = await db.execute(sql`
+      WITH last_msg_per_case AS (
+        SELECT DISTINCT ON (m.case_id)
+          m.id            AS message_id,
+          m.case_id,
+          m.content,
+          m.subject,
+          m.created_at,
+          u.first_name,
+          u.last_name,
+          u.email         AS sender_email,
+          u.is_admin,
+          c.case_name,
+          c.account_number,
+          c.assigned_to   AS case_handler
+        FROM messages m
+        JOIN users u ON u.id = m.sender_id
+        JOIN cases c ON c.id = m.case_id
+        WHERE m.case_id IS NOT NULL
+          AND c.status = 'active'
+          AND (c.is_archived = false OR c.is_archived IS NULL)
+          AND m.created_at >= ${activationDate}
+        ORDER BY m.case_id, m.created_at DESC
+      )
+      SELECT * FROM last_msg_per_case
+      WHERE is_admin = false
+        AND created_at < ${cutoffDate}
+      ORDER BY created_at ASC
+    `);
 
-    if (userMsgs.length === 0) return [];
-
-    // Step 2: fetch all admin messages on the same cases so we can check for responses
-    const caseIds = [...new Set(userMsgs.map(m => m.caseId).filter((id): id is number => id !== null))];
-
-    const adminMsgs = await db
-      .select({ caseId: messages.caseId, createdAt: messages.createdAt })
-      .from(messages)
-      .innerJoin(users, eq(messages.senderId, users.id))
-      .where(and(inArray(messages.caseId, caseIds), eq(users.isAdmin, true)));
-
-    // Build map: caseId → sorted list of admin message timestamps
-    const adminDatesByCaseId = new Map<number, Date[]>();
-    for (const m of adminMsgs) {
-      if (m.caseId === null || !m.createdAt) continue;
-      if (!adminDatesByCaseId.has(m.caseId)) adminDatesByCaseId.set(m.caseId, []);
-      adminDatesByCaseId.get(m.caseId)!.push(m.createdAt);
-    }
-
-    // Step 3: keep only user messages with no admin response after them
     const now = new Date();
-    const result = [];
-    for (const m of userMsgs) {
-      if (m.caseId === null || !m.createdAt) continue;
-      const adminDates = adminDatesByCaseId.get(m.caseId) ?? [];
-      const hasResponse = adminDates.some(d => d > m.createdAt!);
-      if (!hasResponse) {
-        result.push({
-          caseId: m.caseId,
-          caseName: m.caseName,
-          accountNumber: m.accountNumber,
-          caseHandler: m.caseHandler,
-          messageId: m.messageId,
-          messageContent: m.content,
-          messageSubject: m.subject,
-          messageCreatedAt: m.createdAt,
-          senderName: `${m.senderFirstName || ''} ${m.senderLastName || ''}`.trim() || m.senderEmail || 'Unknown',
-          senderEmail: m.senderEmail || '',
-          daysOverdue: Math.floor((now.getTime() - m.createdAt.getTime()) / (1000 * 60 * 60 * 24)),
-        });
-      }
-    }
-    return result;
+    return (rows.rows as any[]).map(r => ({
+      caseId:           Number(r.case_id),
+      caseName:         String(r.case_name),
+      accountNumber:    String(r.account_number),
+      caseHandler:      r.case_handler ? String(r.case_handler) : null,
+      messageId:        Number(r.message_id),
+      messageContent:   String(r.content),
+      messageSubject:   r.subject ? String(r.subject) : null,
+      messageCreatedAt: new Date(r.created_at),
+      senderName:       `${r.first_name || ''} ${r.last_name || ''}`.trim() || String(r.sender_email) || 'Unknown',
+      senderEmail:      r.sender_email ? String(r.sender_email) : '',
+      daysOverdue:      Math.floor((now.getTime() - new Date(r.created_at).getTime()) / (1000 * 60 * 60 * 24)),
+    }));
   }
 
   async getAdminByName(fullName: string): Promise<User | undefined> {

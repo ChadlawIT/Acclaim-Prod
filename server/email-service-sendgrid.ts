@@ -3726,7 +3726,6 @@ export async function sendEscalationReportEmail(
       subject,
       content: [
         { type: 'text/plain', value: textContent },
-        { type: 'text/html', value: htmlContent },
       ],
       attachments,
     };
