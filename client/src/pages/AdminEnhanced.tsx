@@ -2225,7 +2225,14 @@ export default function AdminEnhanced() {
   
   // Check if current user is super admin for destructive operations
   const isSuperAdmin = currentUser?.isSuperAdmin ?? false;
-  
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await queryClient.invalidateQueries();
+    setTimeout(() => setIsRefreshing(false), 800);
+  };
+
   // State for organisation management
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [newOrgName, setNewOrgName] = useState("");
@@ -3823,6 +3830,16 @@ export default function AdminEnhanced() {
             <Archive className="h-4 w-4 mr-2" />
             <span className="hidden sm:inline">Closed Case Management</span>
             <span className="sm:hidden">Closed Cases</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            data-testid="button-admin-refresh"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Refreshing…' : 'Refresh'}
           </Button>
         </div>
       </div>
