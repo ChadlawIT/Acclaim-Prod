@@ -4303,12 +4303,6 @@ export default function AdminEnhanced() {
               <Calendar className="h-3.5 w-3.5 flex-none" />
               Reports
             </TabsTrigger>
-            {isSuperAdmin && (
-              <TabsTrigger value="escalation" className="flex items-center gap-1.5 text-xs sm:text-sm px-3 py-2 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:shadow-sm data-[state=active]:text-teal-700 dark:data-[state=active]:text-teal-400 font-medium whitespace-nowrap">
-                <AlertTriangle className="h-3.5 w-3.5 flex-none" />
-                Escalation
-              </TabsTrigger>
-            )}
           </TabsList>
         </div>
 
@@ -5342,54 +5336,6 @@ export default function AdminEnhanced() {
         <TabsContent value="reports" className="space-y-4">
           <Card>
             <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-                  <Send className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                </div>
-                <div>
-                  <CardTitle>On-Demand Reports</CardTitle>
-                  <CardDescription>
-                    Trigger reports immediately without waiting for the scheduled run
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border rounded-lg bg-muted/30">
-                <div>
-                  <p className="font-medium text-sm">Inactive Cases Report</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Sends the inactive cases report email now, bypassing the Thursday 8 am schedule. Cases inactive for 30+ days are included.
-                  </p>
-                  {inactiveCasesCountData !== undefined && (
-                    <p
-                      data-testid="text-inactive-cases-count"
-                      className="text-xs font-medium mt-1.5 text-amber-700 dark:text-amber-400"
-                    >
-                      {inactiveCasesCountData.count} inactive {inactiveCasesCountData.count === 1 ? "case" : "cases"} currently
-                    </p>
-                  )}
-                </div>
-                <Button
-                  data-testid="button-send-inactive-cases-report"
-                  size="sm"
-                  variant="outline"
-                  className="shrink-0"
-                  disabled={sendInactiveCasesMutation.isPending}
-                  onClick={() => sendInactiveCasesMutation.mutate()}
-                >
-                  {sendInactiveCasesMutation.isPending ? (
-                    <RefreshCw className="h-4 w-4 mr-1.5 animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4 mr-1.5" />
-                  )}
-                  {sendInactiveCasesMutation.isPending ? "Sending…" : "Send Now"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
@@ -5695,14 +5641,8 @@ export default function AdminEnhanced() {
               )}
             </CardContent>
           </Card>
+          {isSuperAdmin && <EscalationReportsTrigger />}
         </TabsContent>
-
-        {/* Escalation Reports Tab */}
-        {isSuperAdmin && (
-        <TabsContent value="escalation" className="space-y-6">
-          <EscalationReportsTrigger />
-        </TabsContent>
-        )}
 
       </Tabs>
 
