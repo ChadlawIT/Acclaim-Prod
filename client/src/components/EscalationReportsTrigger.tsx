@@ -21,6 +21,8 @@ import {
   Search,
   X,
   ChevronDown,
+  Stethoscope,
+  ChevronUp,
 } from "lucide-react";
 import {
   Popover,
@@ -64,6 +66,135 @@ function ResultBanner({ result }: { result: TriggerResult }) {
   );
 }
 
+// ── Diagnose panel for Unanswered Messages ────────────────────────────────────
+
+interface DebugRow {
+  case_id: number;
+  case_name: string;
+  case_status: string;
+  is_archived: boolean | null;
+  sender_email: string;
+  is_admin: boolean | null;
+  created_at: string;
+  days_old: string;
+  result: string;
+}
+
+function UnansweredDiagnosePanel({ days }: { days: string }) {
+  const [open, setOpen] = useState(false);
+  const minDays = Number(days) >= 1 ? Number(days) : 1;
+
+  const { data, isFetching, refetch } = useQuery<{
+    thresholdDays: number;
+    cutoffDate: string;
+    totalCasesWithMessages: number;
+    rows: DebugRow[];
+  }>({
+    queryKey: ["/api/admin/reports/escalation/debug", minDays],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/admin/reports/escalation/debug?days=${minDays}`);
+      return res.json();
+    },
+    enabled: false,
+  });
+
+  const included = data?.rows.filter(r => r.result === "INCLUDED") ?? [];
+  const excluded = data?.rows.filter(r => r.result !== "INCLUDED") ?? [];
+
+  function handleOpen() {
+    setOpen(v => !v);
+    if (!open) refetch();
+  }
+
+  return (
+    <div className="border rounded-lg overflow-hidden">
+      <button
+        data-testid="button-diagnose-unanswered"
+        onClick={handleOpen}
+        className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-700 dark:text-slate-300"
+      >
+        <span className="flex items-center gap-2">
+          <Stethoscope className="h-4 w-4" />
+          Diagnose — why is the report empty?
+        </span>
+        {open ? <ChevronUp className="h-4 w-4 opacity-50" /> : <ChevronDown className="h-4 w-4 opacity-50" />}
+      </button>
+
+      {open && (
+        <div className="p-4 space-y-3 border-t bg-white dark:bg-slate-900">
+          {isFetching ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <RefreshCw className="h-4 w-4 animate-spin" />
+              Analysing messages in the system…
+            </div>
+          ) : !data ? (
+            <p className="text-sm text-muted-foreground">Click the header above to run the analysis.</p>
+          ) : (
+            <>
+              <div className="text-xs text-muted-foreground">
+                Threshold: <strong>{data.thresholdDays} day{data.thresholdDays !== 1 ? "s" : ""}</strong> &nbsp;·&nbsp;
+                Cases with messages found: <strong>{data.totalCasesWithMessages}</strong>
+              </div>
+
+              {included.length > 0 ? (
+                <div className="rounded-lg border border-green-200 dark:border-green-800 overflow-hidden">
+                  <div className="px-3 py-2 bg-green-50 dark:bg-green-900/20 text-xs font-semibold text-green-800 dark:text-green-300 flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    {included.length} case{included.length !== 1 ? "s" : ""} would be INCLUDED in the report
+                  </div>
+                  <div className="divide-y text-xs">
+                    {included.map(r => (
+                      <div key={r.case_id} className="px-3 py-2 flex items-center justify-between gap-2">
+                        <span className="font-medium truncate">{r.case_name}</span>
+                        <span className="text-muted-foreground shrink-0">{r.days_old}d old · {r.sender_email}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-amber-200 dark:border-amber-800 px-3 py-2 bg-amber-50 dark:bg-amber-900/20 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-1.5">
+                  <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                  <span>No cases qualify for this threshold. See exclusion reasons below.</span>
+                </div>
+              )}
+
+              {excluded.length > 0 && (
+                <div className="rounded-lg border overflow-hidden">
+                  <div className="px-3 py-2 bg-slate-50 dark:bg-slate-800/50 text-xs font-semibold text-muted-foreground">
+                    {excluded.length} case{excluded.length !== 1 ? "s" : ""} excluded — reasons:
+                  </div>
+                  <div className="divide-y text-xs">
+                    {excluded.map(r => (
+                      <div key={r.case_id} className="px-3 py-2 grid grid-cols-[1fr_auto] gap-x-3 gap-y-0.5">
+                        <span className="font-medium truncate">{r.case_name}</span>
+                        <span className="text-muted-foreground shrink-0">{r.days_old}d old</span>
+                        <span className="col-span-2 text-muted-foreground">{r.result}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {data.totalCasesWithMessages === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  No messages linked to any case were found in the system at all. Messages sent outside of a case (from the general Messages page) are not counted — only messages sent from within a case detail page qualify.
+                </p>
+              )}
+
+              <button
+                onClick={() => refetch()}
+                className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+              >
+                <RefreshCw className="h-3 w-3" /> Refresh
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Simple report cards (Unanswered Messages & Inactive Cases) ────────────────
 
 const SIMPLE_REPORT_DEFS = [
@@ -80,6 +211,7 @@ const SIMPLE_REPORT_DEFS = [
     daysHelp: "Only messages older than this with no team response will appear in the report.",
     scheduleLine: "Runs automatically Monday–Friday at 8 am (default: 7 days)",
     endpoint: "/api/admin/reports/escalation/trigger",
+    hasDiagnose: true,
   },
   {
     type: "inactive-cases" as const,
@@ -94,6 +226,7 @@ const SIMPLE_REPORT_DEFS = [
     daysHelp: "Only cases with no activity logged for at least this many days will be included.",
     scheduleLine: "Runs automatically every Thursday at 8 am (default: 30 days)",
     endpoint: "/api/admin/reports/inactive-cases/trigger",
+    hasDiagnose: false,
   },
 ];
 
@@ -203,6 +336,8 @@ function SimpleReportCard({ def }: { def: (typeof SIMPLE_REPORT_DEFS)[number] })
             )}
           </Button>
         </div>
+
+        {def.hasDiagnose && <UnansweredDiagnosePanel days={days} />}
       </CardContent>
     </Card>
   );
