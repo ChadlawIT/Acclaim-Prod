@@ -3515,11 +3515,10 @@ export class DatabaseStorage implements IStorage {
           c.status,
           c.stage,
           GREATEST(
-            c.updated_at,
-            COALESCE((SELECT MAX(ca.created_at) FROM case_activities ca WHERE ca.case_id = c.id), c.updated_at),
-            COALESCE((SELECT MAX(m.created_at)  FROM messages m          WHERE m.case_id  = c.id), c.updated_at),
-            COALESCE((SELECT MAX(p.created_at)  FROM payments p          WHERE p.case_id  = c.id), c.updated_at),
-            COALESCE((SELECT MAX(d.created_at)  FROM documents d         WHERE d.case_id  = c.id), c.updated_at)
+            (SELECT MAX(ca.created_at) FROM case_activities ca WHERE ca.case_id = c.id),
+            (SELECT MAX(m.created_at)  FROM messages m          WHERE m.case_id  = c.id),
+            (SELECT MAX(p.created_at)  FROM payments p          WHERE p.case_id  = c.id),
+            (SELECT MAX(d.created_at)  FROM documents d         WHERE d.case_id  = c.id)
           ) AS last_activity_date
         FROM cases c
         WHERE c.status = 'active'
