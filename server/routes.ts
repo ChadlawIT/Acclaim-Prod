@@ -2987,10 +2987,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userData = createUserSchema.parse(req.body);
       
-      // Check if email can be assigned admin status (only @chadlaw.co.uk emails)
-      if (userData.isAdmin && !userData.email.endsWith('@chadlaw.co.uk')) {
+      // Check if email can be assigned admin status (only @chadlaw.co.uk or @acclaim.law emails)
+      const isAdminEligible = (email: string) => email.endsWith('@chadlaw.co.uk') || email.endsWith('@acclaim.law');
+      if (userData.isAdmin && !isAdminEligible(userData.email)) {
         return res.status(400).json({ 
-          message: "Admin privileges can only be assigned to @chadlaw.co.uk email addresses" 
+          message: "Admin privileges can only be assigned to @chadlaw.co.uk or @acclaim.law email addresses" 
         });
       }
 
@@ -3092,21 +3093,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Make user admin (only for @chadlaw.co.uk emails)
+  // Make user admin (only for @chadlaw.co.uk or @acclaim.law emails)
   app.put('/api/admin/users/:userId/make-admin', isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const { userId } = req.params;
       const adminUser = await storage.getUser(req.user.id);
       
-      // Check if user has @chadlaw.co.uk email
+      // Check if user has an admin-eligible email
       const existingUser = await storage.getUser(userId);
       if (!existingUser) {
         return res.status(404).json({ message: "User not found" });
       }
 
-      if (!existingUser.email?.endsWith('@chadlaw.co.uk')) {
+      const isAdminEligible = (email: string) => email.endsWith('@chadlaw.co.uk') || email.endsWith('@acclaim.law');
+      if (!isAdminEligible(existingUser.email ?? '')) {
         return res.status(400).json({ 
-          message: "Admin privileges can only be assigned to @chadlaw.co.uk email addresses" 
+          message: "Admin privileges can only be assigned to @chadlaw.co.uk or @acclaim.law email addresses" 
         });
       }
 
@@ -3197,10 +3199,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Only @chadlaw.co.uk emails can be super admins
-      if (newSuperAdminStatus && !existingUser.email?.endsWith('@chadlaw.co.uk')) {
+      // Only @chadlaw.co.uk or @acclaim.law emails can be super admins
+      const isSuperAdminEligible = (email: string) => email.endsWith('@chadlaw.co.uk') || email.endsWith('@acclaim.law');
+      if (newSuperAdminStatus && !isSuperAdminEligible(existingUser.email ?? '')) {
         return res.status(400).json({ 
-          message: "Super admin privileges can only be assigned to @chadlaw.co.uk email addresses" 
+          message: "Super admin privileges can only be assigned to @chadlaw.co.uk or @acclaim.law email addresses" 
         });
       }
 

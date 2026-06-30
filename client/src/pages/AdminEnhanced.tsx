@@ -4258,9 +4258,9 @@ export default function AdminEnhanced() {
             <Shield className="h-5 w-5 text-violet-600 dark:text-violet-400" />
           </div>
           <div>
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">@chadlaw Users</p>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Staff Users</p>
             <p className="text-2xl font-bold text-foreground mt-0.5">
-              {users?.filter((u: User) => u.email?.endsWith('@chadlaw.co.uk')).length || 0}
+              {users?.filter((u: User) => u.email?.endsWith('@chadlaw.co.uk') || u.email?.endsWith('@acclaim.law')).length || 0}
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">Internal users</p>
           </div>
@@ -4464,7 +4464,7 @@ export default function AdminEnhanced() {
                           <div className="flex items-center space-x-2">
                             <AlertTriangle className="h-4 w-4 text-amber-600" />
                             <p className="text-sm text-amber-700">
-                              Admin privileges can only be assigned to @chadlaw.co.uk email addresses
+                              Admin privileges can only be assigned to @chadlaw.co.uk or @acclaim.law email addresses
                             </p>
                           </div>
                         </div>
@@ -4937,19 +4937,20 @@ export default function AdminEnhanced() {
                           )}
                           <button
                             onClick={() => {
-                              if (!user.isAdmin && !user.email?.endsWith('@chadlaw.co.uk')) { alert('Admin privileges can only be granted to @chadlaw.co.uk email addresses.'); return; }
+                              const isEligible = user.email?.endsWith('@chadlaw.co.uk') || user.email?.endsWith('@acclaim.law');
+                              if (!user.isAdmin && !isEligible) { alert('Admin privileges can only be granted to @chadlaw.co.uk or @acclaim.law email addresses.'); return; }
                               const action = user.isAdmin ? 'remove admin privileges from' : 'grant admin privileges to';
                               if (confirm(`Are you sure you want to ${action} ${user.firstName} ${user.lastName}?`)) {
                                 toggleAdminMutation.mutate({ userId: user.id, makeAdmin: !user.isAdmin });
                               }
                             }}
-                            disabled={toggleAdminMutation.isPending || (!user.isAdmin && !user.email?.endsWith('@chadlaw.co.uk'))}
+                            disabled={toggleAdminMutation.isPending || (!user.isAdmin && !user.email?.endsWith('@chadlaw.co.uk') && !user.email?.endsWith('@acclaim.law'))}
                             className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-50"
                           >
                             {user.isAdmin ? <ShieldCheck className="h-4 w-4 text-blue-500" /> : <Shield className="h-4 w-4 text-gray-400" />}
                             {user.isAdmin ? 'Remove admin' : 'Grant admin'}
                           </button>
-                          {isSuperAdmin && user.isAdmin && user.email?.endsWith('@chadlaw.co.uk') && (
+                          {isSuperAdmin && user.isAdmin && (user.email?.endsWith('@chadlaw.co.uk') || user.email?.endsWith('@acclaim.law')) && (
                             <button
                               onClick={() => {
                                 if (user.id === currentUser?.id) { alert('You cannot change your own super admin status.'); return; }
