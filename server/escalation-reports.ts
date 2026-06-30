@@ -80,7 +80,7 @@ export async function generateEscalationExcel(msgs: EscalatedMessage[]): Promise
   hdr.height = 22;
   sheet.views = [{ state: "frozen", ySplit: 1 }];
 
-  // Group by case, sort cases by oldest message first (highest daysOverdue)
+  // Group by case; sort cases by handler first, then oldest message (highest daysOverdue) within each handler
   const grouped = new Map<number, EscalatedMessage[]>();
   for (const m of msgs) {
     if (!grouped.has(m.caseId)) grouped.set(m.caseId, []);
@@ -88,23 +88,41 @@ export async function generateEscalationExcel(msgs: EscalatedMessage[]): Promise
   }
 
   const sortedCaseIds = [...grouped.keys()].sort((a, b) => {
+    const aFirst = grouped.get(a)![0];
+    const bFirst = grouped.get(b)![0];
+    const aHandler = aFirst.caseHandler || "Unassigned";
+    const bHandler = bFirst.caseHandler || "Unassigned";
+    if (aHandler !== bHandler) return aHandler.localeCompare(bHandler);
     const aMax = Math.max(...grouped.get(a)!.map(m => m.daysOverdue));
     const bMax = Math.max(...grouped.get(b)!.map(m => m.daysOverdue));
     return bMax - aMax;
   });
 
+  let currentHandler = "";
   for (const caseId of sortedCaseIds) {
     const caseMsgs = grouped.get(caseId)!.sort((a, b) => b.daysOverdue - a.daysOverdue);
     const first = caseMsgs[0];
+    const handler = first.caseHandler || "Unassigned";
+
+    // Handler section banner (new handler group)
+    if (handler !== currentHandler) {
+      currentHandler = handler;
+      const handlerRow = sheet.addRow({ caseName: `▶  ${handler}` });
+      sheet.mergeCells(`A${handlerRow.number}:J${handlerRow.number}`);
+      handlerRow.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 12 };
+      handlerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF0F4C75" } };
+      handlerRow.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+      handlerRow.height = 24;
+    }
 
     // Case group header
     const groupRow = sheet.addRow({
-      caseName: `${first.caseName}  ·  ${first.accountNumber}  ·  Handler: ${first.caseHandler || "Unassigned"}`,
+      caseName: `${first.caseName}  ·  ${first.accountNumber}`,
     });
     sheet.mergeCells(`A${groupRow.number}:J${groupRow.number}`);
     groupRow.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 11 };
     groupRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1E3A5F" } };
-    groupRow.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+    groupRow.alignment = { vertical: "middle", horizontal: "left", indent: 2 };
     groupRow.height = 20;
 
     for (const m of caseMsgs) {
@@ -219,13 +237,18 @@ export function generateEscalationHtml(msgs: EscalatedMessage[]): string {
     handlerMap.set(key, (handlerMap.get(key) ?? 0) + 1);
   }
 
-  // Group by case, sorted by oldest first (highest daysOverdue)
+  // Group by case; sort by handler first, then oldest message (highest daysOverdue) within each handler
   const grouped = new Map<number, EscalatedMessage[]>();
   for (const m of msgs) {
     if (!grouped.has(m.caseId)) grouped.set(m.caseId, []);
     grouped.get(m.caseId)!.push(m);
   }
   const sortedCaseIds = [...grouped.keys()].sort((a, b) => {
+    const aFirst = grouped.get(a)![0];
+    const bFirst = grouped.get(b)![0];
+    const aHandler = aFirst.caseHandler || "Unassigned";
+    const bHandler = bFirst.caseHandler || "Unassigned";
+    if (aHandler !== bHandler) return aHandler.localeCompare(bHandler);
     const aMax = Math.max(...grouped.get(a)!.map(m => m.daysOverdue));
     const bMax = Math.max(...grouped.get(b)!.map(m => m.daysOverdue));
     return bMax - aMax;
@@ -242,9 +265,23 @@ export function generateEscalationHtml(msgs: EscalatedMessage[]): string {
     .map(([h, c]) => `<tr><td style="padding:6px 14px;color:#374151">${escHtml(h)}</td><td style="padding:6px 14px;color:#374151;font-weight:600">${c}</td></tr>`)
     .join("");
 
+  let htmlCurrentHandler = "";
   const caseRows = sortedCaseIds.map(caseId => {
     const caseMsgs = grouped.get(caseId)!.sort((a, b) => b.daysOverdue - a.daysOverdue);
     const first = caseMsgs[0];
+    const handler = first.caseHandler || "Unassigned";
+
+    let handlerBanner = "";
+    if (handler !== htmlCurrentHandler) {
+      htmlCurrentHandler = handler;
+      handlerBanner = `
+      <tr style="background:#0F4C75">
+        <td colspan="5" style="padding:12px 14px;color:#FFFFFF;font-weight:800;font-size:14px;letter-spacing:0.3px">
+          ▶&nbsp; ${escHtml(handler)}
+        </td>
+      </tr>`;
+    }
+
     const msgRows = caseMsgs.map(m => {
       const ack = isLikelyAcknowledgement(m.messageContent);
       const rowBg = ack ? "#F3F4F6" : m.daysOverdue >= 28 ? "#FEE2E2" : m.daysOverdue >= 21 ? "#FEF3C7" : "#FFFBEB";
@@ -262,10 +299,10 @@ export function generateEscalationHtml(msgs: EscalatedMessage[]): string {
         </tr>`;
     }).join("");
 
-    return `
+    return `${handlerBanner}
       <tr style="background:#1E3A5F">
-        <td colspan="5" style="padding:10px 14px;color:#FFFFFF;font-weight:700;font-size:13px">
-          ${escHtml(first.caseName)} &nbsp;·&nbsp; ${escHtml(first.accountNumber)} &nbsp;·&nbsp; Handler: ${escHtml(first.caseHandler || "Unassigned")}
+        <td colspan="5" style="padding:10px 14px 10px 28px;color:#FFFFFF;font-weight:700;font-size:13px">
+          ${escHtml(first.caseName)} &nbsp;·&nbsp; ${escHtml(first.accountNumber)}
         </td>
       </tr>
       ${msgRows}`;
