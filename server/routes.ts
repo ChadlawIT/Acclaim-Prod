@@ -5647,6 +5647,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             WHEN LOWER(case_status) != 'active'                        THEN 'excluded: case status=' || case_status
             WHEN is_archived = true                                    THEN 'excluded: case is archived'
             WHEN is_admin = true                                       THEN 'excluded: last sender is admin'
+            WHEN LOWER(sender_email) LIKE '%@acclaim.law'             THEN 'excluded: Acclaim staff sender (' || sender_email || ')'
+            WHEN LOWER(sender_email) LIKE '%@chadlaw.co.uk'           THEN 'excluded: Acclaim staff sender (' || sender_email || ')'
             WHEN created_at >= ${cutoffDate}                           THEN 'excluded: message only ' || ROUND(EXTRACT(EPOCH FROM (NOW()-created_at))/86400::numeric,1) || 'd old (threshold=' || ${minDays} || 'd)'
             ELSE 'INCLUDED'
           END AS result

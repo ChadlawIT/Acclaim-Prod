@@ -535,6 +535,8 @@ export class DatabaseStorage implements IStorage {
       )
       SELECT * FROM last_msg_per_case
       WHERE (is_admin = false OR is_admin IS NULL)
+        AND LOWER(sender_email) NOT LIKE '%@acclaim.law'
+        AND LOWER(sender_email) NOT LIKE '%@chadlaw.co.uk'
         AND created_at < ${cutoffDate}
       ORDER BY created_at ASC
     `);
