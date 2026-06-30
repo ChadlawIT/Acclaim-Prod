@@ -529,7 +529,7 @@ export class DatabaseStorage implements IStorage {
         JOIN users u ON u.id = m.sender_id
         JOIN cases c ON c.id = m.case_id
         WHERE m.case_id IS NOT NULL
-          AND c.status = 'active'
+          AND LOWER(c.status) = 'active'
           AND (c.is_archived = false OR c.is_archived IS NULL)
         ORDER BY m.case_id, m.created_at DESC
       )
@@ -3521,7 +3521,7 @@ export class DatabaseStorage implements IStorage {
             (SELECT MAX(d.created_at)  FROM documents d         WHERE d.case_id  = c.id)
           ) AS last_activity_date
         FROM cases c
-        WHERE c.status = 'active'
+        WHERE LOWER(c.status) = 'active'
           AND (c.is_archived = false OR c.is_archived IS NULL)
       )
       SELECT * FROM case_last_activity
@@ -3619,7 +3619,7 @@ export class DatabaseStorage implements IStorage {
         la.created_at     AS last_activity_date
       FROM cases c
       JOIN latest_activity la ON la.case_id = c.id
-      WHERE c.status = 'active'
+      WHERE LOWER(c.status) = 'active'
         AND (c.is_archived = false OR c.is_archived IS NULL)
         AND LOWER(la.description) = ANY(${lowerDescriptions})
         AND la.created_at < ${cutoffDate}

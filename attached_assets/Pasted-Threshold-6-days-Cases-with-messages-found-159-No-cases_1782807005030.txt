@@ -1,0 +1,479 @@
+Threshold: 6 days  ·  Cases with messages found: 159
+No cases qualify for this threshold. See exclusion reasons below.
+159 cases excluded — reasons:
+Test matter only
+18.8d old
+excluded: case status=Active
+Apt 1 - Green Lane Works | LK01/2DGLW11
+20.9d old
+excluded: case status=Active
+NorWood Building Services Ltd and Jack Norfolk
+10.7d old
+excluded: case status=Active
+John Matthews t/a Wellington Cobbler
+7.8d old
+excluded: case status=Active
+Apartment 5, 2 Cutlers Gardens | KC01/3A.6/1
+28.7d old
+excluded: case status=Active
+24 Makers Place | KC01/3E.41/1
+25.8d old
+excluded: case status=Active
+Apartment 6, 2 Cutlers Gardens | KC01/3A.5/1
+28.7d old
+excluded: case status=Active
+1 Eagle Lane | LK01/1D.1/01
+6.8d old
+excluded: case status=Active
+Apt 9 - Green Lane Works | LK01/2DLOFT1
+5.0d old
+excluded: case status=Active
+Apt 10 - Green Lane Works | LK01/2DLOFT2
+5.0d old
+excluded: case status=Active
+Apt 4 - Birch Landing | LK01/2EGLW.4
+4.9d old
+excluded: case status=Active
+Michael Sidgwick t/a D M S Joinery & Building
+12.8d old
+excluded: case status=Active
+Mr Philip Glenn Wanless t/a PGW Building and Maintenance
+6.0d old
+excluded: case status=Active
+Tony Irving T/A T Irving Building & Roofing
+5.7d old
+excluded: case status=Active
+Wayne Harrison t/a Whitkirk Roofing & Building
+12.9d old
+excluded: case status=Active
+Oliver Brodzinski t/a OB Building & Roofing
+10.9d old
+excluded: case status=Active
+NRS Masonry Services Ltd and Nathan Smith
+3.9d old
+excluded: case status=Active
+Paul Ainsworth t/a Ains Build
+12.7d old
+excluded: case status=Active
+Mr Darren Wyrill t/a Darren Wyrill Joinery & Building
+11.9d old
+excluded: case status=Active
+Michael Gerard Connolly (as guarantor of Mountain Contracts Ltd)
+27.8d old
+excluded: case status=Active
+Thomas Mansell T/a Mansell Joinery and Building
+25.0d old
+excluded: case status=Closed
+Sonder Developments Ltd and Georgina St Hilaire
+14.9d old
+excluded: case status=Active
+Triple M Healthcare Ltd
+21.9d old
+excluded: case status=Active
+Clewer Communications Limited
+0.1d old
+excluded: case status=Active
+The Cleanologists Ltd
+0.1d old
+excluded: case status=Active
+Kacey Relocation Ltd
+0.1d old
+excluded: case status=Active
+Hartyn Property Group Ltd
+13.8d old
+excluded: case status=Active
+39 Solar Avenue | CI312/39SA/1
+7.8d old
+excluded: case status=Active
+6 Wild Garden | CI312/6WG/1
+4.9d old
+excluded: case status=Active
+Apt 07 - District Lofts | CID312/07DL1
+24.9d old
+excluded: case status=Active
+Apt 22 - District Lofts | CID312/22DL1
+24.9d old
+excluded: case status=Active
+Apt 31 - District Lofts | CID312/31DL1
+28.7d old
+excluded: case status=Closed
+Apt 29 - District Lofts | CID312/29DL1
+24.9d old
+excluded: case status=Active
+83 Solar Avenue | CI312/83SA/1
+25.0d old
+excluded: case status=Active
+65 Solar Avenue | CI312/65SA/1
+25.7d old
+excluded: case status=Active
+Rachael Cooper
+5.0d old
+excluded: case status=Active
+Ms Gemma Hunter
+10.7d old
+excluded: case status=Active
+Michaela Rodgers
+25.8d old
+excluded: case status=Active
+Carol Langdale
+20.7d old
+excluded: case status=Active
+Miss Kelly Hardman
+13.9d old
+excluded: case status=Active
+Rebecca Oakes
+14.7d old
+excluded: case status=Active
+Mrs Andrea Hibbert
+18.7d old
+excluded: case status=Active
+Miss Gaynor Coles
+5.0d old
+excluded: case status=Active
+Christine Smith
+8.0d old
+excluded: case status=Active
+Ms Jessica Tumelty
+12.7d old
+excluded: case status=Active
+Shannone Mitchell
+20.0d old
+excluded: case status=Active
+Nancy Walker / Sammy Woodward
+25.0d old
+excluded: case status=Active
+James Davenport
+20.0d old
+excluded: case status=Active
+Clare Ashley
+3.9d old
+excluded: case status=Active
+Laura Powell
+18.7d old
+excluded: case status=Active
+Nicola O'Malley
+11.8d old
+excluded: case status=Active
+Lesley Crowcroft
+4.7d old
+excluded: case status=Active
+Claudia Hibberd
+17.9d old
+excluded: case status=Active
+Paige Carey
+13.9d old
+excluded: case status=Closed
+Nicola Daniels
+19.9d old
+excluded: case status=Active
+Elizabeth Hawksworth
+24.7d old
+excluded: case status=Active
+Mr Kris Namniecks
+5.9d old
+excluded: case status=Active
+Laura Foulis
+10.9d old
+excluded: case status=Active
+Lily Ogden
+5.7d old
+excluded: case status=Active
+Nikita Cliff
+11.8d old
+excluded: case status=Active
+Kirsty Rose
+11.8d old
+excluded: case status=Active
+Stuart Wright
+5.9d old
+excluded: case status=Active
+Caroline Cunningham
+17.9d old
+excluded: case status=Active
+Chloe O'Hara
+24.7d old
+excluded: case status=Active
+Ionie Harrison
+18.9d old
+excluded: case status=Active
+Jo Patrick
+5.9d old
+excluded: case status=Active
+Nichola Brien
+20.7d old
+excluded: case status=Active
+Siddeeqa Garda
+18.8d old
+excluded: case status=Active
+Jo Langley
+19.9d old
+excluded: case status=Active
+Georgia Ridgeway
+7.8d old
+excluded: case status=Active
+Justine Nolan-Scarfe
+18.7d old
+excluded: case status=Active
+Lauren Young
+18.9d old
+excluded: case status=Active
+Paddy Greenwood
+0.9d old
+excluded: case status=Active
+Kelly Woodhead
+10.9d old
+excluded: case status=Active
+Julia Beanland
+8.0d old
+excluded: case status=Active
+James Price
+18.8d old
+excluded: case status=Active
+Lauren Hogg
+20.8d old
+excluded: case status=Active
+Emily Woolham
+13.9d old
+excluded: case status=Active
+Hayley Robinson
+4.8d old
+excluded: case status=Active
+Karina Varley
+5.8d old
+excluded: case status=Active
+Craig Donaldson
+19.9d old
+excluded: case status=Active
+Ella Clarke
+20.0d old
+excluded: case status=Active
+Emma Burville
+19.0d old
+excluded: case status=Active
+Danielle Vesely
+4.7d old
+excluded: case status=Active
+Emily Unsworth
+4.8d old
+excluded: case status=Active
+Sam Sellers Western
+5.9d old
+excluded: case status=Active
+Kelly Gannon
+21.0d old
+excluded: case status=Active
+Ronald Grieveson
+0.9d old
+excluded: case status=Active
+Matt Clegg
+11.9d old
+excluded: case status=Active
+Liam Pearson
+4.9d old
+excluded: case status=Active
+Kirsten Bond
+18.9d old
+excluded: case status=Active
+Hannah Eastwood
+25.0d old
+excluded: case status=Closed
+Samantha Short
+10.7d old
+excluded: case status=Active
+Corey Turner
+25.0d old
+excluded: case status=Active
+Dawn Asquith & Lucy Murray
+19.9d old
+excluded: case status=Active
+Kathryn Wild & Keith Dakin
+21.9d old
+excluded: case status=Active
+Louise Reynolds
+19.9d old
+excluded: case status=Active
+Aoife Maguire
+19.9d old
+excluded: case status=Active
+John Matthews
+15.0d old
+excluded: case status=Active
+Nicole Greenwood
+5.8d old
+excluded: case status=Active
+Lesley Ham
+14.8d old
+excluded: case status=Active
+Sam Peel
+0.7d old
+excluded: case status=Active
+Laura Kaung
+5.8d old
+excluded: case status=Active
+Charlotte Lester
+20.9d old
+excluded: case status=Active
+Antonia Connell
+20.9d old
+excluded: case status=Active
+Sophie Delamere
+20.9d old
+excluded: case status=Active
+22a Little Kelham Street | LK01/1E.4/01
+20.8d old
+excluded: case status=Active
+Apt 68 - Aire Lofts | CI312/68AL/1
+19.9d old
+excluded: case status=Active
+Apt 30 - District Lofts | CID312/30DL1
+0.7d old
+excluded: case status=Active
+Daniel O'Connor t/a D O'Connor Roofing
+19.0d old
+excluded: case status=Active
+16 Eagle Lane | LK01/1F.8/01
+12.9d old
+excluded: case status=Active
+Apartment 2, 4 Cutlers Gardens | KC01/3A.7/1
+0.7d old
+excluded: case status=Active
+Apt 98 - Aire Lofts | CI312/98AL/1
+19.0d old
+excluded: case status=Active
+Mint Commercial and Healthcare Ltd
+10.9d old
+excluded: case status=Active
+MADHATTERS DINING ROOM LTD
+18.7d old
+excluded: case status=Active
+Leadec Limited
+4.0d old
+excluded: case status=Active
+Lee Baker t/a The Cobblers & Locksmith
+7.8d old
+excluded: case status=Active
+John Muir
+5.8d old
+excluded: case status=Active
+Brian Charge t/a Hemel Shoe Repairs
+7.7d old
+excluded: case status=Closed
+Rishi Chawda t/a San Keys
+17.7d old
+excluded: case status=Active
+BOLDMERE HARDWARE LIMITED
+5.7d old
+excluded: case status=Active
+Horde Ltd
+7.9d old
+excluded: case status=Active
+Ice Comms Holdings Ltd
+0.0d old
+excluded: case status=Active
+Celestial Haven Divine Constellation Ltd
+0.0d old
+excluded: case status=Active
+The Digital Organisation Ltd.
+0.0d old
+excluded: case status=Active
+Kwikco Supplies Ltd
+7.9d old
+excluded: case status=Active
+One Space Facilities Management Ltd
+0.7d old
+excluded: case status=Active
+Bondgate Developments Yorkshire Ltd
+0.7d old
+excluded: case status=Active
+EP Seven Developments Ltd and Emily and Paul Beasley
+0.7d old
+excluded: case status=Active
+DU25XHE | 20258150
+3.9d old
+excluded: case status=Active
+NU71YJA | 20258151
+3.9d old
+excluded: case status=Active
+NU24OPP | 20258160
+3.8d old
+excluded: case status=Active
+ULR | RA23UCU | 20237527
+6.8d old
+excluded: case status=Active
+ULR | LR72HEJ | 20247824
+0.8d old
+excluded: case status=Active
+Property damage at VM Coventry | 20268276
+6.0d old
+excluded: case status=Active
+CF73UTY | 20258242
+4.9d old
+excluded: case status=Active
+NU73PPV | 20268265
+5.9d old
+excluded: case status=Active
+20258145 | YO74OTJ
+5.8d old
+excluded: case status=Active
+KE72SNN | 20258245
+5.8d old
+excluded: case status=Active
+NU73OLW | 20258146
+4.9d old
+excluded: case status=Active
+ULR | OV73EOY | 20247834
+4.8d old
+excluded: case status=Active
+ULR | HK23WKA | 20247916
+4.8d old
+excluded: case status=Active
+LX18FFJ | 20258061
+4.7d old
+excluded: case status=Active
+Veterinary Pathology Group Limited | Breach of Contract | 20247882
+0.8d old
+excluded: case status=Active
+FG23MMK | 20258118
+4.0d old
+excluded: case status=Active
+KP73UVX | 20258138
+0.7d old
+excluded: case status=Active
+HK74ONZ | 20258072
+4.0d old
+excluded: case status=Active
+EN74XBW | 20258229
+3.9d old
+excluded: case status=Active
+PY74GPF | 20258200
+3.9d old
+excluded: case status=Active
+AP74HSO | 20258261
+3.9d old
+excluded: case status=Active
+VK74DBV | 20258111
+3.7d old
+excluded: case status=Active
+KR71HWX | 20247948
+1.0d old
+excluded: case status=Active
+MAGM Asset Solutions Ltd
+1.0d old
+excluded: case status=Active
+LC73BVO | 20268295
+0.9d old
+excluded: case status=Active
+BC25OXJ | 20258223
+0.9d old
+excluded: case status=Active
+National Utilities Ltd
+0.7d old
+excluded: case status=Active
+The Estate Agent Group Limited
+0.8d old
+excluded: case status=Active
+LN25HPL | 20258244
+0.7d old
+excluded: case status=Active
+Pearce & Co | 20237431
+0.0d old

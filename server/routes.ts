@@ -5644,7 +5644,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         SELECT *,
           ROUND(EXTRACT(EPOCH FROM (NOW() - created_at))/86400::numeric, 1) AS days_old,
           CASE
-            WHEN case_status != 'active'                               THEN 'excluded: case status=' || case_status
+            WHEN LOWER(case_status) != 'active'                        THEN 'excluded: case status=' || case_status
             WHEN is_archived = true                                    THEN 'excluded: case is archived'
             WHEN is_admin = true                                       THEN 'excluded: last sender is admin'
             WHEN created_at >= ${cutoffDate}                           THEN 'excluded: message only ' || ROUND(EXTRACT(EPOCH FROM (NOW()-created_at))/86400::numeric,1) || 'd old (threshold=' || ${minDays} || 'd)'
