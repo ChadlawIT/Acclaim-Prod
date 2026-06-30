@@ -5615,6 +5615,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Diagnostic: shows exactly what the escalation query sees in this environment
+  app.get("/api/admin/reports/escalation/debug", isAuthenticated, isAdmin, isSuperAdmin, async (req, res) => {
+    try {
+      const { db } = await import('./db');
+      const { sql } = await import('drizzle-orm');
+      const minDays = Number(req.query.days) || 1;
+      const cutoffDate = new Date(Date.now() - minDays * 24 * 60 * 60 * 1000);
+
+      // All last messages per active case, with reasons why included/excluded
+      const rows = await db.execute(sql`
+        WITH last_msg_per_case AS (
+          SELECT DISTINCT ON (m.case_id)
+            m.id            AS message_id,
+            m.case_id,
+            m.created_at,
+            u.email         AS sender_email,
+            u.is_admin,
+            c.case_name,
+            c.status        AS case_status,
+            c.is_archived
+          FROM messages m
+          JOIN users u ON u.id = m.sender_id
+          JOIN cases c ON c.id = m.case_id
+          WHERE m.case_id IS NOT NULL
+          ORDER BY m.case_id, m.created_at DESC
+        )
+        SELECT *,
+          ROUND(EXTRACT(EPOCH FROM (NOW() - created_at))/86400::numeric, 1) AS days_old,
+          CASE
+            WHEN case_status != 'active'                               THEN 'excluded: case status=' || case_status
+            WHEN is_archived = true                                    THEN 'excluded: case is archived'
+            WHEN is_admin = true                                       THEN 'excluded: last sender is admin'
+            WHEN created_at >= ${cutoffDate}                           THEN 'excluded: message only ' || ROUND(EXTRACT(EPOCH FROM (NOW()-created_at))/86400::numeric,1) || 'd old (threshold=' || ${minDays} || 'd)'
+            ELSE 'INCLUDED'
+          END AS result
+        FROM last_msg_per_case
+        ORDER BY case_id ASC
+      `);
+
+      res.json({
+        thresholdDays: minDays,
+        cutoffDate,
+        totalCasesWithMessages: rows.rows.length,
+        rows: rows.rows,
+      });
+    } catch (error) {
+      console.error("Error in escalation debug:", error);
+      res.status(500).json({ message: "Debug query failed", error: String(error) });
+    }
+  });
+
   // Unique activity descriptions for the stuck-activity report picker
   app.get("/api/admin/reports/activity-descriptions", isAuthenticated, isAdmin, isSuperAdmin, async (req, res) => {
     try {

@@ -534,7 +534,7 @@ export class DatabaseStorage implements IStorage {
         ORDER BY m.case_id, m.created_at DESC
       )
       SELECT * FROM last_msg_per_case
-      WHERE is_admin = false
+      WHERE (is_admin = false OR is_admin IS NULL)
         AND created_at < ${cutoffDate}
       ORDER BY created_at ASC
     `);
