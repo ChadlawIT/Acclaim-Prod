@@ -4,7 +4,7 @@ import { sendEscalationReportEmail } from "./email-service-sendgrid";
 
 // Only messages received after this date are considered for escalation.
 // Set to the date this feature was activated so historical backlog is not reported.
-export const ESCALATION_ACTIVE_FROM = new Date("2026-06-25T00:00:00.000Z");
+export const ESCALATION_ACTIVE_FROM = new Date("2026-05-31T00:00:00.000Z");
 
 // Minimum days old before a message is considered overdue
 const MIN_DAYS_OVERDUE = 7;
