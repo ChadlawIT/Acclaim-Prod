@@ -506,8 +506,10 @@ export class DatabaseStorage implements IStorage {
   }[]> {
     const cutoffDate = new Date(Date.now() - minDaysOld * 24 * 60 * 60 * 1000);
 
-    // Find cases where the LAST message (after activation date) is from a non-admin user
+    // Find cases where the LAST message is from a non-admin user
     // and that message is older than minDaysOld — meaning the team hasn't replied since.
+    // activationDate is kept as a parameter for API compatibility but not used as a hard lower bound
+    // (it was causing an impossible range when minDaysOld > days since activation).
     const rows = await db.execute(sql`
       WITH last_msg_per_case AS (
         SELECT DISTINCT ON (m.case_id)
@@ -529,7 +531,6 @@ export class DatabaseStorage implements IStorage {
         WHERE m.case_id IS NOT NULL
           AND c.status = 'active'
           AND (c.is_archived = false OR c.is_archived IS NULL)
-          AND m.created_at >= ${activationDate}
         ORDER BY m.case_id, m.created_at DESC
       )
       SELECT * FROM last_msg_per_case
@@ -3525,8 +3526,7 @@ export class DatabaseStorage implements IStorage {
           AND (c.is_archived = false OR c.is_archived IS NULL)
       )
       SELECT * FROM case_last_activity
-      WHERE last_activity_date >= ${activeFrom}
-        AND last_activity_date < ${cutoffDate}
+      WHERE last_activity_date < ${cutoffDate}
       ORDER BY last_activity_date ASC
     `);
 
@@ -3571,11 +3571,8 @@ export class DatabaseStorage implements IStorage {
     const rows = await db.execute(sql`
       SELECT MIN(description) AS description
       FROM case_activities
-      JOIN cases c ON c.id = case_activities.case_id
-      WHERE case_activities.description IS NOT NULL
-        AND case_activities.description != ''
-        AND c.status = 'active'
-        AND (c.is_archived = false OR c.is_archived IS NULL)
+      WHERE description IS NOT NULL
+        AND description != ''
       GROUP BY LOWER(description)
       ORDER BY LOWER(MIN(description)) ASC
     `);
