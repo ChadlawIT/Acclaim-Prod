@@ -3599,6 +3599,11 @@ export class DatabaseStorage implements IStorage {
 
     const lowerDescriptions = descriptions.map(d => d.toLowerCase());
 
+    // Build an IN list of individual bound parameters — Neon's serverless driver
+    // doesn't support PostgreSQL array parameters in raw sql templates, so we
+    // avoid = ANY(${array}) and use IN ($1, $2, …) instead.
+    const descList = sql.join(lowerDescriptions.map(d => sql`${d}`), sql`, `);
+
     const rows = await db.execute(sql`
       WITH latest_activity AS (
         SELECT DISTINCT ON (ca.case_id)
@@ -3623,7 +3628,7 @@ export class DatabaseStorage implements IStorage {
       JOIN latest_activity la ON la.case_id = c.id
       WHERE LOWER(c.status) = 'active'
         AND (c.is_archived = false OR c.is_archived IS NULL)
-        AND LOWER(la.description) = ANY(${lowerDescriptions})
+        AND LOWER(la.description) IN (${descList})
         AND la.created_at < ${cutoffDate}
       ORDER BY la.created_at ASC
     `);
