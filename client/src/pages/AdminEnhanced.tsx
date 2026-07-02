@@ -2307,6 +2307,8 @@ export default function AdminEnhanced() {
   const [resetPasswordUser, setResetPasswordUser] = useState<User | null>(null);
   const [resetPasswordResult, setResetPasswordResult] = useState<{ tempPassword: string; email: string } | null>(null);
   const [sendingWelcomeEmail, setSendingWelcomeEmail] = useState(false);
+  const [welcomeEmailStatus, setWelcomeEmailStatus] = useState<null | 'sent' | 'failed'>(null);
+  const [inviteEmailStatus, setInviteEmailStatus] = useState<null | 'sending' | 'sent' | 'failed'>(null);
   const [showConfirmCreateUser, setShowConfirmCreateUser] = useState(false);
   const [orgSearchTerm, setOrgSearchTerm] = useState("");
 
@@ -3636,40 +3638,38 @@ export default function AdminEnhanced() {
   });
 
   const handleSendWelcomeEmail = async () => {
-    if (!createdUserId) {
-      toast({
-        title: "Error",
-        description: "Unable to send welcome email - missing user information",
-        variant: "destructive",
-      });
-      return;
-    }
-
+    if (!createdUserId) return;
     setSendingWelcomeEmail(true);
+    setWelcomeEmailStatus(null);
     try {
       const response = await apiRequest("POST", `/api/admin/users/${createdUserId}/send-welcome-email`, {});
       const result = await response.json();
-      
       if (result.emailSent) {
-        toast({
-          title: "Welcome Email Sent",
-          description: result.message || "Welcome email sent successfully",
-        });
+        setWelcomeEmailStatus('sent');
+        toast({ title: "Welcome Email Sent", description: result.message || "Welcome email sent successfully" });
       } else {
-        toast({
-          title: "Email Not Delivered",
-          description: `The welcome email could not be delivered to ${result.recipient?.email || 'the user'}. Please check the server logs or try again shortly.`,
-          variant: "destructive",
-        });
+        setWelcomeEmailStatus('failed');
+        toast({ title: "Email Not Delivered", description: `The welcome email could not be delivered to ${result.recipient?.email || 'the user'}.`, variant: "destructive" });
       }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to send welcome email",
-        variant: "destructive",
-      });
+      setWelcomeEmailStatus('failed');
+      toast({ title: "Error", description: error.message || "Failed to send welcome email", variant: "destructive" });
     } finally {
       setSendingWelcomeEmail(false);
+    }
+  };
+
+  const handleSendInviteEmail = async () => {
+    if (!createdUserId) return;
+    setInviteEmailStatus('sending');
+    try {
+      const response = await apiRequest("POST", `/api/admin/users/${createdUserId}/resend-invite`);
+      const result = await response.json();
+      setInviteEmailStatus('sent');
+      toast({ title: "Invitation Sent", description: result.message || "Microsoft invitation sent successfully" });
+    } catch (error: any) {
+      setInviteEmailStatus('failed');
+      toast({ title: "Invitation Failed", description: error.message || "Could not send the Microsoft invitation.", variant: "destructive" });
     }
   };
 
@@ -4377,11 +4377,11 @@ export default function AdminEnhanced() {
                             {userFormData.organisationIds?.map((orgId) => {
                               const org = organisations?.find((o: Organisation) => o.id === orgId);
                               return (
-                                <Badge key={orgId} variant="secondary" className="flex items-center gap-1" data-testid={`badge-selected-org-${orgId}`}>
+                                <Badge key={orgId} className="flex items-center gap-1 bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300 border border-teal-200 dark:border-teal-700 hover:bg-teal-100" data-testid={`badge-selected-org-${orgId}`}>
                                   {org?.name || `Org ${orgId}`}
                                   <button
                                     type="button"
-                                    className="ml-0.5 text-gray-500 hover:text-red-600"
+                                    className="ml-0.5 text-teal-600 hover:text-red-600 dark:text-teal-400 dark:hover:text-red-400"
                                     onClick={() => setUserFormData({
                                       ...userFormData,
                                       organisationIds: userFormData.organisationIds?.filter((id) => id !== orgId) ?? [],
@@ -6504,51 +6504,87 @@ export default function AdminEnhanced() {
       </Dialog>
 
       {/* New User Dialog */}
-      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+      <Dialog open={showPasswordDialog} onOpenChange={(open) => {
+        setShowPasswordDialog(open);
+        if (!open) { setCreatedUserId(null); setWelcomeEmailStatus(null); setInviteEmailStatus(null); }
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>User Created</DialogTitle>
             <DialogDescription>
-              The user has been added to the system. Send them a welcome email to invite them to the portal.
+              The user has been added to the system. Use the options below to notify them.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-4">
-            {createdUserId && (
-              <div className="bg-blue-50 border border-blue-200 rounded p-4">
-                <p className="text-sm text-blue-700 mb-3">
-                  <strong>Send Welcome Email</strong><br />
-                  Click below to send a welcome email to the user with a link to the portal.
-                </p>
-                <div className="bg-amber-50 border border-amber-200 rounded p-2 mb-3">
-                  <p className="text-xs text-amber-700">
-                    <strong>Note:</strong> The user must be assigned to an organisation before sending a welcome email. Close this dialog and assign them first if needed.
-                  </p>
-                </div>
-                <Button
-                  onClick={handleSendWelcomeEmail}
-                  disabled={sendingWelcomeEmail}
-                  className="w-full bg-blue-600 hover:bg-blue-700"
-                >
-                  {sendingWelcomeEmail ? (
-                    <>
-                      <Mail className="h-4 w-4 mr-2 animate-pulse" />
-                      Sending Email...
-                    </>
-                  ) : (
-                    <>
-                      <Mail className="h-4 w-4 mr-2" />
-                      Send Welcome Email
-                    </>
-                  )}
-                </Button>
+          <div className="grid gap-3 py-2">
+            {/* Welcome email */}
+            <div className="border rounded-lg p-4 space-y-3">
+              <div>
+                <p className="text-sm font-semibold">Send Welcome Email</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Sends their username and temporary password with a link to the portal.</p>
               </div>
-            )}
+              <div className="bg-amber-50 border border-amber-200 rounded p-2">
+                <p className="text-xs text-amber-700">
+                  <strong>Note:</strong> The user must be assigned to an organisation before sending a welcome email. Close this dialog and assign them first if needed.
+                </p>
+              </div>
+              {welcomeEmailStatus === 'sent' && (
+                <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2">
+                  <CheckCircle2 className="h-4 w-4 shrink-0" /> Welcome email sent successfully.
+                </div>
+              )}
+              {welcomeEmailStatus === 'failed' && (
+                <div className="flex items-center gap-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2">
+                  <XCircle className="h-4 w-4 shrink-0" /> Failed to send — please try again or check server logs.
+                </div>
+              )}
+              <Button
+                onClick={handleSendWelcomeEmail}
+                disabled={sendingWelcomeEmail || welcomeEmailStatus === 'sent'}
+                variant="outline"
+                className="w-full"
+                data-testid="button-send-welcome-email-dialog"
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                {sendingWelcomeEmail ? "Sending…" : welcomeEmailStatus === 'sent' ? "Sent ✓" : "Send Welcome Email"}
+              </Button>
+            </div>
+
+            {/* Azure invitation email */}
+            <div className="border rounded-lg p-4 space-y-3">
+              <div>
+                <p className="text-sm font-semibold">Send Microsoft Invitation</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Sends an Azure B2B invitation so the user can sign in with their Microsoft account.</p>
+              </div>
+              {inviteEmailStatus === 'sent' && (
+                <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2">
+                  <CheckCircle2 className="h-4 w-4 shrink-0" /> Invitation sent successfully.
+                </div>
+              )}
+              {inviteEmailStatus === 'failed' && (
+                <div className="flex items-center gap-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2">
+                  <XCircle className="h-4 w-4 shrink-0" /> Failed to send — please check Azure configuration or try again.
+                </div>
+              )}
+              <Button
+                onClick={handleSendInviteEmail}
+                disabled={inviteEmailStatus === 'sending' || inviteEmailStatus === 'sent'}
+                variant="outline"
+                className="w-full"
+                data-testid="button-send-invite-email-dialog"
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                {inviteEmailStatus === 'sending' ? "Sending…" : inviteEmailStatus === 'sent' ? "Sent ✓" : "Send Microsoft Invitation"}
+              </Button>
+            </div>
           </div>
-          <div className="flex justify-end">
+
+          <div className="flex justify-end pt-1">
             <Button onClick={() => {
               setShowPasswordDialog(false);
               setCreatedUserId(null);
+              setWelcomeEmailStatus(null);
+              setInviteEmailStatus(null);
             }}>
               Close
             </Button>
