@@ -3520,18 +3520,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/admin/users/engagement-stats', isAuthenticated, isAdmin, async (_req, res) => {
     try {
       // Run all queries in parallel
-      const [loginRows, msgRows, viewRows, lastSeenRows, allUsers, sosMessages] = await Promise.all([
-        // Login counts per user (from userActivityLogs)
+      const [loginRows, directMsgRows, viewRows, lastSeenRows, allUsers, sosMessages] = await Promise.all([
+        // Login counts per user — covers both local-auth (LOGIN) and SSO (sso_login)
         db.select({ userId: userActivityLogs.userId, cnt: count() })
           .from(userActivityLogs)
-          .where(eq(userActivityLogs.action, 'LOGIN'))
+          .where(sql`${userActivityLogs.action} IN ('LOGIN', 'sso_login')`)
           .groupBy(userActivityLogs.userId),
 
-        // Portal message sent counts per user (from userActivityLogs)
-        db.select({ userId: userActivityLogs.userId, cnt: count() })
-          .from(userActivityLogs)
-          .where(eq(userActivityLogs.action, 'MESSAGE_SENT'))
-          .groupBy(userActivityLogs.userId),
+        // Messages sent — count directly from messages table by sender_id so all
+        // routes are captured (portal send, admin send, OTP send, etc.)
+        db.select({ senderId: messages.senderId, cnt: count() })
+          .from(messages)
+          .where(sql`${messages.senderId} != 'acclaim-system-user'`)
+          .groupBy(messages.senderId),
 
         // First-view counts per user (messages/docs viewed for first time)
         db.select({ userId: auditLog.userId, cnt: count() })
@@ -3552,13 +3553,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .from(users),
 
         // SOS/external messages sent under the Acclaim system user — content starts with "Name:\n\n"
+        // These exist when cases come through the external SOS API integration
         db.select({ content: messages.content })
           .from(messages)
           .where(eq(messages.senderId, 'acclaim-system-user')),
       ]);
 
       // Parse SOS message handler names and build a name→count map
-      // Format: "Matt Perry:\n\nMessage body..."
+      // Format in DB: "Matt Perry:\n\nMessage body..."
       const SOS_PREFIX = /^([^\n]+):\n\n/;
       const sosNameCountMap: Record<string, number> = {};
       for (const { content } of sosMessages) {
@@ -3569,12 +3571,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Merge into lookup maps keyed by userId
+      // Build lookup maps keyed by userId
       const loginMap: Record<string, number> = {};
       for (const r of loginRows) if (r.userId) loginMap[r.userId] = Number(r.cnt);
 
-      const msgMap: Record<string, number> = {};
-      for (const r of msgRows) if (r.userId) msgMap[r.userId] = Number(r.cnt);
+      const directMsgMap: Record<string, number> = {};
+      for (const r of directMsgRows) if (r.senderId) directMsgMap[r.senderId] = Number(r.cnt);
 
       const viewMap: Record<string, number> = {};
       for (const r of viewRows) if (r.userId) viewMap[r.userId] = Number(r.cnt);
@@ -3585,9 +3587,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const stats = allUsers
         .map((u) => {
           const fullName = `${u.firstName} ${u.lastName}`.trim();
+          // SOS messages attributed by matching the handler name embedded in content
           const sosCount = sosNameCountMap[fullName] ?? 0;
-          const portalMsgs = msgMap[u.id] ?? 0;
-          const totalMsgs = portalMsgs + sosCount;
+          // Direct messages sent via any portal route
+          const directMsgs = directMsgMap[u.id] ?? 0;
+          const totalMsgs = directMsgs + sosCount;
           const logins = loginMap[u.id] ?? 0;
           const itemsViewed = viewMap[u.id] ?? 0;
           return {
