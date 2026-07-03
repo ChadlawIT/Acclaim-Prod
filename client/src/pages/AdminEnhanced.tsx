@@ -4927,7 +4927,7 @@ export default function AdminEnhanced() {
                 {/* Detail panel — fixed full-screen on mobile, absolute side panel on sm+ */}
                 {expandedUserId && <div className="hidden sm:block fixed inset-0 z-40" onClick={() => setExpandedUserId(null)} aria-hidden="true" />}
                 {expandedUserId && (() => {
-                  const user = paginatedUsers?.find((u: User) => u.id === expandedUserId);
+                  const user = filteredUsers?.find((u: User) => u.id === expandedUserId);
                   if (!user) return null;
                   const avatarColors = ['#0d9488','#0284c7','#7c3aed','#db2777','#d97706','#16a34a','#dc2626','#475569'];
                   const code = user.id.charCodeAt(0) + (user.id.charCodeAt(1) || 0);
@@ -6682,16 +6682,24 @@ export default function AdminEnhanced() {
               )}
             </Button>
             <Button onClick={async () => {
-              queryClient.invalidateQueries({ queryKey: ['/api/admin/users/email-timestamps'] });
-              await queryClient.refetchQueries({ queryKey: ['/api/admin/users-with-orgs'] });
-              if (resetPasswordUser) {
-                const freshUsers = queryClient.getQueryData<User[]>(['/api/admin/users-with-orgs']);
-                const updatedUser = freshUsers?.find(u => u.id === resetPasswordUser.id);
-                if (updatedUser) setSelectedUser(updatedUser);
-              }
+              const userId = resetPasswordUser?.id;
               sendPasswordEmailMutation.reset();
               setShowResetPasswordDialog(false);
               setResetPasswordResult(null);
+              queryClient.invalidateQueries({ queryKey: ['/api/admin/users/email-timestamps'] });
+              await queryClient.refetchQueries({ queryKey: ['/api/admin/users-with-orgs'] });
+              if (userId) {
+                // Navigate to the page containing this user so they're visible in the list
+                const allUsers = queryClient.getQueryData<User[]>(['/api/admin/users-with-orgs']);
+                if (allUsers) {
+                  const idx = allUsers.findIndex((u: User) => u.id === userId);
+                  if (idx >= 0) {
+                    const page = Math.floor(idx / usersPageSize) + 1;
+                    setUsersPage(page);
+                  }
+                }
+                setExpandedUserId(userId);
+              }
             }}>
               Close
             </Button>
