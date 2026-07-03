@@ -124,11 +124,11 @@ export default function AuthPage() {
         <div className="w-full max-w-sm">
 
           {/* Logo */}
-          <div className="flex items-center gap-3 mb-10">
-            <img src={acclaimLogo} alt="Acclaim" className="h-10 w-10 object-contain" />
+          <div className="flex items-center gap-4 mb-10">
+            <img src={acclaimLogo} alt="Acclaim" className="h-14 w-14 object-contain" />
             <div>
-              <div className="font-semibold text-slate-800 dark:text-white text-lg leading-tight">Acclaim</div>
-              <div className="text-xs text-slate-400 tracking-wide">Credit Management & Recovery</div>
+              <div className="font-bold text-slate-800 dark:text-white text-2xl leading-tight">Acclaim</div>
+              <div className="text-sm text-slate-400 tracking-wide">Credit Management & Recovery</div>
             </div>
           </div>
 
