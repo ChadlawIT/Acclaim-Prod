@@ -49,7 +49,6 @@ export default function Sidebar({ activeSection, setActiveSection, collapsed, on
       className={`${collapsed ? 'w-14' : 'w-64'} h-[100dvh] max-h-screen shadow-lg flex flex-col overflow-hidden transition-all duration-200 ease-in-out flex-shrink-0 dark:bg-gray-900`}
       style={{ background: "linear-gradient(180deg, #1e3f4f 0%, #1a5555 60%, #008080 100%)" }}
     >
-
       {/* Brand Header */}
       <div className="flex-shrink-0 flex items-center h-16 border-b border-white/15 dark:border-gray-700 px-2 overflow-hidden">
         {collapsed ? (
@@ -68,12 +67,11 @@ export default function Sidebar({ activeSection, setActiveSection, collapsed, on
             <img src={acclaimRoseLogo} alt="Acclaim Logo" className="w-10 h-10 mr-2 flex-shrink-0" />
             <div className="text-white">
               <div className="text-lg font-bold text-left leading-tight">Acclaim</div>
-              <div className="text-[10px] opacity-80 text-left leading-snug">Credit Management & Recovery</div>
+              <div className="opacity-80 text-left text-[11px]">Credit Management & Recovery</div>
             </div>
           </button>
         )}
       </div>
-
       {/* Navigation Menu */}
       <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto overflow-x-hidden">
         {menuItems.map((item) => {
@@ -165,7 +163,6 @@ export default function Sidebar({ activeSection, setActiveSection, collapsed, on
           </div>
         )}
       </nav>
-
       {/* User Profile */}
       <div className="flex-shrink-0 p-2 border-t border-white/15 dark:border-gray-700">
         {collapsed ? (
