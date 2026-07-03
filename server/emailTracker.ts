@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 interface UserEmailTimestamps {
   welcomeSentAt?: string;
   inviteSentAt?: string;
+  tempPasswordSentAt?: string;
 }
 
 type EmailTimestampsStore = Record<string, UserEmailTimestamps>;
@@ -39,6 +40,20 @@ export async function recordInviteEmail(userId: string): Promise<void> {
   }
 }
 
+export async function recordTempPasswordEmail(userId: string): Promise<void> {
+  try {
+    await db.insert(auditLog).values({
+      tableName: TABLE_NAME,
+      recordId: userId,
+      operation: "INSERT",
+      fieldName: "tempPasswordSentAt",
+      description: "Temporary password email sent",
+    });
+  } catch (err) {
+    console.error("[emailTracker] Failed to record temp password email:", err);
+  }
+}
+
 export async function getAllTimestamps(): Promise<EmailTimestampsStore> {
   try {
     const rows = await db
@@ -56,6 +71,8 @@ export async function getAllTimestamps(): Promise<EmailTimestampsStore> {
         store[row.recordId].welcomeSentAt = ts;
       } else if (row.fieldName === "inviteSentAt") {
         store[row.recordId].inviteSentAt = ts;
+      } else if (row.fieldName === "tempPasswordSentAt") {
+        store[row.recordId].tempPasswordSentAt = ts;
       }
     }
     return store;

@@ -65,7 +65,7 @@ import { setupAzureAuth, inviteUserToAzure, isAzureAuthEnabled } from "./azure-a
 import ExcelJS from "exceljs";
 import { loginRateLimiter } from "./rate-limiter";
 import { computeRecoveryPerformance } from "./recovery-report";
-import { recordWelcomeEmail, recordInviteEmail, getAllTimestamps } from "./emailTracker";
+import { recordWelcomeEmail, recordInviteEmail, recordTempPasswordEmail, getAllTimestamps } from "./emailTracker";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -3676,8 +3676,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (passwordEmailSent) {
+        await recordTempPasswordEmail(userId);
         res.json({ 
           message: `Password email sent successfully to ${user.email}`,
+          sent: true,
           recipient: {
             name: `${user.firstName} ${user.lastName}`,
             email: user.email

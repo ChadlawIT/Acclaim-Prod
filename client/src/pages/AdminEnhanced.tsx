@@ -3644,7 +3644,7 @@ export default function AdminEnhanced() {
   });
 
   // Send welcome email mutation
-  const { data: emailTimestamps = {} } = useQuery<Record<string, { welcomeSentAt?: string; inviteSentAt?: string }>>({
+  const { data: emailTimestamps = {} } = useQuery<Record<string, { welcomeSentAt?: string; inviteSentAt?: string; tempPasswordSentAt?: string }>>({
     queryKey: ['/api/admin/users/email-timestamps'],
   });
 
@@ -3685,6 +3685,28 @@ export default function AdminEnhanced() {
         description: error.message || "Failed to send welcome email",
         variant: "destructive",
       });
+    },
+  });
+
+  const sendPasswordEmailMutation = useMutation({
+    mutationFn: async ({ userId, temporaryPassword }: { userId: string; temporaryPassword?: string }) => {
+      const response = await apiRequest("POST", `/api/admin/users/${userId}/send-password-email`, { temporaryPassword });
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users/email-timestamps'] });
+      toast({
+        title: "Password Email Sent",
+        description: data.message,
+      });
+    },
+    onError: (error: any) => {
+      if (isUnauthorizedError(error)) {
+        toast({ title: "Unauthorized", description: "You are logged out. Logging in again...", variant: "destructive" });
+        setTimeout(() => { window.location.href = "/api/login"; }, 500);
+        return;
+      }
+      toast({ title: "Error", description: error.message || "Failed to send password email", variant: "destructive" });
     },
   });
 
@@ -4984,7 +5006,7 @@ export default function AdminEnhanced() {
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-700"><ClipboardX className="h-3 w-3" /> No case submit</span>
                         )}
                       </div>
-                      {(emailTimestamps[user.id]?.welcomeSentAt || emailTimestamps[user.id]?.inviteSentAt) && (
+                      {(emailTimestamps[user.id]?.welcomeSentAt || emailTimestamps[user.id]?.inviteSentAt || emailTimestamps[user.id]?.tempPasswordSentAt) && (
                         <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
                           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Email History</p>
                           <div className="space-y-2">
@@ -5006,6 +5028,17 @@ export default function AdminEnhanced() {
                                   <p className="text-gray-500">Microsoft invitation last sent</p>
                                   <p className="font-medium text-gray-800 dark:text-gray-200">
                                     {formatUKDateTime(emailTimestamps[user.id].inviteSentAt!)}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                            {emailTimestamps[user.id]?.tempPasswordSentAt && (
+                              <div className="flex items-start gap-2 text-xs">
+                                <KeyRound className="h-3.5 w-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
+                                <div>
+                                  <p className="text-gray-500">Temporary password email last sent</p>
+                                  <p className="font-medium text-gray-800 dark:text-gray-200">
+                                    {formatUKDateTime(emailTimestamps[user.id].tempPasswordSentAt!)}
                                   </p>
                                 </div>
                               </div>
@@ -6637,13 +6670,18 @@ export default function AdminEnhanced() {
           <div className="flex justify-end gap-2">
             <Button
               variant="outline"
+              disabled={sendPasswordEmailMutation.isPending}
               onClick={() => {
-                if (resetPasswordUser) sendWelcomeEmailMutation.mutate(resetPasswordUser.id);
-                setShowResetPasswordDialog(false);
+                if (resetPasswordUser) {
+                  sendPasswordEmailMutation.mutate({
+                    userId: resetPasswordUser.id,
+                    temporaryPassword: resetPasswordResult?.tempPassword,
+                  });
+                }
               }}
             >
               <Mail className="h-4 w-4 mr-2" />
-              Send Email
+              {sendPasswordEmailMutation.isPending ? "Sending…" : "Email password to user"}
             </Button>
             <Button onClick={() => { setShowResetPasswordDialog(false); setResetPasswordResult(null); }}>
               Close
