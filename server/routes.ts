@@ -3651,7 +3651,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Determine password to use: passed from request, or stored temporary password
-      const passwordToSend = temporaryPassword || user.temporaryPassword;
+      const passwordToSend = temporaryPassword || user.tempPassword;
       if (!passwordToSend) {
         return res.status(400).json({ message: "No temporary password available." });
       }

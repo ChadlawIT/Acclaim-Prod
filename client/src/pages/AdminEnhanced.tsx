@@ -3690,11 +3690,13 @@ export default function AdminEnhanced() {
 
   const sendPasswordEmailMutation = useMutation({
     mutationFn: async ({ userId, temporaryPassword }: { userId: string; temporaryPassword?: string }) => {
-      const response = await apiRequest("POST", `/api/admin/users/${userId}/send-password-email`, { temporaryPassword });
+      const response = await apiRequest("POST", `/api/admin/users/${userId}/send-password-email`, temporaryPassword ? { temporaryPassword } : undefined);
       return await response.json();
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users/email-timestamps'] });
+      setShowResetPasswordDialog(false);
+      setResetPasswordResult(null);
       toast({
         title: "Password Email Sent",
         description: data.message,
