@@ -3646,6 +3646,7 @@ export default function AdminEnhanced() {
       const result = await response.json();
       if (result.emailSent) {
         setWelcomeEmailStatus('sent');
+        queryClient.invalidateQueries({ queryKey: ['/api/admin/users/email-timestamps'] });
         toast({ title: "Welcome Email Sent", description: result.message || "Welcome email sent successfully" });
       } else {
         setWelcomeEmailStatus('failed');
@@ -3666,6 +3667,7 @@ export default function AdminEnhanced() {
       const response = await apiRequest("POST", `/api/admin/users/${createdUserId}/resend-invite`);
       const result = await response.json();
       setInviteEmailStatus('sent');
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users/email-timestamps'] });
       toast({ title: "Invitation Sent", description: result.message || "Microsoft invitation sent successfully" });
     } catch (error: any) {
       setInviteEmailStatus('failed');
@@ -6508,7 +6510,7 @@ export default function AdminEnhanced() {
         setShowPasswordDialog(open);
         if (!open) { setCreatedUserId(null); setWelcomeEmailStatus(null); setInviteEmailStatus(null); }
       }}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>User Created</DialogTitle>
             <DialogDescription>
