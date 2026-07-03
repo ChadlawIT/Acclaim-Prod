@@ -154,6 +154,14 @@
   background: linear-gradient(180deg, #0b1e26 0%, #0a2e2e 60%, #004d4d 100%);
 }
 
+/* Teal panel gradient (login right panel, admin header) */
+.teal-panel-gradient {
+  background: linear-gradient(160deg, #1e3f4f 0%, #1a5555 55%, #008080 100%);
+}
+.dark .teal-panel-gradient {
+  background: linear-gradient(160deg, #0b1e26 0%, #0a2e2e 55%, #004d4d 100%);
+}
+
 /* Improve coloured backgrounds in dark mode */
 .dark .bg-blue-50 {
   background-color: hsl(215, 35%, 16%);

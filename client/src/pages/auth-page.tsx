@@ -339,8 +339,7 @@ export default function AuthPage() {
       </div>
       {/* Right side - Brand panel */}
       <div
-        className="hidden md:flex md:w-[36%] shrink-0 flex-col justify-between relative overflow-hidden"
-        style={{ background: "linear-gradient(160deg, #1e3f4f 0%, #1a5555 55%, #008080 100%)" }}
+        className="hidden md:flex md:w-[36%] shrink-0 flex-col justify-between relative overflow-hidden teal-panel-gradient"
       >
         {/* Decorative circles */}
         <div

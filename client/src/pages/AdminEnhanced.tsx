@@ -3895,7 +3895,7 @@ export default function AdminEnhanced() {
   return (
     <div className="space-y-6 p-4 sm:p-6">
       {/* Header */}
-      <div className="rounded-xl p-5 sm:p-6 shadow-sm" style={{ background: "linear-gradient(160deg, #1e3f4f 0%, #1a5555 55%, #008080 100%)" }}>
+      <div className="rounded-xl p-5 sm:p-6 shadow-sm teal-panel-gradient">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
             <Link href="/">
