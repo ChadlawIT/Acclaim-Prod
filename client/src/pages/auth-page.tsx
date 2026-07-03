@@ -402,13 +402,17 @@ export default function AuthPage() {
             <p className="text-white/40 text-[10px] uppercase tracking-widest mb-3">Why clients trust us</p>
             <div className="space-y-2">
               {[
-                { badge: "✓", text: "Yorkshire-based legal specialists" },
-                { badge: "✓", text: "GDPR compliant & data secure" },
-                { badge: "✓", text: "Dedicated case handler support" },
+                { icon: "⚖️", text: "Yorkshire-based legal specialists" },
+                { icon: "🛡️", text: "GDPR compliant & data secure" },
+                { icon: "🤝", text: "Dedicated case handler support" },
               ].map((t) => (
-                <div key={t.text} className="flex items-center gap-2">
-                  <span className="text-teal-400 text-xs font-bold">{t.badge}</span>
-                  <span className="text-white/60 text-xs">{t.text}</span>
+                <div
+                  key={t.text}
+                  className="flex items-center gap-3 rounded-xl px-3 py-2.5"
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.07)" }}
+                >
+                  <span className="text-sm flex-shrink-0">{t.icon}</span>
+                  <span className="text-white/70 text-xs">{t.text}</span>
                 </div>
               ))}
             </div>
