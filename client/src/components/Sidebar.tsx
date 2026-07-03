@@ -56,7 +56,7 @@ export default function Sidebar({ activeSection, setActiveSection, collapsed, on
             className="flex items-center justify-center w-full hover:bg-white/15 dark:hover:bg-gray-800 p-2 rounded-lg transition-colors"
             title="Acclaim"
           >
-            <img src={acclaimRoseLogo} alt="Acclaim Logo" className="w-8 h-8 flex-shrink-0" />
+            <img src={acclaimRoseLogo} alt="Acclaim Logo" className="w-8 h-8 flex-shrink-0 object-contain" />
           </button>
         ) : (
           <button
