@@ -46,14 +46,17 @@ export default function Sidebar({ activeSection, setActiveSection, collapsed, on
   ];
 
   return (
-    <div className={`${collapsed ? 'w-14' : 'w-64'} h-[100dvh] max-h-screen bg-acclaim-teal dark:bg-gray-900 shadow-lg flex flex-col overflow-hidden transition-all duration-200 ease-in-out flex-shrink-0`}>
+    <div
+      className={`${collapsed ? 'w-14' : 'w-64'} h-[100dvh] max-h-screen shadow-lg flex flex-col overflow-hidden transition-all duration-200 ease-in-out flex-shrink-0 dark:bg-gray-900`}
+      style={{ background: "linear-gradient(180deg, #1e3f4f 0%, #1a5555 60%, #008080 100%)" }}
+    >
 
       {/* Brand Header */}
-      <div className="flex-shrink-0 flex items-center h-16 bg-acclaim-teal dark:bg-gray-900 border-b border-teal-700 dark:border-gray-700 px-2 overflow-hidden">
+      <div className="flex-shrink-0 flex items-center h-16 border-b border-white/15 dark:border-gray-700 px-2 overflow-hidden">
         {collapsed ? (
           <button
             onClick={() => setActiveSection('dashboard')}
-            className="flex items-center justify-center w-full hover:bg-teal-700 dark:hover:bg-gray-800 p-2 rounded-lg transition-colors"
+            className="flex items-center justify-center w-full hover:bg-white/15 dark:hover:bg-gray-800 p-2 rounded-lg transition-colors"
             title="Acclaim"
           >
             <img src={logoImage} alt="Acclaim Logo" className="w-7 h-7 filter brightness-0 invert opacity-80 dark:hidden flex-shrink-0" />
@@ -62,7 +65,7 @@ export default function Sidebar({ activeSection, setActiveSection, collapsed, on
         ) : (
           <button
             onClick={() => setActiveSection('dashboard')}
-            className="flex items-center hover:bg-teal-700 dark:hover:bg-gray-800 px-3 py-2 rounded-lg transition-colors flex-1 min-w-0"
+            className="flex items-center hover:bg-white/15 dark:hover:bg-gray-800 px-3 py-2 rounded-lg transition-colors flex-1 min-w-0"
           >
             <img src={logoImage} alt="Acclaim Logo" className="w-8 h-8 mr-3 filter brightness-0 invert opacity-80 dark:hidden flex-shrink-0" />
             <img src={acclaimRoseLogo} alt="Acclaim Logo" className="w-10 h-10 mr-3 hidden dark:block flex-shrink-0" />
@@ -95,8 +98,8 @@ export default function Sidebar({ activeSection, setActiveSection, collapsed, on
                 collapsed ? 'justify-center' : ''
               } ${
                 isActive
-                  ? "bg-teal-700 dark:bg-gray-700"
-                  : "hover:bg-teal-700 dark:hover:bg-gray-800"
+                  ? "bg-white/20 dark:bg-gray-700"
+                  : "hover:bg-white/15 dark:hover:bg-gray-800"
               }`}
             >
               <Icon className={`w-5 h-5 flex-shrink-0 ${collapsed ? '' : 'mr-3'}`} />
@@ -111,7 +114,7 @@ export default function Sidebar({ activeSection, setActiveSection, collapsed, on
         })}
 
         {/* Chadwick Lawrence */}
-        <div className="pt-3 mt-3 border-t border-teal-700/50 dark:border-gray-700">
+        <div className="pt-3 mt-3 border-t border-white/15 dark:border-gray-700">
           <button
             onClick={() => setActiveSection("chadwick-lawrence")}
             title={collapsed ? "Chadwick Lawrence" : undefined}
@@ -119,8 +122,8 @@ export default function Sidebar({ activeSection, setActiveSection, collapsed, on
               collapsed ? 'justify-center' : ''
             } ${
               activeSection === "chadwick-lawrence"
-                ? "bg-teal-700 dark:bg-gray-700"
-                : "hover:bg-teal-700 dark:hover:bg-gray-800"
+                ? "bg-white/20 dark:bg-gray-700"
+                : "hover:bg-white/15 dark:hover:bg-gray-800"
             }`}
           >
             <Scale className={`w-5 h-5 flex-shrink-0 ${collapsed ? '' : 'mr-3'}`} />
@@ -146,11 +149,11 @@ export default function Sidebar({ activeSection, setActiveSection, collapsed, on
 
         {/* Collapse toggle — desktop only */}
         {!isMobile && (
-          <div className="pt-3 mt-3 border-t border-teal-700/50 dark:border-gray-700">
+          <div className="pt-3 mt-3 border-t border-white/15 dark:border-gray-700">
             <button
               onClick={onToggleCollapse}
               title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-              className={`flex items-center w-full px-3 py-2.5 text-teal-200 hover:text-white rounded-lg transition-colors hover:bg-teal-700 dark:hover:bg-gray-800 ${
+              className={`flex items-center w-full px-3 py-2.5 text-white/70 hover:text-white rounded-lg transition-colors hover:bg-white/15 dark:hover:bg-gray-800 ${
                 collapsed ? 'justify-center' : ''
               }`}
             >
@@ -167,10 +170,10 @@ export default function Sidebar({ activeSection, setActiveSection, collapsed, on
       </nav>
 
       {/* User Profile */}
-      <div className="flex-shrink-0 p-2 border-t border-teal-700 dark:border-gray-700">
+      <div className="flex-shrink-0 p-2 border-t border-white/15 dark:border-gray-700">
         {collapsed ? (
           <div className="flex flex-col items-center gap-1.5">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden bg-white border-2 border-teal-300 flex-shrink-0">
+            <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden bg-white border-2 border-white/40 flex-shrink-0">
               {user?.isAdmin
                 ? <img src={acclaimRoseLogo} alt="Acclaim" className="w-6 h-6 object-contain" />
                 : <User className="text-acclaim-teal h-4 w-4" />
@@ -179,14 +182,14 @@ export default function Sidebar({ activeSection, setActiveSection, collapsed, on
             <button
               onClick={() => setLocation("/profile")}
               title="Profile"
-              className="p-1.5 text-teal-200 hover:text-white hover:bg-teal-700 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              className="p-1.5 text-white/70 hover:text-white hover:bg-white/15 dark:hover:bg-gray-800 rounded-lg transition-colors"
             >
               <UserCog className="w-4 h-4" />
             </button>
             <button
               onClick={handleLogout}
               title="Logout"
-              className="p-1.5 text-teal-200 hover:text-white hover:bg-teal-700 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              className="p-1.5 text-white/70 hover:text-white hover:bg-white/15 dark:hover:bg-gray-800 rounded-lg transition-colors"
             >
               <LogOut className="w-4 h-4" />
             </button>
@@ -194,7 +197,7 @@ export default function Sidebar({ activeSection, setActiveSection, collapsed, on
         ) : (
           <>
             <div className="flex items-center mb-3 px-2">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden bg-white border-2 border-acclaim-teal flex-shrink-0">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden bg-white border-2 border-white/40 flex-shrink-0">
                 {user?.isAdmin
                   ? <img src={acclaimRoseLogo} alt="Acclaim" className="w-8 h-8 object-contain" />
                   : <User className="text-acclaim-teal h-5 w-5" />
@@ -204,7 +207,7 @@ export default function Sidebar({ activeSection, setActiveSection, collapsed, on
                 <div className="text-white font-medium text-sm truncate">
                   {user?.firstName} {user?.lastName}
                 </div>
-                <div className="text-teal-200 text-xs truncate">
+                <div className="text-white/60 text-xs truncate">
                   {user?.email}
                 </div>
               </div>
@@ -214,7 +217,7 @@ export default function Sidebar({ activeSection, setActiveSection, collapsed, on
                 variant="ghost"
                 size="sm"
                 onClick={() => setLocation("/profile")}
-                className="flex-1 justify-start text-white hover:bg-teal-700 dark:hover:bg-gray-800"
+                className="flex-1 justify-start text-white hover:bg-white/15 dark:hover:bg-gray-800"
               >
                 <UserCog className="w-4 h-4 mr-2" />
                 Profile
@@ -223,7 +226,7 @@ export default function Sidebar({ activeSection, setActiveSection, collapsed, on
                 variant="ghost"
                 size="sm"
                 onClick={handleLogout}
-                className="flex-1 justify-start text-white hover:bg-teal-700 dark:hover:bg-gray-800"
+                className="flex-1 justify-start text-white hover:bg-white/15 dark:hover:bg-gray-800"
               >
                 <LogOut className="w-4 h-4 mr-2" />
                 Logout
