@@ -124,7 +124,7 @@ export default function AuthPage() {
         <div className="w-full max-w-sm">
 
           {/* Logo */}
-          <div className="flex justify-center mb-10">
+          <div className="flex justify-center mb-10 text-[16px]">
             <div className="flex items-center gap-3">
               <img src={acclaimLogo} alt="Acclaim" className="h-16 w-16 object-contain" />
               <div className="text-left">
@@ -145,10 +145,10 @@ export default function AuthPage() {
                 Back
               </button>
             ) : null}
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight text-left">
               {showAltLogin ? "Sign in with password" : "Welcome."}
             </h2>
-            <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+            <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 text-left">
               {showAltLogin
                 ? "Enter your email address and password below."
                 : "Sign in to access your portal account."}
