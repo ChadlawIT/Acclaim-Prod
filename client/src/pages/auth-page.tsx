@@ -368,7 +368,7 @@ export default function AuthPage() {
 
           {/* Main heading */}
           <h2 className="text-white text-4xl font-bold leading-tight mb-4 text-left" style={{ letterSpacing: "-0.02em" }}>
-            Your debt recovery<br />portal — made simple.
+            Smarter debt<br />recovery.
           </h2>
           <p className="text-teal-200 text-base opacity-75 leading-relaxed max-w-xs">
             Track cases, communicate with our team, and monitor your recovery progress — all in one secure place.
