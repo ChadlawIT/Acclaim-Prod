@@ -294,6 +294,7 @@ class EmailService {
               <p style="color: #64748b; font-size: 14px;">
                 Please log in to the Acclaim Portal to respond to this message.
               </p>
+              <p style="color: #94a3b8; font-size: 12px; margin-top: 8px;">Please do not reply to this email — responses sent by email cannot be processed.</p>
             </div>
           </div>
           
@@ -329,6 +330,7 @@ Please log in to the Acclaim Portal to respond to this message.
 
       const info = await this.transporter.sendMail({
         from: '"Acclaim Credit Management & Recovery" <email@acclaim.law>',
+        replyTo: 'noreply@acclaim.law',
         to: adminEmail,
         subject: subject,
         text: textContent,
@@ -470,6 +472,7 @@ Please log in to the Acclaim Portal to respond to this message.
               <p style="color: #64748b; font-size: 14px;">
                 Please log in to the Acclaim Portal to view and respond to this message.
               </p>
+              <p style="color: #94a3b8; font-size: 12px; margin-top: 8px;">Please do not reply to this email — to respond, log in to the portal using the link above.</p>
             </div>
           </div>
           
@@ -507,6 +510,7 @@ To manage your notification preferences, visit your Profile settings in the port
 
       const info = await this.transporter.sendMail({
         from: '"Acclaim Credit Management & Recovery" <email@acclaim.law>',
+        replyTo: 'noreply@acclaim.law',
         to: data.userEmail,
         subject: subject,
         text: textContent,
