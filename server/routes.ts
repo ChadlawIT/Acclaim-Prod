@@ -3519,6 +3519,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET user engagement stats for "Top Users" panel (no DB changes — reads existing tables)
   app.get('/api/admin/users/engagement-stats', isAuthenticated, isAdmin, async (_req, res) => {
     try {
+      // Resolve the Acclaim portal system account user ID (email@acclaim.law).
+      // Messages sent via SOS through this account embed the real handler name in
+      // the content ("Matt Perry:\n\nBody...") just like acclaim-system-user messages.
+      const [acclaimAccountRow] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, 'email@acclaim.law'))
+        .limit(1);
+      const acclaimAccountId = acclaimAccountRow?.id ?? null;
+
       // Run all queries in parallel
       const [loginRows, directMsgRows, viewRows, lastSeenRows, allUsers, sosMessages] = await Promise.all([
         // Login counts per user — covers both local-auth (LOGIN) and SSO (sso_login)
@@ -3527,11 +3537,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .where(sql`${userActivityLogs.action} IN ('LOGIN', 'sso_login')`)
           .groupBy(userActivityLogs.userId),
 
-        // Messages sent — count directly from messages table by sender_id so all
-        // routes are captured (portal send, admin send, OTP send, etc.)
+        // Messages sent — count directly from messages table by sender_id.
+        // Exclude acclaim-system-user (string sentinel) and the email@acclaim.law
+        // portal account — both are system relay accounts whose messages are
+        // attributed to the named handler parsed from the content below.
         db.select({ senderId: messages.senderId, cnt: count() })
           .from(messages)
-          .where(sql`${messages.senderId} != 'acclaim-system-user'`)
+          .where(
+            acclaimAccountId
+              ? sql`${messages.senderId} NOT IN ('acclaim-system-user', ${acclaimAccountId})`
+              : sql`${messages.senderId} != 'acclaim-system-user'`
+          )
           .groupBy(messages.senderId),
 
         // First-view counts per user (messages/docs viewed for first time)
@@ -3552,14 +3568,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         db.select({ id: users.id, firstName: users.firstName, lastName: users.lastName, email: users.email, isAdmin: users.isAdmin })
           .from(users),
 
-        // SOS/external messages sent under the Acclaim system user — content starts with "Name:\n\n"
-        // These exist when cases come through the external SOS API integration
+        // SOS/external messages — includes both acclaim-system-user (string sentinel)
+        // and the email@acclaim.law portal account. Content format: "Name:\n\nBody..."
         db.select({ content: messages.content })
           .from(messages)
-          .where(eq(messages.senderId, 'acclaim-system-user')),
+          .where(
+            acclaimAccountId
+              ? sql`${messages.senderId} IN ('acclaim-system-user', ${acclaimAccountId})`
+              : eq(messages.senderId, 'acclaim-system-user')
+          ),
       ]);
 
-      // Parse SOS message handler names and build a name→count map
+      // Parse handler names from SOS/relay messages and build a name→count map
       // Format in DB: "Matt Perry:\n\nMessage body..."
       const SOS_PREFIX = /^([^\n]+):\n\n/;
       const sosNameCountMap: Record<string, number> = {};
