@@ -276,7 +276,7 @@ export default function AuthPage() {
             </button>
 
             {showFirstTimeGuide && (
-              <div className="mt-2 px-4 py-4 rounded-lg bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 text-sm text-gray-700 dark:text-gray-300">
+              <div className="mt-2 px-4 py-4 rounded-lg dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 text-sm text-gray-700 dark:text-gray-300 bg-[#fafafa]">
                 {!showAltLogin ? (
                   <>
                     <p className="font-medium text-gray-800 dark:text-gray-100 mb-3">
