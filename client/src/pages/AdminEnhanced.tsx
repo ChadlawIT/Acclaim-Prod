@@ -3693,15 +3693,6 @@ export default function AdminEnhanced() {
       const response = await apiRequest("POST", `/api/admin/users/${userId}/send-password-email`, temporaryPassword ? { temporaryPassword } : undefined);
       return await response.json();
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/users/email-timestamps'] });
-      setShowResetPasswordDialog(false);
-      setResetPasswordResult(null);
-      toast({
-        title: "Password Email Sent",
-        description: data.message,
-      });
-    },
     onError: (error: any) => {
       if (isUnauthorizedError(error)) {
         toast({ title: "Unauthorized", description: "You are logged out. Logging in again...", variant: "destructive" });
@@ -6672,7 +6663,7 @@ export default function AdminEnhanced() {
           <div className="flex justify-end gap-2">
             <Button
               variant="outline"
-              disabled={sendPasswordEmailMutation.isPending}
+              disabled={sendPasswordEmailMutation.isPending || sendPasswordEmailMutation.isSuccess}
               onClick={() => {
                 if (resetPasswordUser) {
                   sendPasswordEmailMutation.mutate({
@@ -6682,10 +6673,20 @@ export default function AdminEnhanced() {
                 }
               }}
             >
-              <Mail className="h-4 w-4 mr-2" />
-              {sendPasswordEmailMutation.isPending ? "Sending…" : "Email password to user"}
+              {sendPasswordEmailMutation.isSuccess ? (
+                <><CheckCircle2 className="h-4 w-4 mr-2 text-green-500" />Email sent</>
+              ) : sendPasswordEmailMutation.isPending ? (
+                <><Mail className="h-4 w-4 mr-2" />Sending…</>
+              ) : (
+                <><Mail className="h-4 w-4 mr-2" />Email password to user</>
+              )}
             </Button>
-            <Button onClick={() => { setShowResetPasswordDialog(false); setResetPasswordResult(null); }}>
+            <Button onClick={() => {
+              queryClient.invalidateQueries({ queryKey: ['/api/admin/users/email-timestamps'] });
+              sendPasswordEmailMutation.reset();
+              setShowResetPasswordDialog(false);
+              setResetPasswordResult(null);
+            }}>
               Close
             </Button>
           </div>
