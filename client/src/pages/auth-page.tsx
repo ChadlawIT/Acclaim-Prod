@@ -121,7 +121,7 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-gray-50 dark:bg-gray-900">
       {/* Left side - Form */}
-      <div className="flex-1 flex items-center justify-center p-4 md:p-8 text-center bg-[color:var(--primary-foreground)]">
+      <div className="flex-1 flex items-center justify-center p-4 md:p-8">
         <div className="w-full max-w-md">
           {/* Logo and Header */}
           <div className="text-center mb-8">
@@ -141,7 +141,7 @@ export default function AuthPage() {
           </div>
 
           <Card className="shadow-lg border-0">
-            <CardHeader className="pb-4 bg-[color:var(--primary-foreground)] border-t-[color:var(--primary-foreground)] border-r-[color:var(--primary-foreground)] border-b-[color:var(--primary-foreground)] border-l-[color:var(--primary-foreground)]">
+            <CardHeader className="pb-4">
               <CardTitle className="text-lg">
                 {showAltLogin ? (
                   <button
@@ -159,7 +159,7 @@ export default function AuthPage() {
                   : "Sign in with your Microsoft account to access the portal."}
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-6 pt-0 bg-[color:var(--primary-foreground)] border-t-[color:var(--primary-foreground)] border-r-[color:var(--primary-foreground)] border-b-[color:var(--primary-foreground)] border-l-[color:var(--primary-foreground)]">
+            <CardContent>
               {error && !showAltLogin && (
                 <Alert variant="destructive" className="mb-4">
                   <AlertDescription>{error}</AlertDescription>
