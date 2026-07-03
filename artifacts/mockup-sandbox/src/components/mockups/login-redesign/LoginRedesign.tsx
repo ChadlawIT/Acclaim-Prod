@@ -13,7 +13,7 @@ export function LoginRedesign() {
 
       {/* ── Left panel — brand ── */}
       <div
-        className="hidden lg:flex flex-col justify-between w-[42%] relative overflow-hidden"
+        className="hidden lg:flex flex-col justify-between w-[32%] relative overflow-hidden"
         style={{ background: "linear-gradient(160deg, #0f2027 0%, #0d3d3d 55%, #005f5f 100%)" }}
       >
         {/* Decorative grid */}
