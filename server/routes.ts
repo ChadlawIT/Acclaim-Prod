@@ -5737,6 +5737,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Preview / diagnose for Inactive Cases — returns matching cases for on-screen view
+  app.get("/api/admin/reports/inactive-cases/debug", isAuthenticated, isAdmin, isSuperAdmin, async (req, res) => {
+    try {
+      const days = Math.max(1, Number(req.query.days) || 30);
+      const cases = await storage.getInactiveCases(days);
+      res.json({ thresholdDays: days, count: cases.length, cases });
+    } catch (error) {
+      console.error("Error in inactive-cases preview:", error);
+      res.status(500).json({ message: "Failed to run inactive cases preview" });
+    }
+  });
+
+  // Preview / diagnose for Stuck Activity — returns matching cases for on-screen view
+  app.get("/api/admin/reports/stuck-activity/debug", isAuthenticated, isAdmin, isSuperAdmin, async (req, res) => {
+    try {
+      const days = Math.max(1, Number(req.query.days) || 21);
+      const raw = req.query.descriptions;
+      const descriptions: string[] = Array.isArray(raw)
+        ? (raw as string[])
+        : raw
+        ? [raw as string]
+        : [];
+      if (descriptions.length === 0) {
+        return res.json({ thresholdDays: days, count: 0, cases: [], descriptions: [] });
+      }
+      const cases = await storage.getCasesStuckAtActivity(descriptions, days);
+      res.json({ thresholdDays: days, count: cases.length, cases, descriptions });
+    } catch (error) {
+      console.error("Error in stuck-activity preview:", error);
+      res.status(500).json({ message: "Failed to run stuck activity preview" });
+    }
+  });
+
   // External API endpoints for case management system integration
 
   // Check whether a case exists by external reference (read-only, no side effects)

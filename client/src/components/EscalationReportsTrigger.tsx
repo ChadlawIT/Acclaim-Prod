@@ -195,6 +195,272 @@ function UnansweredDiagnosePanel({ days }: { days: string }) {
   );
 }
 
+// ── Shared: handler-grouped preview list ──────────────────────────────────────
+
+interface HandlerCase {
+  caseId: number;
+  caseName: string;
+  assignedTo: string | null;
+  stage?: string;
+  daysValue: number;
+  daysLabel: string;
+  subLabel?: string;
+}
+
+function HandlerGroupedPreview({ cases, emptyMessage }: { cases: HandlerCase[]; emptyMessage: string }) {
+  if (cases.length === 0) {
+    return (
+      <div className="rounded-lg border border-amber-200 dark:border-amber-800 px-3 py-2 bg-amber-50 dark:bg-amber-900/20 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-1.5">
+        <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+        <span>{emptyMessage}</span>
+      </div>
+    );
+  }
+
+  // Group by handler — named handlers first (alphabetical), Unassigned last
+  const byHandler = new Map<string, HandlerCase[]>();
+  for (const c of cases) {
+    const key = c.assignedTo || "Unassigned";
+    if (!byHandler.has(key)) byHandler.set(key, []);
+    byHandler.get(key)!.push(c);
+  }
+  const sortedHandlers = [...byHandler.entries()].sort(([a], [b]) => {
+    if (a === "Unassigned") return 1;
+    if (b === "Unassigned") return -1;
+    return a.localeCompare(b);
+  });
+
+  return (
+    <div className="space-y-2">
+      {sortedHandlers.map(([handler, handlerCases]) => {
+        const isUnassigned = handler === "Unassigned";
+        const initial = handler[0]?.toUpperCase() ?? "?";
+        // Sort cases within handler: most days first
+        const sorted = [...handlerCases].sort((a, b) => b.daysValue - a.daysValue);
+        return (
+          <div key={handler} className="rounded-lg border overflow-hidden">
+            <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 dark:bg-slate-800/50 border-b">
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${
+                isUnassigned
+                  ? "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
+                  : "bg-violet-100 dark:bg-violet-900/50 text-violet-700 dark:text-violet-300"
+              }`}>
+                {isUnassigned ? "?" : initial}
+              </div>
+              <span className="text-xs font-semibold text-foreground flex-1 truncate">{handler}</span>
+              <span className="text-xs text-muted-foreground shrink-0">
+                {handlerCases.length} case{handlerCases.length !== 1 ? "s" : ""}
+              </span>
+            </div>
+            <div className="divide-y text-xs">
+              {sorted.map(c => (
+                <div key={c.caseId} className="px-3 py-2 flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">{c.caseName}</p>
+                    {c.subLabel && (
+                      <p className="text-muted-foreground mt-0.5 line-clamp-1">{c.subLabel}</p>
+                    )}
+                  </div>
+                  <span className="shrink-0 text-muted-foreground whitespace-nowrap">{c.daysValue}d {c.daysLabel}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Diagnose panel for Inactive Cases ─────────────────────────────────────────
+
+function InactiveCasesDiagnosePanel({ days }: { days: string }) {
+  const [open, setOpen] = useState(false);
+  const minDays = Number(days) >= 1 ? Number(days) : 1;
+
+  const { data, isFetching, refetch } = useQuery<{
+    thresholdDays: number;
+    count: number;
+    cases: Array<{
+      caseId: number; caseName: string; assignedTo: string | null;
+      stage: string; daysInactive: number;
+    }>;
+  }>({
+    queryKey: ["/api/admin/reports/inactive-cases/debug", minDays],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/admin/reports/inactive-cases/debug?days=${minDays}`);
+      return res.json();
+    },
+    enabled: false,
+  });
+
+  function handleOpen() {
+    setOpen(v => !v);
+    if (!open) refetch();
+  }
+
+  const handlerCases: HandlerCase[] = (data?.cases ?? []).map(c => ({
+    caseId:    c.caseId,
+    caseName:  c.caseName,
+    assignedTo: c.assignedTo,
+    stage:     c.stage,
+    daysValue: c.daysInactive,
+    daysLabel: "inactive",
+    subLabel:  c.stage ? `Stage: ${c.stage.replace(/_/g, " ")}` : undefined,
+  }));
+
+  return (
+    <div className="border rounded-lg overflow-hidden">
+      <button
+        data-testid="button-diagnose-inactive-cases"
+        onClick={handleOpen}
+        className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-700 dark:text-slate-300"
+      >
+        <span className="flex items-center gap-2">
+          <Stethoscope className="h-4 w-4" />
+          Preview — which cases would be included?
+        </span>
+        {open ? <ChevronUp className="h-4 w-4 opacity-50" /> : <ChevronDown className="h-4 w-4 opacity-50" />}
+      </button>
+
+      {open && (
+        <div className="p-4 space-y-3 border-t bg-white dark:bg-slate-900">
+          {isFetching ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <RefreshCw className="h-4 w-4 animate-spin" />
+              Scanning for inactive cases…
+            </div>
+          ) : !data ? (
+            <p className="text-sm text-muted-foreground">Click the header above to run the preview.</p>
+          ) : (
+            <>
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">
+                  Threshold: <strong>{data.thresholdDays} day{data.thresholdDays !== 1 ? "s" : ""}</strong>
+                  &nbsp;·&nbsp;
+                  <strong>{data.count}</strong> case{data.count !== 1 ? "s" : ""} would be included
+                </p>
+                <button
+                  onClick={() => refetch()}
+                  className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                >
+                  <RefreshCw className="h-3 w-3" /> Refresh
+                </button>
+              </div>
+              <HandlerGroupedPreview
+                cases={handlerCases}
+                emptyMessage={`No cases have been inactive for ${data.thresholdDays}+ days. Try lowering the threshold.`}
+              />
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Diagnose panel for Stuck Activity ─────────────────────────────────────────
+
+function StuckActivityDiagnosePanel({ selected, days }: { selected: string[]; days: string }) {
+  const [open, setOpen] = useState(false);
+  const minDays = Number(days) >= 1 ? Number(days) : 1;
+
+  const queryParams = new URLSearchParams();
+  queryParams.set("days", String(minDays));
+  for (const d of selected) queryParams.append("descriptions", d);
+  const queryString = queryParams.toString();
+
+  const { data, isFetching, refetch } = useQuery<{
+    thresholdDays: number;
+    count: number;
+    descriptions: string[];
+    cases: Array<{
+      caseId: number; caseName: string; assignedTo: string | null;
+      stage: string; lastActivityDescription: string; daysSinceActivity: number;
+    }>;
+  }>({
+    queryKey: ["/api/admin/reports/stuck-activity/debug", minDays, selected],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/admin/reports/stuck-activity/debug?${queryString}`);
+      return res.json();
+    },
+    enabled: false,
+  });
+
+  function handleOpen() {
+    setOpen(v => !v);
+    if (!open) refetch();
+  }
+
+  const handlerCases: HandlerCase[] = (data?.cases ?? []).map(c => ({
+    caseId:    c.caseId,
+    caseName:  c.caseName,
+    assignedTo: c.assignedTo,
+    daysValue: c.daysSinceActivity,
+    daysLabel: "since activity",
+    subLabel:  c.lastActivityDescription,
+  }));
+
+  const canPreview = selected.length > 0;
+
+  return (
+    <div className="border rounded-lg overflow-hidden">
+      <button
+        data-testid="button-diagnose-stuck-activity"
+        onClick={canPreview ? handleOpen : undefined}
+        disabled={!canPreview}
+        className={`w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium transition-colors ${
+          canPreview
+            ? "bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 cursor-pointer"
+            : "bg-slate-50 dark:bg-slate-800/50 text-slate-400 dark:text-slate-600 cursor-not-allowed"
+        }`}
+      >
+        <span className="flex items-center gap-2">
+          <Stethoscope className="h-4 w-4" />
+          Preview — which cases would be included?
+        </span>
+        {canPreview
+          ? (open ? <ChevronUp className="h-4 w-4 opacity-50" /> : <ChevronDown className="h-4 w-4 opacity-50" />)
+          : <span className="text-xs">Select activities first</span>
+        }
+      </button>
+
+      {open && canPreview && (
+        <div className="p-4 space-y-3 border-t bg-white dark:bg-slate-900">
+          {isFetching ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <RefreshCw className="h-4 w-4 animate-spin" />
+              Scanning for matching cases…
+            </div>
+          ) : !data ? (
+            <p className="text-sm text-muted-foreground">Click the header above to run the preview.</p>
+          ) : (
+            <>
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">
+                  Threshold: <strong>{data.thresholdDays} day{data.thresholdDays !== 1 ? "s" : ""}</strong>
+                  &nbsp;·&nbsp;
+                  <strong>{data.count}</strong> case{data.count !== 1 ? "s" : ""} would be included
+                </p>
+                <button
+                  onClick={() => refetch()}
+                  className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                >
+                  <RefreshCw className="h-3 w-3" /> Refresh
+                </button>
+              </div>
+              <HandlerGroupedPreview
+                cases={handlerCases}
+                emptyMessage={`No cases are stuck at those activities for ${data.thresholdDays}+ days. Try fewer days or different activities.`}
+              />
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Simple report cards (Unanswered Messages & Inactive Cases) ────────────────
 
 const SIMPLE_REPORT_DEFS = [
@@ -226,7 +492,7 @@ const SIMPLE_REPORT_DEFS = [
     daysHelp: "Only cases with no activity logged for at least this many days will be included.",
     scheduleLine: "Runs automatically every Thursday at 8 am (default: 30 days)",
     endpoint: "/api/admin/reports/inactive-cases/trigger",
-    hasDiagnose: false,
+    hasDiagnose: true,
   },
 ];
 
@@ -337,7 +603,8 @@ function SimpleReportCard({ def }: { def: (typeof SIMPLE_REPORT_DEFS)[number] })
           </Button>
         </div>
 
-        {def.hasDiagnose && <UnansweredDiagnosePanel days={days} />}
+        {def.hasDiagnose && def.type === "escalation" && <UnansweredDiagnosePanel days={days} />}
+        {def.hasDiagnose && def.type === "inactive-cases" && <InactiveCasesDiagnosePanel days={days} />}
       </CardContent>
     </Card>
   );
@@ -596,6 +863,8 @@ function StuckActivityCard() {
             )}
           </Button>
         </div>
+
+        <StuckActivityDiagnosePanel selected={selected} days={days} />
       </CardContent>
     </Card>
   );
