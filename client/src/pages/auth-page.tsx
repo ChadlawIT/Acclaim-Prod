@@ -356,26 +356,26 @@ export default function AuthPage() {
           style={{ background: "radial-gradient(circle, #008b8b 0%, transparent 70%)" }}
         />
 
-        <div className="relative z-10 p-10 pt-12">
+        <div className="relative z-10 p-8 pt-10">
           {/* Logo */}
-          <div className="flex items-center gap-3 mb-16">
-            <img src={acclaimLogo} alt="Acclaim" className="h-10 w-10 object-contain" />
+          <div className="flex items-center gap-2.5 mb-10">
+            <img src={acclaimLogo} alt="Acclaim" className="h-8 w-8 object-contain" />
             <div>
-              <div className="text-white font-semibold text-lg leading-tight tracking-wide text-left">Acclaim</div>
-              <div className="text-teal-300 tracking-widest uppercase opacity-80 text-left text-[9px]">Credit Management & RECOVERY</div>
+              <div className="text-white font-semibold text-base leading-tight tracking-wide">Acclaim</div>
+              <div className="text-teal-300 text-[9px] tracking-widest uppercase opacity-80">Credit Management</div>
             </div>
           </div>
 
           {/* Main heading */}
-          <h2 className="text-white text-4xl font-bold leading-tight mb-4 text-left" style={{ letterSpacing: "-0.02em" }}>
-            Debt Recovery<br />Portal.
+          <h2 className="text-white text-3xl font-bold leading-tight mb-3" style={{ letterSpacing: "-0.02em" }}>
+            Debt Recovery Portal.
           </h2>
-          <p className="text-teal-200 text-base opacity-75 leading-relaxed max-w-xs">
-            Track cases, communicate with our team, and monitor your recovery progress — all in one secure place.
+          <p className="text-teal-200 text-sm opacity-75 leading-relaxed">
+            Track cases, communicate with our team, and monitor recovery progress — all in one place.
           </p>
 
           {/* Feature list */}
-          <div className="mt-10 space-y-4">
+          <div className="mt-8 space-y-3.5">
             {[
               { icon: "📁", label: "Case Management", desc: "Track every case from open to resolution" },
               { icon: "💬", label: "Secure Messaging", desc: "Direct communication with our team" },
@@ -383,7 +383,7 @@ export default function AuthPage() {
             ].map((f) => (
               <div key={f.label} className="flex items-start gap-3">
                 <div
-                  className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-sm"
+                  className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-xs"
                   style={{ background: "rgba(255,255,255,0.08)" }}
                 >
                   {f.icon}
@@ -398,8 +398,8 @@ export default function AuthPage() {
         </div>
 
         {/* Footer */}
-        <div className="relative z-10 p-10">
-          <div className="border-t border-white/10 pt-6">
+        <div className="relative z-10 p-8">
+          <div className="border-t border-white/10 pt-5">
             <p className="text-white/40 text-xs">Part of Chadwick Lawrence LLP</p>
           </div>
         </div>
