@@ -121,7 +121,7 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-gray-50 dark:bg-gray-900">
       {/* Left side - Form */}
-      <div className="flex-1 flex items-center justify-center p-4 md:p-8">
+      <div className="flex-1 flex items-center justify-center p-4 md:p-8 text-center">
         <div className="w-full max-w-md">
           {/* Logo and Header */}
           <div className="text-center mb-8">
