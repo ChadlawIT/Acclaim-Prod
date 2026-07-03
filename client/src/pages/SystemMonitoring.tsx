@@ -259,7 +259,16 @@ export default function SystemMonitoring() {
     try {
       const date = new Date(dateValue);
       if (isNaN(date.getTime())) return 'Invalid date';
-      return format(date, 'MMM d, yyyy HH:mm:ss');
+      return new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Europe/London',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+      }).format(date);
     } catch (error) {
       return 'Invalid date';
     }
