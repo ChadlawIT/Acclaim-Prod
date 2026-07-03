@@ -285,7 +285,7 @@ export default function AuthPage() {
                     <ol className="space-y-3">
                       <li className="flex gap-3">
                         <span className="flex-shrink-0 w-6 h-6 rounded-full bg-teal-600 text-white text-xs flex items-center justify-center font-semibold">1</span>
-                        <span className="text-[#0d9488]"><strong>Check your email for a Microsoft invitation</strong> — you should have received an email from <em>invitations@microsoft.com</em> sent by Chadwick Lawrence.</span>
+                        <span><strong>Check your email for a Microsoft invitation</strong> — you should have received an email from <em>invitations@microsoft.com</em> sent by Chadwick Lawrence.</span>
                       </li>
                       <li className="flex gap-3">
                         <span className="flex-shrink-0 w-6 h-6 rounded-full bg-teal-600 text-white text-xs flex items-center justify-center font-semibold">2</span>
