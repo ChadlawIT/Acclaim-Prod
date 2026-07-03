@@ -140,7 +140,7 @@ export default function AuthPage() {
             <p className="text-muted-foreground text-sm">Access your cases</p>
           </div>
 
-          <Card className="shadow-none border-0">
+          <Card className="shadow-lg border-0">
             <CardHeader className="pb-4 bg-[color:var(--primary-foreground)] border-t-[color:var(--primary-foreground)] border-r-[color:var(--primary-foreground)] border-b-[color:var(--primary-foreground)] border-l-[color:var(--primary-foreground)]">
               <CardTitle className="text-lg">
                 {showAltLogin ? (
