@@ -3898,6 +3898,12 @@ export default function AdminEnhanced() {
       <div className="rounded-xl p-5 sm:p-6 shadow-sm" style={{ background: "linear-gradient(160deg, #1e3f4f 0%, #1a5555 55%, #008080 100%)" }}>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
+            <Link href="/">
+              <Button variant="secondary" size="sm" className="bg-white/15 hover:bg-white/25 text-white border-0 backdrop-blur-sm">
+                <ArrowLeft className="h-4 w-4 mr-1.5" />
+                <span className="hidden sm:inline">Back</span>
+              </Button>
+            </Link>
             <div className="p-2.5 bg-white/15 rounded-lg">
               <ShieldCheck className="h-6 w-6 text-white" />
             </div>
@@ -3907,12 +3913,6 @@ export default function AdminEnhanced() {
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <Link href="/">
-              <Button variant="secondary" size="sm" className="bg-white/15 hover:bg-white/25 text-white border-0 backdrop-blur-sm">
-                <ArrowLeft className="h-4 w-4 mr-1.5" />
-                <span className="hidden sm:inline">Back</span>
-              </Button>
-            </Link>
             <Button
               variant="secondary"
               size="sm"
