@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -119,123 +118,118 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen flex flex-col md:flex-row bg-white dark:bg-gray-900">
       {/* Left side - Form */}
-      <div className="flex-1 flex items-center justify-center p-4 md:p-8">
-        <div className="w-full max-w-md">
-          {/* Logo and Header */}
-          <div className="text-center mb-8">
-            <div className="flex items-center justify-center mb-6">
-              <img 
-                src={acclaimLogo} 
-                alt="Acclaim Credit Management" 
-                className="h-16 w-16 mr-3"
-              />
-              <div className="text-left">
-                <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Acclaim</h1>
-                <p className="text-sm text-muted-foreground">Credit Management & Recovery</p>
-              </div>
+      <div className="flex-1 flex items-center justify-center p-8 md:p-12">
+        <div className="w-full max-w-sm">
+
+          {/* Logo */}
+          <div className="flex items-center gap-3 mb-10">
+            <img src={acclaimLogo} alt="Acclaim" className="h-10 w-10 object-contain" />
+            <div>
+              <div className="font-semibold text-slate-800 dark:text-white text-lg leading-tight">Acclaim</div>
+              <div className="text-xs text-slate-400 tracking-wide">Credit Management & Recovery</div>
             </div>
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Welcome to your Portal</h2>
-            <p className="text-muted-foreground text-sm">Access your cases</p>
           </div>
 
-          <Card className="shadow-lg border-0">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg">
-                {showAltLogin ? (
-                  <button
-                    onClick={() => { setShowAltLogin(false); setAltError(""); }}
-                    className="flex items-center gap-2 text-base font-semibold text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                    Sign In
-                  </button>
-                ) : "Sign In"}
-              </CardTitle>
-              <CardDescription>
-                {showAltLogin
-                  ? "Enter your email address and password below."
-                  : "Sign in with your Microsoft account to access the portal."}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {error && !showAltLogin && (
-                <Alert variant="destructive" className="mb-4">
-                  <AlertDescription>{error}</AlertDescription>
+          {/* Heading */}
+          <div className="mb-8">
+            {showAltLogin ? (
+              <button
+                onClick={() => { setShowAltLogin(false); setAltError(""); }}
+                className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors mb-4"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                Back
+              </button>
+            ) : null}
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+              {showAltLogin ? "Sign in with password" : "Welcome back"}
+            </h2>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+              {showAltLogin
+                ? "Enter your email address and password below."
+                : "Sign in to access your portal account."}
+            </p>
+          </div>
+
+          {error && !showAltLogin && (
+            <Alert variant="destructive" className="mb-5">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {!showAltLogin ? (
+            <button
+              type="button"
+              onClick={handleAzureLogin}
+              data-testid="button-azure-login"
+              className="w-full flex items-center justify-center gap-3 h-11 rounded-xl border-2 border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700 font-semibold text-sm transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-700"
+            >
+              <MicrosoftIcon />
+              Continue with Microsoft
+            </button>
+          ) : (
+            <form onSubmit={handleAltLogin} className="space-y-4">
+              {altError && (
+                <Alert variant="destructive">
+                  <AlertDescription>{altError}</AlertDescription>
                 </Alert>
               )}
-
-              {!showAltLogin ? (
-                <>
-                  <Button
-                    type="button"
-                    className="w-full h-11 font-medium bg-acclaim-teal hover:bg-acclaim-teal/90"
-                    onClick={handleAzureLogin}
-                    data-testid="button-azure-login"
-                  >
-                    <MicrosoftIcon />
-                    <span className="ml-2">Sign in with Microsoft</span>
-                  </Button>
-
-                </>
-              ) : (
-                <form onSubmit={handleAltLogin} className="space-y-4">
-                  {altError && (
-                    <Alert variant="destructive">
-                      <AlertDescription>{altError}</AlertDescription>
-                    </Alert>
-                  )}
-                  <div className="space-y-1.5">
-                    <Label htmlFor="alt-email">Email address</Label>
-                    <Input
-                      id="alt-email"
-                      type="email"
-                      placeholder="you@example.com"
-                      value={altEmail}
-                      onChange={e => setAltEmail(e.target.value)}
-                      autoComplete="email"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="alt-password">Password</Label>
-                    <Input
-                      id="alt-password"
-                      type="password"
-                      placeholder="Enter your password"
-                      value={altPassword}
-                      onChange={e => setAltPassword(e.target.value)}
-                      autoComplete="current-password"
-                      required
-                    />
-                  </div>
-                  <Button
-                    type="submit"
-                    className="w-full h-11 font-medium bg-acclaim-teal hover:bg-acclaim-teal/90"
-                    disabled={altLoading || !altEmail.trim() || !altPassword}
-                  >
-                    {altLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                    {altLoading ? "Signing in…" : "Sign In"}
-                  </Button>
-                  <p className="text-xs text-center text-muted-foreground">
-                    Use the temporary password provided to you by Acclaim. You will be asked to set a new password on first sign in.
-                  </p>
-                </form>
-              )}
-
-              <div className="mt-6 text-center text-xs text-[color:var(--muted-foreground)]">Contact us at email@acclaim.law | 0113 225 8811</div>
-              <div className="mt-3 text-center text-xs text-muted-foreground">
-                <Link href="/terms" className="hover:text-primary hover:underline">
-                  Terms of Use
-                </Link>
-                <span className="mx-2">|</span>
-                <Link href="/privacy" className="hover:text-primary hover:underline">
-                  Privacy Notice
-                </Link>
+              <div className="space-y-1.5">
+                <Label htmlFor="alt-email" className="text-xs font-medium text-slate-600 dark:text-slate-400">Email address</Label>
+                <Input
+                  id="alt-email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={altEmail}
+                  onChange={e => setAltEmail(e.target.value)}
+                  autoComplete="email"
+                  required
+                  className="h-11 rounded-xl border-slate-200 focus:border-teal-500 focus:ring-teal-500/20"
+                />
               </div>
-            </CardContent>
-          </Card>
+              <div className="space-y-1.5">
+                <Label htmlFor="alt-password" className="text-xs font-medium text-slate-600 dark:text-slate-400">Password</Label>
+                <Input
+                  id="alt-password"
+                  type="password"
+                  placeholder="Enter your password"
+                  value={altPassword}
+                  onChange={e => setAltPassword(e.target.value)}
+                  autoComplete="current-password"
+                  required
+                  className="h-11 rounded-xl border-slate-200 focus:border-teal-500 focus:ring-teal-500/20"
+                />
+              </div>
+              <Button
+                type="submit"
+                className="w-full h-11 rounded-xl font-semibold bg-acclaim-teal hover:bg-acclaim-teal/90"
+                disabled={altLoading || !altEmail.trim() || !altPassword}
+              >
+                {altLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                {altLoading ? "Signing in…" : "Sign In"}
+              </Button>
+              <p className="text-xs text-center text-slate-400">
+                Use the temporary password provided by Acclaim. You'll be asked to set a new one on first sign in.
+              </p>
+            </form>
+          )}
+
+          {/* Divider + contact */}
+          <div className="mt-8 pt-6 border-t border-slate-100 dark:border-gray-800 text-center space-y-2">
+            <p className="text-xs text-slate-400">
+              Need help?{" "}
+              <a href="mailto:email@acclaim.law" className="text-teal-600 hover:underline font-medium">email@acclaim.law</a>
+              {" · "}
+              <a href="tel:01132258811" className="text-teal-600 hover:underline font-medium">0113 225 8811</a>
+            </p>
+            <p className="text-xs text-slate-300 dark:text-slate-600">
+              <Link href="/terms" className="hover:text-slate-500 transition-colors">Terms of Use</Link>
+              {" · "}
+              <Link href="/privacy" className="hover:text-slate-500 transition-colors">Privacy Notice</Link>
+            </p>
+          </div>
 
           {/* Dev-only bypass login — never shown in production */}
           {isDev && (
