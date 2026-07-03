@@ -63,9 +63,9 @@ export default function Sidebar({ activeSection, setActiveSection, collapsed, on
         ) : (
           <button
             onClick={() => setActiveSection('dashboard')}
-            className="flex items-center hover:bg-white/15 dark:hover:bg-gray-800 px-3 py-2 rounded-lg transition-colors flex-1 min-w-0"
+            className="flex items-center hover:bg-white/15 dark:hover:bg-gray-800 px-2 py-2 rounded-lg transition-colors flex-1 min-w-0"
           >
-            <img src={acclaimRoseLogo} alt="Acclaim Logo" className="w-10 h-10 mr-3 flex-shrink-0" />
+            <img src={acclaimRoseLogo} alt="Acclaim Logo" className="w-10 h-10 mr-2 flex-shrink-0" />
             <div className="text-white overflow-hidden">
               <div className="text-lg font-bold text-left truncate">Acclaim</div>
               <div className="text-xs opacity-80 text-left truncate">Credit Management & Recovery</div>
