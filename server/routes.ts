@@ -17,10 +17,13 @@ import {
   createOrganisationSchema,
   updateOrganisationSchema,
   insertScheduledReportSchema,
-  auditLog
+  auditLog,
+  userActivityLogs,
+  messages,
+  users
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, sql, count } from "drizzle-orm";
 import { z } from "zod";
 
 // Validates one or more email addresses separated by semicolons (or commas)
@@ -3511,6 +3514,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET email send timestamps (stored in audit_log table under tableName='email_notifications')
   app.get('/api/admin/users/email-timestamps', isAuthenticated, isAdmin, async (_req, res) => {
     res.json(await getAllTimestamps());
+  });
+
+  // GET user engagement stats for "Top Users" panel (no DB changes — reads existing tables)
+  app.get('/api/admin/users/engagement-stats', isAuthenticated, isAdmin, async (_req, res) => {
+    try {
+      // Login counts per user
+      const loginRows = await db
+        .select({ userId: userActivityLogs.userId, cnt: count() })
+        .from(userActivityLogs)
+        .where(eq(userActivityLogs.action, 'LOGIN'))
+        .groupBy(userActivityLogs.userId);
+
+      // Message sent counts per user
+      const msgRows = await db
+        .select({ userId: userActivityLogs.userId, cnt: count() })
+        .from(userActivityLogs)
+        .where(eq(userActivityLogs.action, 'MESSAGE_SENT'))
+        .groupBy(userActivityLogs.userId);
+
+      // First-view counts per user (messages/docs viewed for first time)
+      const viewRows = await db
+        .select({ userId: auditLog.userId, cnt: count() })
+        .from(auditLog)
+        .where(
+          and(
+            eq(auditLog.operation, 'VIEW'),
+            sql`${auditLog.userId} IS NOT NULL`
+          )
+        )
+        .groupBy(auditLog.userId);
+
+      // Last seen per user (most recent activity log entry)
+      const lastSeenRows = await db
+        .select({
+          userId: userActivityLogs.userId,
+          lastSeen: sql<string>`MAX(${userActivityLogs.createdAt})`,
+        })
+        .from(userActivityLogs)
+        .groupBy(userActivityLogs.userId);
+
+      // All users (for name lookup)
+      const allUsers = await db
+        .select({ id: users.id, firstName: users.firstName, lastName: users.lastName, email: users.email, isAdmin: users.isAdmin })
+        .from(users);
+
+      // Merge into one record per user
+      const loginMap: Record<string, number> = {};
+      for (const r of loginRows) if (r.userId) loginMap[r.userId] = Number(r.cnt);
+
+      const msgMap: Record<string, number> = {};
+      for (const r of msgRows) if (r.userId) msgMap[r.userId] = Number(r.cnt);
+
+      const viewMap: Record<string, number> = {};
+      for (const r of viewRows) if (r.userId) viewMap[r.userId] = Number(r.cnt);
+
+      const lastSeenMap: Record<string, string> = {};
+      for (const r of lastSeenRows) if (r.userId) lastSeenMap[r.userId] = r.lastSeen;
+
+      const stats = allUsers
+        .map((u) => ({
+          userId: u.id,
+          name: `${u.firstName} ${u.lastName}`.trim(),
+          email: u.email,
+          isAdmin: u.isAdmin,
+          logins: loginMap[u.id] ?? 0,
+          messagesSent: msgMap[u.id] ?? 0,
+          itemsViewed: viewMap[u.id] ?? 0,
+          lastSeen: lastSeenMap[u.id] ?? null,
+          total: (loginMap[u.id] ?? 0) + (msgMap[u.id] ?? 0) * 3 + (viewMap[u.id] ?? 0),
+        }))
+        .filter((u) => u.logins > 0 || u.messagesSent > 0 || u.itemsViewed > 0)
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 10);
+
+      res.json(stats);
+    } catch (err) {
+      console.error('[engagement-stats]', err);
+      res.status(500).json({ message: 'Failed to load engagement stats' });
+    }
   });
 
   // Send just the temporary password email (for password resets)

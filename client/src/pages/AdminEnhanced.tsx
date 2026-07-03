@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import ExcelJS from "exceljs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useAuth } from "@/hooks/use-auth";
-import { Users, Building, Plus, Edit, Trash2, Shield, UserPlus, AlertTriangle, ShieldCheck, ShieldAlert, ArrowLeft, Activity, FileText, CreditCard, Archive, ArchiveRestore, Download, Check, Eye, EyeOff, Mail, Bell, BellOff, FilePlus, FileX, BarChart3, Search, Crown, Calendar, CalendarOff, Pencil, LogOut, RefreshCw, ChevronDown, ChevronUp, ChevronRight, Clock, Send, History, KeyRound, Copy, HelpCircle, X, ClipboardList, ClipboardX, MapPin, Phone, Banknote, User, FileImage, FileSpreadsheet, FileVideo, Receipt, Scale, Zap, CheckCircle2, XCircle } from "lucide-react";
+import { Users, Building, Plus, Edit, Trash2, Shield, UserPlus, AlertTriangle, ShieldCheck, ShieldAlert, ArrowLeft, Activity, FileText, CreditCard, Archive, ArchiveRestore, Download, Check, Eye, EyeOff, Mail, Bell, BellOff, FilePlus, FileX, BarChart3, Search, Crown, Calendar, CalendarOff, Pencil, LogOut, RefreshCw, ChevronDown, ChevronUp, ChevronRight, Clock, Send, History, KeyRound, Copy, HelpCircle, X, ClipboardList, ClipboardX, MapPin, Phone, Banknote, User, FileImage, FileSpreadsheet, FileVideo, Receipt, Scale, Zap, CheckCircle2, XCircle, Trophy, MessageSquare, LogIn } from "lucide-react";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { createUserSchema, updateUserSchema, createOrganisationSchema, updateOrganisationSchema } from "@shared/schema";
@@ -2106,6 +2106,135 @@ function CaseSubmissionsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+type EngagementStat = {
+  userId: string;
+  name: string;
+  email: string;
+  isAdmin: boolean;
+  logins: number;
+  messagesSent: number;
+  itemsViewed: number;
+  lastSeen: string | null;
+  total: number;
+};
+
+function TopUsersCard() {
+  const [open, setOpen] = useState(false);
+  const { data: stats = [], isLoading, refetch } = useQuery<EngagementStat[]>({
+    queryKey: ['/api/admin/users/engagement-stats'],
+    enabled: open,
+  });
+
+  const medals = ['🥇', '🥈', '🥉'];
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <button
+          className="flex items-center justify-between w-full text-left group"
+          onClick={() => setOpen((v) => !v)}
+          data-testid="top-users-toggle"
+        >
+          <div className="flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-amber-500" />
+            <CardTitle className="text-base">Top Users</CardTitle>
+            <span className="text-xs text-muted-foreground font-normal">— logins, messages &amp; activity</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {open && (
+              <button
+                onClick={(e) => { e.stopPropagation(); refetch(); }}
+                className="text-muted-foreground hover:text-foreground p-1 rounded"
+                title="Refresh"
+                data-testid="top-users-refresh"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+              </button>
+            )}
+            {open ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+          </div>
+        </button>
+      </CardHeader>
+
+      {open && (
+        <CardContent>
+          {isLoading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+              <RefreshCw className="h-4 w-4 animate-spin" />
+              Loading engagement data…
+            </div>
+          ) : stats.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-2">No activity recorded yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left text-xs text-muted-foreground">
+                    <th className="pb-2 pr-4 font-medium w-6">#</th>
+                    <th className="pb-2 pr-4 font-medium">User</th>
+                    <th className="pb-2 pr-4 font-medium text-center">
+                      <span className="flex items-center justify-center gap-1">
+                        <LogIn className="h-3 w-3" /> Logins
+                      </span>
+                    </th>
+                    <th className="pb-2 pr-4 font-medium text-center">
+                      <span className="flex items-center justify-center gap-1">
+                        <MessageSquare className="h-3 w-3" /> Messages
+                      </span>
+                    </th>
+                    <th className="pb-2 pr-4 font-medium text-center">
+                      <span className="flex items-center justify-center gap-1">
+                        <Eye className="h-3 w-3" /> Items Viewed
+                      </span>
+                    </th>
+                    <th className="pb-2 font-medium text-right">Last Seen</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stats.map((u, idx) => (
+                    <tr key={u.userId} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                      <td className="py-2.5 pr-4 text-muted-foreground font-mono">
+                        {idx < 3 ? medals[idx] : <span className="text-xs pl-1">{idx + 1}</span>}
+                      </td>
+                      <td className="py-2.5 pr-4">
+                        <div className="font-medium leading-tight">{u.name || '—'}</div>
+                        <div className="text-xs text-muted-foreground truncate max-w-[180px]">{u.email}</div>
+                      </td>
+                      <td className="py-2.5 pr-4 text-center">
+                        <span className={`font-semibold ${u.logins > 0 ? 'text-foreground' : 'text-muted-foreground'}`}>
+                          {u.logins}
+                        </span>
+                      </td>
+                      <td className="py-2.5 pr-4 text-center">
+                        <span className={`font-semibold ${u.messagesSent > 0 ? 'text-teal-600 dark:text-teal-400' : 'text-muted-foreground'}`}>
+                          {u.messagesSent}
+                        </span>
+                      </td>
+                      <td className="py-2.5 pr-4 text-center">
+                        <span className={`font-semibold ${u.itemsViewed > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground'}`}>
+                          {u.itemsViewed}
+                        </span>
+                      </td>
+                      <td className="py-2.5 text-right text-xs text-muted-foreground whitespace-nowrap">
+                        {u.lastSeen
+                          ? new Date(u.lastSeen).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                          : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="text-xs text-muted-foreground mt-3">
+                Ranked by weighted activity score (messages ×3, logins ×1, items viewed ×1). Top 10 shown.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      )}
+    </Card>
   );
 }
 
@@ -4310,6 +4439,7 @@ export default function AdminEnhanced() {
 
         {/* User Management Tab */}
         <TabsContent value="users" className="space-y-4">
+          <TopUsersCard />
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
