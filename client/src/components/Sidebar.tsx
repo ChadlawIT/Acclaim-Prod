@@ -46,8 +46,7 @@ export default function Sidebar({ activeSection, setActiveSection, collapsed, on
 
   return (
     <div
-      className={`${collapsed ? 'w-14' : 'w-64'} h-[100dvh] max-h-screen shadow-lg flex flex-col overflow-hidden transition-all duration-200 ease-in-out flex-shrink-0 dark:bg-gray-900`}
-      style={{ background: "linear-gradient(180deg, #1e3f4f 0%, #1a5555 60%, #008080 100%)" }}
+      className={`${collapsed ? 'w-14' : 'w-64'} h-[100dvh] max-h-screen shadow-lg flex flex-col overflow-hidden transition-all duration-200 ease-in-out flex-shrink-0 sidebar-gradient`}
     >
       {/* Brand Header */}
       <div className="flex-shrink-0 flex items-center h-16 border-b border-white/15 dark:border-gray-700 px-2 overflow-hidden">

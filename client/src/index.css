@@ -146,6 +146,14 @@
   background-color: hsl(180, 100%, 27%);
 }
 
+/* Sidebar gradient — brighter in light, darker in dark */
+.sidebar-gradient {
+  background: linear-gradient(180deg, #1e3f4f 0%, #1a5555 60%, #008080 100%);
+}
+.dark .sidebar-gradient {
+  background: linear-gradient(180deg, #0b1e26 0%, #0a2e2e 60%, #004d4d 100%);
+}
+
 /* Improve coloured backgrounds in dark mode */
 .dark .bg-blue-50 {
   background-color: hsl(215, 35%, 16%);
