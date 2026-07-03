@@ -6681,8 +6681,14 @@ export default function AdminEnhanced() {
                 <><Mail className="h-4 w-4 mr-2" />Email password to user</>
               )}
             </Button>
-            <Button onClick={() => {
+            <Button onClick={async () => {
               queryClient.invalidateQueries({ queryKey: ['/api/admin/users/email-timestamps'] });
+              await queryClient.refetchQueries({ queryKey: ['/api/admin/users-with-orgs'] });
+              if (resetPasswordUser) {
+                const freshUsers = queryClient.getQueryData<User[]>(['/api/admin/users-with-orgs']);
+                const updatedUser = freshUsers?.find(u => u.id === resetPasswordUser.id);
+                if (updatedUser) setSelectedUser(updatedUser);
+              }
               sendPasswordEmailMutation.reset();
               setShowResetPasswordDialog(false);
               setResetPasswordResult(null);
