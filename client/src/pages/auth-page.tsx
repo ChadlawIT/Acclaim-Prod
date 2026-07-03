@@ -361,13 +361,13 @@ export default function AuthPage() {
           <div className="flex items-center gap-3 mb-16">
             <img src={acclaimLogo} alt="Acclaim" className="h-10 w-10 object-contain" />
             <div>
-              <div className="text-white font-semibold text-lg leading-tight tracking-wide">Acclaim</div>
-              <div className="text-teal-300 text-xs tracking-widest uppercase opacity-80">Credit Management</div>
+              <div className="text-white font-semibold text-lg leading-tight tracking-wide text-left">Acclaim</div>
+              <div className="text-teal-300 tracking-widest uppercase opacity-80 text-left text-[9px]">Credit Management & RECOVERY</div>
             </div>
           </div>
 
           {/* Main heading */}
-          <h2 className="text-white text-4xl font-bold leading-tight mb-4" style={{ letterSpacing: "-0.02em" }}>
+          <h2 className="text-white text-4xl font-bold leading-tight mb-4 text-left" style={{ letterSpacing: "-0.02em" }}>
             Your debt recovery<br />portal — made simple.
           </h2>
           <p className="text-teal-200 text-base opacity-75 leading-relaxed max-w-xs">
