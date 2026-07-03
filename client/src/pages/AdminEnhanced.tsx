@@ -4962,6 +4962,16 @@ export default function AdminEnhanced() {
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700"><Check className="h-3 w-3" /> Registered</span>
                         )}
+                        {!(user as any).mustChangePassword && (
+                          (user as any).azureId ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700">
+                              <svg className="h-3 w-3" viewBox="0 0 23 23" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M11 11H0V0H11V11Z" fill="#F25022"/><path d="M23 11H12V0H23V11Z" fill="#7FBA00"/><path d="M11 23H0V12H11V23Z" fill="#00A4EF"/><path d="M23 23H12V12H23V23Z" fill="#FFB900"/></svg>
+                              Microsoft SSO
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-600"><KeyRound className="h-3 w-3" /> Password</span>
+                          )
+                        )}
                         {(user as any).emailNotifications !== false && (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700"><Bell className="h-3 w-3" /> Msgs on</span>
                         )}

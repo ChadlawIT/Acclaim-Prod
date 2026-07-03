@@ -2073,6 +2073,8 @@ export class DatabaseStorage implements IStorage {
         isAdmin: users.isAdmin,
         isSuperAdmin: users.isSuperAdmin,
         phone: users.phone,
+        azureId: users.azureId,
+        mustChangePassword: users.mustChangePassword,
       })
       .from(users)
       .leftJoin(organisations, eq(users.organisationId, organisations.id))
