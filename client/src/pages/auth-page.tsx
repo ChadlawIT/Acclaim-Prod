@@ -415,8 +415,27 @@ export default function AuthPage() {
           </div>
         </div>
 
+        {/* Decorative secure badge */}
+        <div className="relative z-10 px-8 pb-6">
+          <div
+            className="rounded-2xl p-4 flex items-center gap-3"
+            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
+          >
+            <div
+              className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-base"
+              style={{ background: "rgba(0,180,180,0.15)" }}
+            >
+              🔒
+            </div>
+            <div>
+              <div className="text-white text-xs font-semibold">Secure Portal Access</div>
+              <div className="text-white/40 text-[10px] mt-0.5">Protected by enterprise-grade encryption</div>
+            </div>
+          </div>
+        </div>
+
         {/* Footer */}
-        <div className="relative z-10 p-8">
+        <div className="relative z-10 px-8 pb-8">
           <div className="border-t border-white/10 pt-5">
             <p className="text-white/40 text-xs">Part of Chadwick Lawrence LLP</p>
           </div>
