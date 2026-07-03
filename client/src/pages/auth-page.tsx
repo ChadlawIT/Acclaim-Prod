@@ -375,23 +375,23 @@ export default function AuthPage() {
           </p>
 
           {/* Feature list */}
-          <div className="mt-8 space-y-3.5">
+          <div className="mt-8 space-y-5">
             {[
               { icon: "📁", label: "Case Management", desc: "Track every case from open to resolution" },
               { icon: "💬", label: "Secure Messaging", desc: "Direct communication with our team" },
               { icon: "📊", label: "Analytics & Reports", desc: "Payment tracking and performance metrics" },
               { icon: "📄", label: "Document Management", desc: "Store and share case documents securely" },
             ].map((f) => (
-              <div key={f.label} className="flex items-start gap-3">
+              <div key={f.label} className="flex items-center gap-4">
                 <div
-                  className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-xs"
-                  style={{ background: "rgba(255,255,255,0.08)" }}
+                  className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-lg"
+                  style={{ background: "rgba(255,255,255,0.10)" }}
                 >
                   {f.icon}
                 </div>
                 <div>
-                  <div className="text-white text-sm font-medium">{f.label}</div>
-                  <div className="text-teal-300 text-xs opacity-70">{f.desc}</div>
+                  <div className="text-white text-base font-semibold leading-snug">{f.label}</div>
+                  <div className="text-teal-300 text-xs opacity-75 mt-0.5">{f.desc}</div>
                 </div>
               </div>
             ))}
