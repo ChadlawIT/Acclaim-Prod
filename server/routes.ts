@@ -3519,47 +3519,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET user engagement stats for "Top Users" panel (no DB changes — reads existing tables)
   app.get('/api/admin/users/engagement-stats', isAuthenticated, isAdmin, async (_req, res) => {
     try {
-      // Login counts per user
-      const loginRows = await db
-        .select({ userId: userActivityLogs.userId, cnt: count() })
-        .from(userActivityLogs)
-        .where(eq(userActivityLogs.action, 'LOGIN'))
-        .groupBy(userActivityLogs.userId);
+      // Run all queries in parallel
+      const [loginRows, msgRows, viewRows, lastSeenRows, allUsers, sosMessages] = await Promise.all([
+        // Login counts per user (from userActivityLogs)
+        db.select({ userId: userActivityLogs.userId, cnt: count() })
+          .from(userActivityLogs)
+          .where(eq(userActivityLogs.action, 'LOGIN'))
+          .groupBy(userActivityLogs.userId),
 
-      // Message sent counts per user
-      const msgRows = await db
-        .select({ userId: userActivityLogs.userId, cnt: count() })
-        .from(userActivityLogs)
-        .where(eq(userActivityLogs.action, 'MESSAGE_SENT'))
-        .groupBy(userActivityLogs.userId);
+        // Portal message sent counts per user (from userActivityLogs)
+        db.select({ userId: userActivityLogs.userId, cnt: count() })
+          .from(userActivityLogs)
+          .where(eq(userActivityLogs.action, 'MESSAGE_SENT'))
+          .groupBy(userActivityLogs.userId),
 
-      // First-view counts per user (messages/docs viewed for first time)
-      const viewRows = await db
-        .select({ userId: auditLog.userId, cnt: count() })
-        .from(auditLog)
-        .where(
-          and(
-            eq(auditLog.operation, 'VIEW'),
-            sql`${auditLog.userId} IS NOT NULL`
-          )
-        )
-        .groupBy(auditLog.userId);
+        // First-view counts per user (messages/docs viewed for first time)
+        db.select({ userId: auditLog.userId, cnt: count() })
+          .from(auditLog)
+          .where(and(eq(auditLog.operation, 'VIEW'), sql`${auditLog.userId} IS NOT NULL`))
+          .groupBy(auditLog.userId),
 
-      // Last seen per user (most recent activity log entry)
-      const lastSeenRows = await db
-        .select({
+        // Last seen per user (most recent activity log entry)
+        db.select({
           userId: userActivityLogs.userId,
           lastSeen: sql<string>`MAX(${userActivityLogs.createdAt})`,
         })
-        .from(userActivityLogs)
-        .groupBy(userActivityLogs.userId);
+          .from(userActivityLogs)
+          .groupBy(userActivityLogs.userId),
 
-      // All users (for name lookup)
-      const allUsers = await db
-        .select({ id: users.id, firstName: users.firstName, lastName: users.lastName, email: users.email, isAdmin: users.isAdmin })
-        .from(users);
+        // All users (for name lookup)
+        db.select({ id: users.id, firstName: users.firstName, lastName: users.lastName, email: users.email, isAdmin: users.isAdmin })
+          .from(users),
 
-      // Merge into one record per user
+        // SOS/external messages sent under the Acclaim system user — content starts with "Name:\n\n"
+        db.select({ content: messages.content })
+          .from(messages)
+          .where(eq(messages.senderId, 'acclaim-system-user')),
+      ]);
+
+      // Parse SOS message handler names and build a name→count map
+      // Format: "Matt Perry:\n\nMessage body..."
+      const SOS_PREFIX = /^([^\n]+):\n\n/;
+      const sosNameCountMap: Record<string, number> = {};
+      for (const { content } of sosMessages) {
+        const match = (content || '').match(SOS_PREFIX);
+        if (match) {
+          const name = match[1].trim();
+          sosNameCountMap[name] = (sosNameCountMap[name] ?? 0) + 1;
+        }
+      }
+
+      // Merge into lookup maps keyed by userId
       const loginMap: Record<string, number> = {};
       for (const r of loginRows) if (r.userId) loginMap[r.userId] = Number(r.cnt);
 
@@ -3573,17 +3583,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const r of lastSeenRows) if (r.userId) lastSeenMap[r.userId] = r.lastSeen;
 
       const stats = allUsers
-        .map((u) => ({
-          userId: u.id,
-          name: `${u.firstName} ${u.lastName}`.trim(),
-          email: u.email,
-          isAdmin: u.isAdmin,
-          logins: loginMap[u.id] ?? 0,
-          messagesSent: msgMap[u.id] ?? 0,
-          itemsViewed: viewMap[u.id] ?? 0,
-          lastSeen: lastSeenMap[u.id] ?? null,
-          total: (loginMap[u.id] ?? 0) + (msgMap[u.id] ?? 0) * 3 + (viewMap[u.id] ?? 0),
-        }))
+        .map((u) => {
+          const fullName = `${u.firstName} ${u.lastName}`.trim();
+          const sosCount = sosNameCountMap[fullName] ?? 0;
+          const portalMsgs = msgMap[u.id] ?? 0;
+          const totalMsgs = portalMsgs + sosCount;
+          const logins = loginMap[u.id] ?? 0;
+          const itemsViewed = viewMap[u.id] ?? 0;
+          return {
+            userId: u.id,
+            name: fullName,
+            email: u.email,
+            isAdmin: u.isAdmin,
+            logins,
+            messagesSent: totalMsgs,
+            sosMessages: sosCount,
+            itemsViewed,
+            lastSeen: lastSeenMap[u.id] ?? null,
+            total: logins + totalMsgs * 3 + itemsViewed,
+          };
+        })
         .filter((u) => u.logins > 0 || u.messagesSent > 0 || u.itemsViewed > 0)
         .sort((a, b) => b.total - a.total)
         .slice(0, 10);

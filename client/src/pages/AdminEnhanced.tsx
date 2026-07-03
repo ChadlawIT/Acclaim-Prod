@@ -2116,6 +2116,7 @@ type EngagementStat = {
   isAdmin: boolean;
   logins: number;
   messagesSent: number;
+  sosMessages: number;
   itemsViewed: number;
   lastSeen: string | null;
   total: number;
@@ -2212,6 +2213,11 @@ function TopUsersCard() {
                         <span className={`font-semibold ${u.messagesSent > 0 ? 'text-teal-600 dark:text-teal-400' : 'text-muted-foreground'}`}>
                           {u.messagesSent}
                         </span>
+                        {u.sosMessages > 0 && (
+                          <div className="text-xs text-muted-foreground leading-tight">
+                            {u.sosMessages} via SOS
+                          </div>
+                        )}
                       </td>
                       <td className="py-2.5 pr-4 text-center">
                         <span className={`font-semibold ${u.itemsViewed > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground'}`}>
