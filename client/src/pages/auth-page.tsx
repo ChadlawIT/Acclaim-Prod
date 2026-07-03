@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FileText, MessageSquare, TrendingUp, Shield, ChevronDown, ChevronUp, Info, ArrowLeft, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Info, ArrowLeft, Loader2 } from "lucide-react";
 import acclaimLogo from "@assets/acclaim_rose_transparent_1768474381340.png";
 
 const MicrosoftIcon = () => (
@@ -341,58 +341,66 @@ export default function AuthPage() {
           </div>
         </div>
       </div>
-      {/* Right side - Feature showcase */}
-      <div className="hidden md:flex md:w-[36%] shrink-0 bg-gradient-to-br from-teal-700 via-teal-600 to-slate-800 dark:from-slate-900 dark:via-slate-800 dark:to-gray-900 items-center justify-center p-8">
-        <div className="max-w-lg text-white">
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold mb-4 text-center">Acclaim Credit Management & Recovery</h2>
-            <p className="text-lg opacity-90 leading-relaxed text-center">Streamline your debt recovery cases with our comprehensive case management portal.</p>
-          </div>
+      {/* Right side - Brand panel */}
+      <div
+        className="hidden md:flex md:w-[36%] shrink-0 flex-col justify-between relative overflow-hidden"
+        style={{ background: "linear-gradient(160deg, #0f2027 0%, #0d3d3d 55%, #005f5f 100%)" }}
+      >
+        {/* Decorative circles */}
+        <div
+          className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full opacity-10"
+          style={{ background: "radial-gradient(circle, #00b4b4 0%, transparent 70%)" }}
+        />
+        <div
+          className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10"
+          style={{ background: "radial-gradient(circle, #008b8b 0%, transparent 70%)" }}
+        />
 
-          <div className="space-y-6">
-            <div className="flex items-start space-x-4">
-              <div className="flex-shrink-0 w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                <FileText className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">Case Management</h3>
-                <p className="text-sm opacity-90">Track cases from initial contact through to resolution with detailed stage progression and activity logs.</p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-4">
-              <div className="flex-shrink-0 w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                <MessageSquare className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">Secure Communications</h3>
-                <p className="text-sm opacity-90">Integrated messaging system and document management.</p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-4">
-              <div className="flex-shrink-0 w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                <TrendingUp className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">Analytics & Reporting</h3>
-                <p className="text-sm opacity-90">Comprehensive reporting tools for recovery analysis, payment tracking, and performance metrics.</p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-4">
-              <div className="flex-shrink-0 w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                <Shield className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">Enterprise Security</h3>
-                <p className="text-sm opacity-90">High-level security with role-based access control and complete data protection.</p>
-              </div>
+        <div className="relative z-10 p-10 pt-12">
+          {/* Logo */}
+          <div className="flex items-center gap-3 mb-16">
+            <img src={acclaimLogo} alt="Acclaim" className="h-10 w-10 object-contain" />
+            <div>
+              <div className="text-white font-semibold text-lg leading-tight tracking-wide">Acclaim</div>
+              <div className="text-teal-300 text-xs tracking-widest uppercase opacity-80">Credit Management</div>
             </div>
           </div>
 
-          <div className="mt-8 pt-6 border-t border-white/20">
-            <p className="text-sm opacity-75 text-center">Part of Chadwick Lawrence LLP</p>
+          {/* Main heading */}
+          <h2 className="text-white text-4xl font-bold leading-tight mb-4" style={{ letterSpacing: "-0.02em" }}>
+            Your debt recovery<br />portal — made simple.
+          </h2>
+          <p className="text-teal-200 text-base opacity-75 leading-relaxed max-w-xs">
+            Track cases, communicate with our team, and monitor your recovery progress — all in one secure place.
+          </p>
+
+          {/* Feature list */}
+          <div className="mt-10 space-y-4">
+            {[
+              { icon: "📁", label: "Case Management", desc: "Track every case from open to resolution" },
+              { icon: "💬", label: "Secure Messaging", desc: "Direct communication with our team" },
+              { icon: "📊", label: "Analytics & Reports", desc: "Payment tracking and performance metrics" },
+            ].map((f) => (
+              <div key={f.label} className="flex items-start gap-3">
+                <div
+                  className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-sm"
+                  style={{ background: "rgba(255,255,255,0.08)" }}
+                >
+                  {f.icon}
+                </div>
+                <div>
+                  <div className="text-white text-sm font-medium">{f.label}</div>
+                  <div className="text-teal-300 text-xs opacity-70">{f.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="relative z-10 p-10">
+          <div className="border-t border-white/10 pt-6">
+            <p className="text-white/40 text-xs">Part of Chadwick Lawrence LLP</p>
           </div>
         </div>
       </div>
