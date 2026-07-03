@@ -144,7 +144,7 @@ export default function AuthPage() {
               </button>
             ) : null}
             <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
-              {showAltLogin ? "Sign in with password" : "Welcome back"}
+              {showAltLogin ? "Sign in with password" : "Welcome."}
             </h2>
             <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
               {showAltLogin
