@@ -380,6 +380,7 @@ export default function AuthPage() {
               { icon: "📁", label: "Case Management", desc: "Track every case from open to resolution" },
               { icon: "💬", label: "Secure Messaging", desc: "Direct communication with our team" },
               { icon: "📊", label: "Analytics & Reports", desc: "Payment tracking and performance metrics" },
+              { icon: "📄", label: "Document Management", desc: "Store and share case documents securely" },
             ].map((f) => (
               <div key={f.label} className="flex items-start gap-3">
                 <div
@@ -394,6 +395,23 @@ export default function AuthPage() {
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Trust strip */}
+          <div className="mt-8 pt-6 border-t border-white/10">
+            <p className="text-white/40 text-[10px] uppercase tracking-widest mb-3">Why clients trust us</p>
+            <div className="space-y-2">
+              {[
+                { badge: "✓", text: "Yorkshire-based legal specialists" },
+                { badge: "✓", text: "GDPR compliant & data secure" },
+                { badge: "✓", text: "Dedicated case handler support" },
+              ].map((t) => (
+                <div key={t.text} className="flex items-center gap-2">
+                  <span className="text-teal-400 text-xs font-bold">{t.badge}</span>
+                  <span className="text-white/60 text-xs">{t.text}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
