@@ -6663,15 +6663,15 @@ export default function AdminEnhanced() {
           <div className="flex justify-end gap-2">
             <Button
               variant="outline"
-              disabled={sendPasswordEmailMutation.isPending || sendPasswordEmailMutation.isSuccess}
               onClick={() => {
-                if (resetPasswordUser) {
+                if (!sendPasswordEmailMutation.isPending && !sendPasswordEmailMutation.isSuccess && resetPasswordUser) {
                   sendPasswordEmailMutation.mutate({
                     userId: resetPasswordUser.id,
                     temporaryPassword: resetPasswordResult?.tempPassword,
                   });
                 }
               }}
+              className={sendPasswordEmailMutation.isSuccess ? "text-green-600 border-green-300 pointer-events-none" : sendPasswordEmailMutation.isPending ? "opacity-60 pointer-events-none" : ""}
             >
               {sendPasswordEmailMutation.isSuccess ? (
                 <><CheckCircle2 className="h-4 w-4 mr-2 text-green-500" />Email sent</>
