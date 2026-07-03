@@ -367,7 +367,7 @@ export default function AuthPage() {
           </div>
 
           {/* Main heading */}
-          <h2 className="text-white text-3xl font-bold leading-tight mb-3" style={{ letterSpacing: "-0.02em" }}>
+          <h2 className="text-white text-3xl font-bold leading-tight mb-3" style={{ letterSpacing: "-0.02em", textShadow: "0 0 40px rgba(0,180,180,0.45), 0 0 80px rgba(0,180,180,0.15)" }}>
             Debt Recovery Portal.
           </h2>
           <p className="text-teal-200 text-sm opacity-75 leading-relaxed">
@@ -402,25 +402,21 @@ export default function AuthPage() {
             <p className="text-white/40 text-[10px] uppercase tracking-widest mb-3">Why clients trust us</p>
             <div className="space-y-2">
               {[
-                { icon: "⚖️", text: "Yorkshire-based legal specialists" },
-                { icon: "🛡️", text: "GDPR compliant & data secure" },
-                { icon: "🤝", text: "Dedicated case handler support" },
+                { badge: "✓", text: "Yorkshire-based legal specialists" },
+                { badge: "✓", text: "GDPR compliant & data secure" },
+                { badge: "✓", text: "Dedicated case handler support" },
               ].map((t) => (
-                <div
-                  key={t.text}
-                  className="flex items-center gap-3 rounded-xl px-3 py-2.5"
-                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.07)" }}
-                >
-                  <span className="text-sm flex-shrink-0">{t.icon}</span>
-                  <span className="text-white/70 text-xs">{t.text}</span>
+                <div key={t.text} className="flex items-center gap-2">
+                  <span className="text-teal-400 text-xs font-bold">{t.badge}</span>
+                  <span className="text-white/60 text-xs">{t.text}</span>
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Decorative secure badge */}
-        <div className="relative z-10 px-8 pb-6">
+        {/* Frosted-glass cards */}
+        <div className="relative z-10 px-8 pb-6 space-y-3">
           <div
             className="rounded-2xl p-4 flex items-center gap-3"
             style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
@@ -434,6 +430,21 @@ export default function AuthPage() {
             <div>
               <div className="text-white text-xs font-semibold">Secure Portal Access</div>
               <div className="text-white/40 text-[10px] mt-0.5">Protected by enterprise-grade encryption</div>
+            </div>
+          </div>
+          <div
+            className="rounded-2xl p-4 flex items-center gap-3"
+            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
+          >
+            <div
+              className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-base"
+              style={{ background: "rgba(0,180,180,0.15)" }}
+            >
+              ⚖️
+            </div>
+            <div>
+              <div className="text-white text-xs font-semibold">Backed by Legal Expertise</div>
+              <div className="text-white/40 text-[10px] mt-0.5">Part of Chadwick Lawrence LLP solicitors</div>
             </div>
           </div>
         </div>
