@@ -735,7 +735,7 @@ export default function CaseSummaryReport() {
             <div className="p-3 sm:p-4 bg-blue-50 rounded-lg">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs sm:text-sm text-gray-600">Total Cases</p>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Cases</p>
                   <p className="text-lg sm:text-2xl font-bold text-blue-600">{filteredCases?.length || 0}</p>
                 </div>
                 <FileText className="h-5 w-5 sm:h-8 sm:w-8 text-blue-600 hidden sm:block" />
@@ -744,7 +744,7 @@ export default function CaseSummaryReport() {
             <div className="p-3 sm:p-4 bg-yellow-50 rounded-lg">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs sm:text-sm text-gray-600">Active Cases</p>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Active Cases</p>
                   <p className="text-lg sm:text-2xl font-bold text-yellow-600">{filteredStats?.activeCases || 0}</p>
                 </div>
                 <User className="h-5 w-5 sm:h-8 sm:w-8 text-yellow-600 hidden sm:block" />
@@ -753,7 +753,7 @@ export default function CaseSummaryReport() {
             <div className="p-3 sm:p-4 bg-green-50 rounded-lg">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs sm:text-sm text-gray-600">Closed Cases</p>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Closed Cases</p>
                   <p className="text-lg sm:text-2xl font-bold text-green-600">{filteredStats?.closedCases || 0}</p>
                 </div>
                 <Calendar className="h-5 w-5 sm:h-8 sm:w-8 text-green-600 hidden sm:block" />
@@ -762,7 +762,7 @@ export default function CaseSummaryReport() {
             <div className="p-3 sm:p-4 bg-purple-50 rounded-lg">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs sm:text-sm text-gray-600">Original Amount</p>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Original Amount</p>
                   <p className="text-lg sm:text-2xl font-bold text-purple-600">{formatCurrency(getTotalOriginalAmount())}</p>
                 </div>
                 <Banknote className="h-5 w-5 sm:h-8 sm:w-8 text-purple-600 hidden sm:block" />
@@ -771,7 +771,7 @@ export default function CaseSummaryReport() {
             <div className="p-3 sm:p-4 bg-emerald-50 rounded-lg">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs sm:text-sm text-gray-600">Payments Received</p>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Payments Received</p>
                   <p className="text-lg sm:text-2xl font-bold text-emerald-600">{formatCurrency(getTotalPaymentsReceived())}</p>
                 </div>
                 <Banknote className="h-5 w-5 sm:h-8 sm:w-8 text-emerald-600 hidden sm:block" />
@@ -780,7 +780,7 @@ export default function CaseSummaryReport() {
             <div className="p-3 sm:p-4 bg-orange-50 rounded-lg">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs sm:text-sm text-gray-600">Outstanding</p>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Outstanding</p>
                   <p className="text-lg sm:text-2xl font-bold text-orange-600">{formatCurrency(getTotalOutstandingAmount())}</p>
                 </div>
                 <Banknote className="h-5 w-5 sm:h-8 sm:w-8 text-orange-600 hidden sm:block" />
@@ -790,7 +790,7 @@ export default function CaseSummaryReport() {
         </CardContent>
       </Card>
       {/* Recent Updates Selector */}
-      <Card className="mb-4 sm:mb-6 bg-[#f0fdf4]">
+      <Card className="mb-4 sm:mb-6 bg-[#f0fdf4] dark:bg-emerald-950/30">
         <CardHeader className="pb-2 sm:pb-4">
           <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
             <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -799,9 +799,9 @@ export default function CaseSummaryReport() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-            <p className="text-sm text-gray-600 flex-1">Optionally include the most recent updates from Acclaim on each case — notes or messages sent by the team. These appear as extra columns in the Excel and PDF exports, and in the table below. Select how many updates to show per case (1–5), with the most recent first.</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300 flex-1">Optionally include the most recent updates from Acclaim on each case — notes or messages sent by the team. These appear as extra columns in the Excel and PDF exports, and in the table below. Select how many updates to show per case (1–5), with the most recent first.</p>
             <div className="flex items-center gap-2 shrink-0">
-              <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Updates per case:</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">Updates per case:</label>
               <Select
                 value={String(recentMessagesCount)}
                 onValueChange={(v) => setRecentMessagesCount(parseInt(v, 10))}
@@ -829,44 +829,44 @@ export default function CaseSummaryReport() {
         </CardHeader>
         <CardContent className="p-2 sm:p-6">
           <div className="overflow-x-auto -mx-2 sm:mx-0">
-            <table className="w-full border-collapse border border-gray-200 text-xs sm:text-sm">
+            <table className="w-full border-collapse border border-gray-200 dark:border-gray-700 text-xs sm:text-sm">
               <thead>
-                <tr className="bg-gray-50">
-                  <th className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 text-left font-medium text-gray-900 whitespace-nowrap">
+                <tr className="bg-gray-50 dark:bg-gray-800">
+                  <th className="border border-gray-200 dark:border-gray-700 px-2 sm:px-4 py-2 sm:py-3 text-left font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
                     Account
                   </th>
-                  <th className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 text-left font-medium text-gray-900">
+                  <th className="border border-gray-200 dark:border-gray-700 px-2 sm:px-4 py-2 sm:py-3 text-left font-medium text-gray-900 dark:text-gray-100">
                     Case Name
                   </th>
-                  <th className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 text-left font-medium text-gray-900">
+                  <th className="border border-gray-200 dark:border-gray-700 px-2 sm:px-4 py-2 sm:py-3 text-left font-medium text-gray-900 dark:text-gray-100">
                     Status
                   </th>
-                  <th className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 text-left font-medium text-gray-900">
+                  <th className="border border-gray-200 dark:border-gray-700 px-2 sm:px-4 py-2 sm:py-3 text-left font-medium text-gray-900 dark:text-gray-100">
                     Stage
                   </th>
-                  <th className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 text-left font-medium text-gray-900 whitespace-nowrap">
+                  <th className="border border-gray-200 dark:border-gray-700 px-2 sm:px-4 py-2 sm:py-3 text-left font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
                     Original
                   </th>
-                  <th className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 text-left font-medium text-gray-900 whitespace-nowrap">
+                  <th className="border border-gray-200 dark:border-gray-700 px-2 sm:px-4 py-2 sm:py-3 text-left font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
                     Costs
                   </th>
-                  <th className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 text-left font-medium text-gray-900 whitespace-nowrap">
+                  <th className="border border-gray-200 dark:border-gray-700 px-2 sm:px-4 py-2 sm:py-3 text-left font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
                     Interest
                   </th>
-                  <th className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 text-left font-medium text-gray-900 whitespace-nowrap">
+                  <th className="border border-gray-200 dark:border-gray-700 px-2 sm:px-4 py-2 sm:py-3 text-left font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
                     Fees
                   </th>
-                  <th className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 text-left font-medium text-gray-900 whitespace-nowrap">
+                  <th className="border border-gray-200 dark:border-gray-700 px-2 sm:px-4 py-2 sm:py-3 text-left font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
                     Total Debt
                   </th>
-                  <th className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 text-left font-medium text-gray-900 whitespace-nowrap">
+                  <th className="border border-gray-200 dark:border-gray-700 px-2 sm:px-4 py-2 sm:py-3 text-left font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
                     Payments
                   </th>
-                  <th className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 text-left font-medium text-gray-900 whitespace-nowrap">
+                  <th className="border border-gray-200 dark:border-gray-700 px-2 sm:px-4 py-2 sm:py-3 text-left font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
                     Outstanding
                   </th>
                   {recentMessagesCount > 0 && Array.from({ length: recentMessagesCount }, (_, i) => (
-                    <th key={i} className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 text-left font-medium text-gray-900 whitespace-nowrap min-w-[200px]">
+                    <th key={i} className="border border-gray-200 dark:border-gray-700 px-2 sm:px-4 py-2 sm:py-3 text-left font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap min-w-[200px]">
                       Recent Message {i + 1}
                     </th>
                   ))}
@@ -876,37 +876,37 @@ export default function CaseSummaryReport() {
                 {filteredCases?.map((caseItem: any) => {
                   const orderedMsgs = [...(recentMessages?.[String(caseItem.id)] ?? [])].reverse();
                   return (
-                    <tr key={caseItem.id} className={`${(caseItem.status || '').toLowerCase() === 'closed' ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-gray-50'}`}>
-                      <td className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 text-gray-900 whitespace-nowrap">
+                    <tr key={caseItem.id} className={`${(caseItem.status || '').toLowerCase() === 'closed' ? 'bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-950/50' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>
+                      <td className="border border-gray-200 dark:border-gray-700 px-2 sm:px-4 py-2 sm:py-3 text-gray-900 dark:text-gray-100 whitespace-nowrap">
                         {caseItem.accountNumber}
                       </td>
-                      <td className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 text-gray-900">
+                      <td className="border border-gray-200 dark:border-gray-700 px-2 sm:px-4 py-2 sm:py-3 text-gray-900 dark:text-gray-100">
                         <div>
                           {caseItem.caseName}
                           {caseItem.organisationName && (
-                            <div className="text-xs text-gray-500">({caseItem.organisationName})</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">({caseItem.organisationName})</div>
                           )}
                         </div>
                       </td>
-                      <td className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3">
+                      <td className="border border-gray-200 dark:border-gray-700 px-2 sm:px-4 py-2 sm:py-3">
                         {getStatusBadge(caseItem.status)}
                       </td>
-                      <td className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3">
+                      <td className="border border-gray-200 dark:border-gray-700 px-2 sm:px-4 py-2 sm:py-3">
                         {getStageBadge(caseItem.stage)}
                       </td>
-                      <td className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 font-medium text-gray-900 whitespace-nowrap">
+                      <td className="border border-gray-200 dark:border-gray-700 px-2 sm:px-4 py-2 sm:py-3 font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
                         {formatCurrency(caseItem.originalAmount)}
                       </td>
-                      <td className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 font-medium text-gray-900 whitespace-nowrap">
+                      <td className="border border-gray-200 dark:border-gray-700 px-2 sm:px-4 py-2 sm:py-3 font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
                         {formatCurrency(caseItem.costsAdded || 0)}
                       </td>
-                      <td className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 font-medium text-gray-900 whitespace-nowrap">
+                      <td className="border border-gray-200 dark:border-gray-700 px-2 sm:px-4 py-2 sm:py-3 font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
                         {formatCurrency(caseItem.interestAdded || 0)}
                       </td>
-                      <td className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 font-medium text-gray-900 whitespace-nowrap">
+                      <td className="border border-gray-200 dark:border-gray-700 px-2 sm:px-4 py-2 sm:py-3 font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
                         {formatCurrency(caseItem.feesAdded || 0)}
                       </td>
-                      <td className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 font-medium text-purple-600 whitespace-nowrap">
+                      <td className="border border-gray-200 dark:border-gray-700 px-2 sm:px-4 py-2 sm:py-3 font-medium text-purple-600 dark:text-purple-400 whitespace-nowrap">
                         {formatCurrency(
                           parseFloat(caseItem.originalAmount) + 
                           parseFloat(caseItem.costsAdded || 0) + 
@@ -914,20 +914,20 @@ export default function CaseSummaryReport() {
                           parseFloat(caseItem.feesAdded || 0)
                         )}
                       </td>
-                      <td className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 font-medium text-green-600 whitespace-nowrap">
+                      <td className="border border-gray-200 dark:border-gray-700 px-2 sm:px-4 py-2 sm:py-3 font-medium text-green-600 dark:text-green-400 whitespace-nowrap">
                         {formatCurrency(getTotalPayments(caseItem))}
                       </td>
-                      <td className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 font-medium text-orange-600 whitespace-nowrap">
+                      <td className="border border-gray-200 dark:border-gray-700 px-2 sm:px-4 py-2 sm:py-3 font-medium text-orange-600 dark:text-orange-400 whitespace-nowrap">
                         {formatCurrency(caseItem.outstandingAmount || 0)}
                       </td>
                       {recentMessagesCount > 0 && Array.from({ length: recentMessagesCount }, (_, i) => {
                         const msg = orderedMsgs[i];
                         return (
-                          <td key={i} className="border border-gray-200 px-2 sm:px-4 py-2 sm:py-3 text-gray-700 align-top min-w-[200px]">
+                          <td key={i} className="border border-gray-200 dark:border-gray-700 px-2 sm:px-4 py-2 sm:py-3 text-gray-700 dark:text-gray-300 align-top min-w-[200px]">
                             {msg ? (
                               <div className="text-xs space-y-0.5">
-                                <div className="font-medium text-gray-500">{new Date(msg.createdAt).toLocaleDateString('en-GB')} — {msg.sender}</div>
-                                <div className="text-gray-500 italic">{msg.subject || '(no subject)'}</div>
+                                <div className="font-medium text-gray-500 dark:text-gray-400">{new Date(msg.createdAt).toLocaleDateString('en-GB')} — {msg.sender}</div>
+                                <div className="text-gray-500 dark:text-gray-400 italic">{msg.subject || '(no subject)'}</div>
                                 <div className="whitespace-pre-wrap break-words">{msg.content}</div>
                               </div>
                             ) : null}
