@@ -231,6 +231,17 @@ export default function AuthPage() {
               {" · "}
               <Link href="/privacy" className="hover:text-slate-500 transition-colors">Privacy Notice</Link>
             </p>
+            {!showAltLogin && (
+              <p className="text-xs text-slate-300 dark:text-slate-600">
+                <button
+                  onClick={() => { setShowAltLogin(true); setError(""); }}
+                  className="hover:text-slate-500 transition-colors"
+                  data-testid="button-sign-in-another-way"
+                >
+                  Sign in another way
+                </button>
+              </p>
+            )}
           </div>
 
           {/* Dev-only bypass login — never shown in production */}
