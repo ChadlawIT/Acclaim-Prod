@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef } from "react";
+import { formatUKDateTime } from "@/lib/dateUtils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -1280,7 +1281,8 @@ const handleReply = (message: any) => {
                             month: 'short',
                             year: 'numeric',
                             hour: '2-digit',
-                            minute: '2-digit'
+                            minute: '2-digit',
+                            timeZone: 'Europe/London'
                           })}
                         </p>
                         {log.ipAddress && (

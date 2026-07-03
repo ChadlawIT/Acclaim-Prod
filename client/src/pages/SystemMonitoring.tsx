@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Activity, Users, AlertTriangle, Shield, Clock, Download, Search, Filter, CheckCircle, AlertCircle, XCircle, Lock, Unlock, Loader2 } from "lucide-react";
 import { Link } from "wouter";
 import { format } from "date-fns";
+import { formatUKDateTime, formatUKDateTimeSecs, formatUKShortDateTime, formatUKTime } from "@/lib/dateUtils";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -407,7 +408,7 @@ export default function SystemMonitoring() {
                         <div className="flex-1">
                           <p className="text-sm font-medium">{log.action}</p>
                           <p className="text-xs text-gray-600 dark:text-gray-400">
-                            {log.userEmail} • {format(new Date(log.timestamp), 'MMM d, HH:mm')}
+                            {log.userEmail} • {formatUKShortDateTime(log.timestamp)}
                           </p>
                         </div>
                       </div>
@@ -528,7 +529,7 @@ export default function SystemMonitoring() {
                             </TableCell>
                             <TableCell className="max-w-md truncate">{log.details}</TableCell>
                             <TableCell className="font-mono text-sm">{log.ipAddress}</TableCell>
-                            <TableCell>{format(new Date(log.timestamp), 'MMM d, yyyy HH:mm:ss')}</TableCell>
+                            <TableCell>{formatUKDateTimeSecs(log.timestamp)}</TableCell>
                           </TableRow>
                         ))
                       )}
@@ -743,7 +744,7 @@ export default function SystemMonitoring() {
                               <TableCell className="font-medium">{metric.metric}</TableCell>
                               <TableCell>{metric.value}</TableCell>
                               <TableCell>{getStatusBadge(metric.status)}</TableCell>
-                              <TableCell>{new Date(metric.timestamp).toLocaleString()}</TableCell>
+                              <TableCell>{formatUKDateTimeSecs(metric.timestamp)}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -802,7 +803,7 @@ export default function SystemMonitoring() {
                               <Badge variant="outline">{metric.metricName}</Badge>
                             </TableCell>
                             <TableCell className="font-mono">{metric.metricValue}</TableCell>
-                            <TableCell>{format(new Date(metric.recordedAt), 'MMM d, yyyy HH:mm:ss')}</TableCell>
+                            <TableCell>{formatUKDateTimeSecs(metric.recordedAt)}</TableCell>
                           </TableRow>
                         ))
                       )}
@@ -941,7 +942,7 @@ export default function SystemMonitoring() {
                               <TableCell>
                                 <Badge variant="destructive">{account.attempts}</Badge>
                               </TableCell>
-                              <TableCell>{format(new Date(account.lockedUntil), 'HH:mm:ss')}</TableCell>
+                              <TableCell>{formatUKTime(account.lockedUntil)}</TableCell>
                               <TableCell>
                                 <Badge variant="outline" className="text-orange-600">
                                   {account.remainingMinutes} min
@@ -1033,7 +1034,7 @@ export default function SystemMonitoring() {
                                   <Badge className="bg-yellow-100 text-yellow-800">Warning</Badge>
                                 )}
                               </TableCell>
-                              <TableCell>{format(new Date(attempt.lastAttempt), 'HH:mm:ss')}</TableCell>
+                              <TableCell>{formatUKTime(attempt.lastAttempt)}</TableCell>
                               <TableCell className="text-right">
                                 <Button
                                   size="sm"

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, Fragment } from "react";
+import { formatUKDateTime, formatUKDateTimeSecs } from "@/lib/dateUtils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -2226,7 +2227,7 @@ function TopUsersCard() {
                       </td>
                       <td className="py-2.5 text-right text-xs text-muted-foreground whitespace-nowrap">
                         {u.lastSeen
-                          ? new Date(u.lastSeen).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                          ? formatUKDateTime(u.lastSeen)
                           : '—'}
                       </td>
                     </tr>
@@ -2257,8 +2258,8 @@ function UserAuditRow({ userId }: { userId: string }) {
   const fmt = (dateStr: string | null | undefined) => {
     if (!dateStr) return null;
     const d = new Date(dateStr);
-    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) +
-      ' at ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Europe/London' }) +
+      ' at ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' });
   };
 
   return (
@@ -2309,8 +2310,8 @@ function MobileUserAuditSection({ userId }: { userId: string }) {
   const fmt = (dateStr: string | null | undefined) => {
     if (!dateStr) return null;
     const d = new Date(dateStr);
-    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) +
-      ' at ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Europe/London' }) +
+      ' at ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' });
   };
 
   if (isLoading) return <p className="text-xs text-gray-500">Loading login history...</p>;
@@ -4983,7 +4984,7 @@ export default function AdminEnhanced() {
                                 <div>
                                   <p className="text-gray-500">Welcome email last sent</p>
                                   <p className="font-medium text-gray-800 dark:text-gray-200">
-                                    {new Date(emailTimestamps[user.id].welcomeSentAt!).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                    {formatUKDateTime(emailTimestamps[user.id].welcomeSentAt!)}
                                   </p>
                                 </div>
                               </div>
@@ -4994,7 +4995,7 @@ export default function AdminEnhanced() {
                                 <div>
                                   <p className="text-gray-500">Microsoft invitation last sent</p>
                                   <p className="font-medium text-gray-800 dark:text-gray-200">
-                                    {new Date(emailTimestamps[user.id].inviteSentAt!).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                    {formatUKDateTime(emailTimestamps[user.id].inviteSentAt!)}
                                   </p>
                                 </div>
                               </div>
@@ -7234,13 +7235,7 @@ export default function AdminEnhanced() {
                           {log.operation}
                         </Badge>
                         <span className="text-gray-500 text-xs">
-                          {new Date(log.timestamp).toLocaleString('en-GB', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
+                          {formatUKDateTime(log.timestamp)}
                         </span>
                       </div>
                       <p className="text-gray-700 dark:text-gray-300 break-words">{log.description}</p>

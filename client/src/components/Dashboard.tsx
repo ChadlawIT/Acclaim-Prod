@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatUKDateTime } from "@/lib/dateUtils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiRequest } from "@/lib/queryClient";
@@ -318,7 +319,8 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
       month: 'short',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      timeZone: 'Europe/London'
     });
   };
 

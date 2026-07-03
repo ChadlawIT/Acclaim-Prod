@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatUKDateTime } from "@/lib/dateUtils";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,10 +23,7 @@ const CL_PINK  = "#ba1b6e";
 
 function formatDate(d: string | null | undefined): string {
   if (!d) return "—";
-  return new Date(d).toLocaleString("en-GB", {
-    day: "2-digit", month: "short", year: "numeric",
-    hour: "2-digit", minute: "2-digit",
-  });
+  return formatUKDateTime(d);
 }
 
 function CategoryBadge({ cat }: { cat: string | null | undefined }) {
