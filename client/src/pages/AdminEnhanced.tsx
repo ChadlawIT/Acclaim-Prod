@@ -6625,7 +6625,7 @@ export default function AdminEnhanced() {
 
       {/* Reset Password Dialog */}
       <Dialog open={showResetPasswordDialog} onOpenChange={(open) => { setShowResetPasswordDialog(open); if (!open) setResetPasswordResult(null); }}>
-        <DialogContent>
+        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} onCloseAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Temporary Password Generated</DialogTitle>
             <DialogDescription>
