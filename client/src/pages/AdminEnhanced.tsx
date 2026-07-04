@@ -3745,7 +3745,6 @@ export default function AdminEnhanced() {
     },
     onSuccess: (data) => {
       setResetPasswordResult({ tempPassword: data.tempPassword, email: data.email });
-      setShowResetPasswordDialog(true);
     },
     onError: (error) => {
       toast({
@@ -5075,6 +5074,8 @@ export default function AdminEnhanced() {
                           <button
                             onClick={() => {
                               if (confirm(`Reset password for ${user.firstName} ${user.lastName}?\n\nThis will generate a new temporary password. The user will need to change it on next sign in.`)) {
+                                setResetPasswordResult(null);
+                                sendPasswordEmailMutation.reset();
                                 setResetPasswordUser(user);
                                 resetPasswordMutation.mutate(user.id);
                               }
@@ -5082,8 +5083,54 @@ export default function AdminEnhanced() {
                             disabled={resetPasswordMutation.isPending}
                             className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-50"
                           >
-                            <KeyRound className="h-4 w-4 text-gray-400" /> Reset password
+                            <KeyRound className="h-4 w-4 text-gray-400" />
+                            {resetPasswordMutation.isPending && resetPasswordUser?.id === user.id ? "Resetting…" : "Reset password"}
                           </button>
+                          {resetPasswordResult && resetPasswordUser?.id === user.id && (
+                            <div className="mx-0 my-1 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                              <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-2">Temporary Password Set</p>
+                              <div className="flex items-center gap-2 mb-1">
+                                <code className="flex-1 text-sm font-mono font-bold text-amber-900 bg-amber-100 rounded px-2 py-1.5 select-all break-all">
+                                  {resetPasswordResult.tempPassword}
+                                </code>
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(resetPasswordResult!.tempPassword).catch(() => {});
+                                    toast({ title: "Copied", description: "Temporary password copied to clipboard." });
+                                  }}
+                                  className="flex-shrink-0 p-1.5 rounded border border-amber-300 bg-white hover:bg-amber-50 transition-colors"
+                                >
+                                  <Copy className="h-3.5 w-3.5 text-amber-700" />
+                                </button>
+                              </div>
+                              <p className="text-xs text-amber-600 mb-2">Account: {resetPasswordResult.email}</p>
+                              <div className="flex gap-2 mt-2">
+                                <button
+                                  onClick={() => {
+                                    if (!sendPasswordEmailMutation.isPending && !sendPasswordEmailMutation.isSuccess) {
+                                      sendPasswordEmailMutation.mutate({ userId: user.id, temporaryPassword: resetPasswordResult!.tempPassword });
+                                    }
+                                  }}
+                                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border transition-colors ${sendPasswordEmailMutation.isSuccess ? 'text-green-700 border-green-300 bg-green-50' : sendPasswordEmailMutation.isPending ? 'text-gray-500 border-gray-200 bg-gray-50 opacity-60' : 'text-teal-700 border-teal-300 bg-teal-50 hover:bg-teal-100'}`}
+                                >
+                                  {sendPasswordEmailMutation.isSuccess ? <><CheckCircle2 className="h-3.5 w-3.5" /> Sent</> : sendPasswordEmailMutation.isPending ? <><Mail className="h-3.5 w-3.5" /> Sending…</> : <><Mail className="h-3.5 w-3.5" /> Email to user</>}
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    sendPasswordEmailMutation.reset();
+                                    setResetPasswordResult(null);
+                                    setResetPasswordUser(null);
+                                    queryClient.invalidateQueries({ queryKey: ['/api/admin/users/email-timestamps'] });
+                                    await queryClient.refetchQueries({ queryKey: ['/api/admin/users-with-orgs'] });
+                                    setExpandedUserId(user.id);
+                                  }}
+                                  className="px-3 py-2 rounded-lg text-xs font-medium border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 transition-colors"
+                                >
+                                  Done
+                                </button>
+                              </div>
+                            </div>
+                          )}
                           <button
                             onClick={() => { setSelectedUser(user); setShowAssignUser(true); }}
                             className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left"
@@ -6623,89 +6670,6 @@ export default function AdminEnhanced() {
         </DialogContent>
       </Dialog>
 
-      {/* Reset Password Dialog */}
-      <Dialog open={showResetPasswordDialog} onOpenChange={(open) => { setShowResetPasswordDialog(open); if (!open) setResetPasswordResult(null); }}>
-        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} onCloseAutoFocus={(e) => e.preventDefault()}>
-          <DialogHeader>
-            <DialogTitle>Temporary Password Generated</DialogTitle>
-            <DialogDescription>
-              A new temporary password has been set for {resetPasswordUser?.firstName} {resetPasswordUser?.lastName}. Please share it with them securely — they will be required to set a new password on first sign in.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-              <p className="text-xs text-amber-700 font-medium mb-2 uppercase tracking-wide">Temporary Password</p>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 text-lg font-mono font-bold text-amber-900 bg-amber-100 rounded px-3 py-2 select-all">
-                  {resetPasswordResult?.tempPassword}
-                </code>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    if (resetPasswordResult?.tempPassword) {
-                      navigator.clipboard.writeText(resetPasswordResult.tempPassword);
-                      toast({ title: "Copied", description: "Temporary password copied to clipboard." });
-                    }
-                  }}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </div>
-              <p className="text-xs text-amber-700 mt-2">Account: {resetPasswordResult?.email}</p>
-            </div>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <p className="text-sm text-blue-700">
-                <strong>Next step:</strong> Use the Email button to send this user a password reset email, or share the temporary password with them directly.
-              </p>
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                if (!sendPasswordEmailMutation.isPending && !sendPasswordEmailMutation.isSuccess && resetPasswordUser) {
-                  sendPasswordEmailMutation.mutate({
-                    userId: resetPasswordUser.id,
-                    temporaryPassword: resetPasswordResult?.tempPassword,
-                  });
-                }
-              }}
-              className={sendPasswordEmailMutation.isSuccess ? "text-green-600 border-green-300 pointer-events-none" : sendPasswordEmailMutation.isPending ? "opacity-60 pointer-events-none" : ""}
-            >
-              {sendPasswordEmailMutation.isSuccess ? (
-                <><CheckCircle2 className="h-4 w-4 mr-2 text-green-500" />Email sent</>
-              ) : sendPasswordEmailMutation.isPending ? (
-                <><Mail className="h-4 w-4 mr-2" />Sending…</>
-              ) : (
-                <><Mail className="h-4 w-4 mr-2" />Email password to user</>
-              )}
-            </Button>
-            <Button onClick={async () => {
-              const userId = resetPasswordUser?.id;
-              sendPasswordEmailMutation.reset();
-              setShowResetPasswordDialog(false);
-              setResetPasswordResult(null);
-              queryClient.invalidateQueries({ queryKey: ['/api/admin/users/email-timestamps'] });
-              await queryClient.refetchQueries({ queryKey: ['/api/admin/users-with-orgs'] });
-              if (userId) {
-                // Navigate to the page containing this user so they're visible in the list
-                const allUsers = queryClient.getQueryData<User[]>(['/api/admin/users-with-orgs']);
-                if (allUsers) {
-                  const idx = allUsers.findIndex((u: User) => u.id === userId);
-                  if (idx >= 0) {
-                    const page = Math.floor(idx / usersPageSize) + 1;
-                    setUsersPage(page);
-                  }
-                }
-                setExpandedUserId(userId);
-              }
-            }}>
-              Close
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* New User Dialog */}
       <Dialog open={showPasswordDialog} onOpenChange={(open) => {
