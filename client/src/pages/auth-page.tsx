@@ -166,7 +166,7 @@ export default function AuthPage() {
               type="button"
               onClick={handleAzureLogin}
               data-testid="button-azure-login"
-              className="w-full flex items-center justify-center gap-3 h-11 rounded-xl border-2 border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700 font-semibold text-sm transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-700"
+              className="w-full flex items-center justify-center gap-3 h-11 rounded-xl bg-acclaim-teal hover:bg-acclaim-teal/90 text-white font-semibold text-sm transition-all"
             >
               <MicrosoftIcon />
               Sign in with Microsoft
