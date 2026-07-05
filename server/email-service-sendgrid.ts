@@ -21,9 +21,9 @@ function escapeHtml(value: string): string {
 
 function getLogoAttachment(): { filename: string; path: string; cid: string } | null {
   const possiblePaths = [
-    path.join(__dirname, '../attached_assets/Acclaim rose.Cur_1752271300769.png'),
-    path.join(__dirname, '../../attached_assets/Acclaim rose.Cur_1752271300769.png'),
-    path.join(process.cwd(), 'attached_assets/Acclaim rose.Cur_1752271300769.png'),
+    path.join(__dirname, '../attached_assets/acclaim-logo-nobg.png'),
+    path.join(__dirname, '../../attached_assets/acclaim-logo-nobg.png'),
+    path.join(process.cwd(), 'attached_assets/acclaim-logo-nobg.png'),
   ];
   
   for (const logoPath of possiblePaths) {
@@ -43,9 +43,9 @@ function getLogoAttachment(): { filename: string; path: string; cid: string } | 
 // Get logo as base64 for HTTP API
 function getLogoBase64(): { content: string; filename: string; type: string; content_id: string; disposition: string } | null {
   const possiblePaths = [
-    path.join(__dirname, '../attached_assets/Acclaim rose.Cur_1752271300769.png'),
-    path.join(__dirname, '../../attached_assets/Acclaim rose.Cur_1752271300769.png'),
-    path.join(process.cwd(), 'attached_assets/Acclaim rose.Cur_1752271300769.png'),
+    path.join(__dirname, '../attached_assets/acclaim-logo-nobg.png'),
+    path.join(__dirname, '../../attached_assets/acclaim-logo-nobg.png'),
+    path.join(process.cwd(), 'attached_assets/acclaim-logo-nobg.png'),
   ];
   
   for (const logoPath of possiblePaths) {
@@ -498,9 +498,9 @@ class SendGridEmailService {
                   
                   <!-- Header -->
                   <tr>
-                    <td style="background-color: #008b8b; background: linear-gradient(135deg, #008b8b 0%, #006666 100%); padding: 40px 40px 30px 40px; text-align: center;">
-                      <img src="cid:logo" alt="Acclaim" style="height: 36px; width: auto; margin-bottom: 16px;" />
-                      <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600; letter-spacing: -0.5px;">Case Update</h1>
+                    <td style="background-color: #ffffff; padding: 28px 40px 24px 40px; text-align: center; border-bottom: 4px solid #0d9488;">
+                      <img src="cid:logo" alt="Acclaim" style="width: 160px; height: auto; margin-bottom: 14px;" />
+                      <h1 style="margin: 0; color: #1a2e44; font-size: 22px; font-weight: 600; letter-spacing: -0.5px;">Case Update</h1>
                       ${caseHeaderHtml}
                     </td>
                   </tr>
@@ -682,10 +682,10 @@ Portal: https://acclaim-api-prod-uks-001.azurewebsites.net/auth
                   
                   <!-- Header -->
                   <tr>
-                    <td style="background-color: #008b8b; background: linear-gradient(135deg, #008b8b 0%, #006666 100%); padding: 40px 40px 30px 40px; text-align: center;">
-                      <img src="cid:logo" alt="Acclaim" style="height: 36px; width: auto; margin-bottom: 16px;" />
-                      <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600; letter-spacing: -0.5px;">New Message</h1>
-                      ${data.caseReference ? `<p style="margin: 8px 0 0 0; color: rgba(255,255,255,0.85); font-size: 14px;">Case: ${data.caseReference}</p>` : ''}
+                    <td style="background-color: #ffffff; padding: 28px 40px 24px 40px; text-align: center; border-bottom: 4px solid #0d9488;">
+                      <img src="cid:logo" alt="Acclaim" style="width: 160px; height: auto; margin-bottom: 14px;" />
+                      <h1 style="margin: 0; color: #1a2e44; font-size: 22px; font-weight: 600; letter-spacing: -0.5px;">New Message</h1>
+                      ${data.caseReference ? `<p style="margin: 8px 0 0 0; color: #475569; font-size: 14px;">Case: ${data.caseReference}</p>` : ''}
                     </td>
                   </tr>
                   
@@ -1043,8 +1043,8 @@ Please log in to the Acclaim Portal to view and respond to this message.
                           </td>
                         </tr>
                       </table>
-                      <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600; letter-spacing: -0.5px;">Super Admin Access Granted</h1>
-                      <p style="margin: 8px 0 0 0; color: rgba(255,255,255,0.85); font-size: 14px;">Acclaim Client Portal</p>
+                      <h1 style="margin: 0; color: #1a2e44; font-size: 22px; font-weight: 600; letter-spacing: -0.5px;">Super Admin Access Granted</h1>
+                      <p style="margin: 8px 0 0 0; color: #475569; font-size: 14px;">Acclaim Client Portal</p>
                     </td>
                   </tr>
 
@@ -1197,9 +1197,9 @@ Open the portal: https://acclaim-api-prod-uks-001.azurewebsites.net/auth
                   
                   <!-- Header -->
                   <tr>
-                    <td style="background-color: #008b8b; background: linear-gradient(135deg, #008b8b 0%, #006666 100%); padding: 40px 40px 30px 40px; text-align: center;">
-                      <img src="cid:logo" alt="Acclaim" style="height: 36px; width: auto; margin-bottom: 16px;" />
-                      <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600; letter-spacing: -0.5px;">Message from Acclaim</h1>
+                    <td style="background-color: #ffffff; padding: 28px 40px 24px 40px; text-align: center; border-bottom: 4px solid #0d9488;">
+                      <img src="cid:logo" alt="Acclaim" style="width: 160px; height: auto; margin-bottom: 14px;" />
+                      <h1 style="margin: 0; color: #1a2e44; font-size: 22px; font-weight: 600; letter-spacing: -0.5px;">Message from Acclaim</h1>
                       ${caseHeaderHtml}
                     </td>
                   </tr>
@@ -1371,10 +1371,10 @@ Portal: https://acclaim-api-prod-uks-001.azurewebsites.net/auth
                   
                   <!-- Header -->
                   <tr>
-                    <td style="background-color: #008b8b; background: linear-gradient(135deg, #008b8b 0%, #006666 100%); padding: 40px 40px 30px 40px; text-align: center;">
-                      <img src="cid:logo" alt="Acclaim" style="height: 36px; width: auto; margin-bottom: 16px;" />
-                      <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600; letter-spacing: -0.5px;">Welcome to Acclaim</h1>
-                      <p style="margin: 8px 0 0 0; color: rgba(255,255,255,0.85); font-size: 14px;">Your account is ready</p>
+                    <td style="background-color: #ffffff; padding: 28px 40px 24px 40px; text-align: center; border-bottom: 4px solid #0d9488;">
+                      <img src="cid:logo" alt="Acclaim" style="width: 160px; height: auto; margin-bottom: 14px;" />
+                      <h1 style="margin: 0; color: #1a2e44; font-size: 22px; font-weight: 600; letter-spacing: -0.5px;">Welcome to Acclaim</h1>
+                      <p style="margin: 8px 0 0 0; color: #475569; font-size: 14px;">Your account is ready</p>
                     </td>
                   </tr>
                   
@@ -1570,9 +1570,9 @@ If you have any questions, please contact our support team.
                   
                   <!-- Header -->
                   <tr>
-                    <td style="background-color: #008b8b; background: linear-gradient(135deg, #008b8b 0%, #006666 100%); padding: 40px 40px 30px 40px; text-align: center;">
-                      <img src="cid:logo" alt="Acclaim" style="height: 36px; width: auto; margin-bottom: 16px;" />
-                      <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600; letter-spacing: -0.5px;">Your Temporary Password</h1>
+                    <td style="background-color: #ffffff; padding: 28px 40px 24px 40px; text-align: center; border-bottom: 4px solid #0d9488;">
+                      <img src="cid:logo" alt="Acclaim" style="width: 160px; height: auto; margin-bottom: 14px;" />
+                      <h1 style="margin: 0; color: #1a2e44; font-size: 22px; font-weight: 600; letter-spacing: -0.5px;">Your Temporary Password</h1>
                     </td>
                   </tr>
                   
@@ -1709,9 +1709,9 @@ If you have any questions, please contact our support team.
                   
                   <!-- Header -->
                   <tr>
-                    <td style="background-color: #008b8b; background: linear-gradient(135deg, #008b8b 0%, #006666 100%); padding: 40px 40px 30px 40px; text-align: center;">
-                      <img src="cid:logo" alt="Acclaim" style="height: 36px; width: auto; margin-bottom: 16px;" />
-                      <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600; letter-spacing: -0.5px;">Password Reset</h1>
+                    <td style="background-color: #ffffff; padding: 28px 40px 24px 40px; text-align: center; border-bottom: 4px solid #0d9488;">
+                      <img src="cid:logo" alt="Acclaim" style="width: 160px; height: auto; margin-bottom: 14px;" />
+                      <h1 style="margin: 0; color: #1a2e44; font-size: 22px; font-weight: 600; letter-spacing: -0.5px;">Password Reset</h1>
                     </td>
                   </tr>
                   
@@ -2056,10 +2056,10 @@ Need help? Contact us at email@acclaim.law
                   
                   <!-- Header -->
                   <tr>
-                    <td style="background-color: #008b8b; background: linear-gradient(135deg, #008b8b 0%, #006666 100%); padding: 40px 40px 30px 40px; text-align: center;">
-                      <img src="cid:logo" alt="Acclaim" style="height: 36px; width: auto; margin-bottom: 16px;" />
-                      <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600; letter-spacing: -0.5px;">New Case Submission</h1>
-                      <p style="margin: 8px 0 0 0; color: rgba(255,255,255,0.85); font-size: 14px;">Submission ID: #${data.submissionId}</p>
+                    <td style="background-color: #ffffff; padding: 28px 40px 24px 40px; text-align: center; border-bottom: 4px solid #0d9488;">
+                      <img src="cid:logo" alt="Acclaim" style="width: 160px; height: auto; margin-bottom: 14px;" />
+                      <h1 style="margin: 0; color: #1a2e44; font-size: 22px; font-weight: 600; letter-spacing: -0.5px;">New Case Submission</h1>
+                      <p style="margin: 8px 0 0 0; color: #475569; font-size: 14px;">Submission ID: #${data.submissionId}</p>
                     </td>
                   </tr>
                   
@@ -2473,10 +2473,10 @@ A detailed Excel spreadsheet and all uploaded files are attached to this email.
                   
                   <!-- Header -->
                   <tr>
-                    <td style="background-color: #008b8b; background: linear-gradient(135deg, #008b8b 0%, #006666 100%); padding: 40px 40px 30px 40px; text-align: center;">
-                      <img src="cid:logo" alt="Acclaim" style="height: 36px; width: auto; margin-bottom: 16px;" />
-                      <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600; letter-spacing: -0.5px;">Document Uploaded</h1>
-                      ${data.caseReference ? `<p style="margin: 8px 0 0 0; color: rgba(255,255,255,0.85); font-size: 14px;">Case: ${data.caseReference}</p>` : ''}
+                    <td style="background-color: #ffffff; padding: 28px 40px 24px 40px; text-align: center; border-bottom: 4px solid #0d9488;">
+                      <img src="cid:logo" alt="Acclaim" style="width: 160px; height: auto; margin-bottom: 14px;" />
+                      <h1 style="margin: 0; color: #1a2e44; font-size: 22px; font-weight: 600; letter-spacing: -0.5px;">Document Uploaded</h1>
+                      ${data.caseReference ? `<p style="margin: 8px 0 0 0; color: #475569; font-size: 14px;">Case: ${data.caseReference}</p>` : ''}
                     </td>
                   </tr>
                   
@@ -2660,9 +2660,9 @@ Please log in to the Acclaim Portal to view this document.
                   
                   <!-- Header -->
                   <tr>
-                    <td style="background-color: #008b8b; background: linear-gradient(135deg, #008b8b 0%, #006666 100%); padding: 40px 40px 30px 40px; text-align: center;">
-                      <img src="cid:logo" alt="Acclaim" style="height: 36px; width: auto; margin-bottom: 16px;" />
-                      <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600; letter-spacing: -0.5px;">New Document Available</h1>
+                    <td style="background-color: #ffffff; padding: 28px 40px 24px 40px; text-align: center; border-bottom: 4px solid #0d9488;">
+                      <img src="cid:logo" alt="Acclaim" style="width: 160px; height: auto; margin-bottom: 14px;" />
+                      <h1 style="margin: 0; color: #1a2e44; font-size: 22px; font-weight: 600; letter-spacing: -0.5px;">New Document Available</h1>
                       ${caseHeaderHtml}
                     </td>
                   </tr>
@@ -2823,10 +2823,10 @@ Portal: https://acclaim-api-prod-uks-001.azurewebsites.net/auth
                   
                   <!-- Header -->
                   <tr>
-                    <td style="background-color: #008b8b; background: linear-gradient(135deg, #008b8b 0%, #006666 100%); padding: 40px 40px 30px 40px; text-align: center;">
-                      <img src="cid:logo" alt="Acclaim" style="height: 36px; width: auto; margin-bottom: 16px;" />
-                      <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600; letter-spacing: -0.5px;">New Member Request</h1>
-                      <p style="margin: 8px 0 0 0; color: rgba(255,255,255,0.85); font-size: 14px;">Organisation: ${data.orgName}</p>
+                    <td style="background-color: #ffffff; padding: 28px 40px 24px 40px; text-align: center; border-bottom: 4px solid #0d9488;">
+                      <img src="cid:logo" alt="Acclaim" style="width: 160px; height: auto; margin-bottom: 14px;" />
+                      <h1 style="margin: 0; color: #1a2e44; font-size: 22px; font-weight: 600; letter-spacing: -0.5px;">New Member Request</h1>
+                      <p style="margin: 8px 0 0 0; color: #475569; font-size: 14px;">Organisation: ${data.orgName}</p>
                     </td>
                   </tr>
                   
@@ -2984,9 +2984,9 @@ This request was submitted via the Acclaim Client Portal.
                   <!-- Header -->
                   <tr>
                     <td style="background-color: ${isRemoval ? '#dc2626' : isOwnershipRemoval ? '#ea580c' : '#f59e0b'}; background: linear-gradient(135deg, ${isRemoval ? '#dc2626' : isOwnershipRemoval ? '#ea580c' : '#f59e0b'} 0%, ${isRemoval ? '#b91c1c' : isOwnershipRemoval ? '#c2410c' : '#d97706'} 100%); padding: 40px 40px 30px 40px; text-align: center;">
-                      <img src="cid:logo" alt="Acclaim" style="height: 36px; width: auto; margin-bottom: 16px;" />
-                      <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600; letter-spacing: -0.5px;">${headerTitle}</h1>
-                      <p style="margin: 8px 0 0 0; color: rgba(255,255,255,0.85); font-size: 14px;">Organisation: ${data.orgName}</p>
+                      <img src="cid:logo" alt="Acclaim" style="width: 160px; height: auto; margin-bottom: 14px;" />
+                      <h1 style="margin: 0; color: #1a2e44; font-size: 22px; font-weight: 600; letter-spacing: -0.5px;">${headerTitle}</h1>
+                      <p style="margin: 8px 0 0 0; color: #475569; font-size: 14px;">Organisation: ${data.orgName}</p>
                     </td>
                   </tr>
                   
@@ -3324,7 +3324,7 @@ You can disable these login notifications in your Profile Settings.
                   
                   <!-- Header -->
                   <tr>
-                    <td style="background-color: #008b8b; background: linear-gradient(135deg, #008b8b 0%, #006666 100%); padding: 40px 40px 30px 40px; text-align: center;">
+                    <td style="background-color: #ffffff; padding: 28px 40px 24px 40px; text-align: center; border-bottom: 4px solid #0d9488;">
                       <img src="cid:logo" alt="Acclaim" style="height: 48px; width: auto; margin-bottom: 12px;" />
                       <h1 style="margin: 0; color: #ffffff; font-size: 26px; font-weight: 600; letter-spacing: -0.5px;">Acclaim Portal</h1>
                     </td>

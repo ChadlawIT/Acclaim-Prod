@@ -195,12 +195,12 @@ class EmailService {
         : `New Message: ${data.messageSubject || 'User Enquiry'} - Acclaim Portal`;
       const htmlContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); background-color: #14b8a6; color: #ffffff; padding: 20px; text-align: center;">
+          <div style="background-color: #ffffff; padding: 24px 30px 20px 30px; text-align: center; border-bottom: 4px solid #0d9488;">
             <div style="margin-bottom: 10px;">
-              <img src="cid:logo" alt="Acclaim Credit Management & Recovery" style="height: 32px; width: auto;" />
+              <img src="cid:logo" alt="Acclaim Credit Management & Recovery" style="width: 150px; height: auto;" />
             </div>
-            <h2 style="margin: 0; font-size: 18px; color: #ffffff; font-weight: 600;">New Message Received</h2>
-            ${data.caseReference ? `<p style="margin: 5px 0 0 0; color: #ffffff; font-size: 14px;">Case: ${data.caseReference}</p>` : ''}
+            <h2 style="margin: 0; font-size: 18px; color: #1a2e44; font-weight: 600;">New Message Received</h2>
+            ${data.caseReference ? `<p style="margin: 5px 0 0 0; color: #475569; font-size: 14px;">Case: ${data.caseReference}</p>` : ''}
           </div>
           
           <div style="padding: 30px; background: #f8fafc; border: 1px solid #e2e8f0;">
@@ -338,7 +338,7 @@ Please log in to the Acclaim Portal to respond to this message.
         attachments: [
           {
             filename: 'logo.png',
-            path: path.join(__dirname, '../attached_assets/Acclaim rose.Cur_1752271300769.png'),
+            path: path.join(__dirname, '../attached_assets/acclaim-logo-nobg.png'),
             cid: 'logo'
           }
         ]
@@ -393,12 +393,12 @@ Please log in to the Acclaim Portal to respond to this message.
       
       const htmlContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc;">
-          <div style="background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); color: white; padding: 30px; text-align: center;">
+          <div style="background-color: #ffffff; padding: 24px 30px 20px 30px; text-align: center; border-bottom: 4px solid #0d9488;">
             <div style="margin-bottom: 10px;">
-              <img src="cid:logo" alt="Acclaim Credit Management & Recovery" style="height: 40px; width: auto;" />
+              <img src="cid:logo" alt="Acclaim Credit Management & Recovery" style="width: 150px; height: auto;" />
             </div>
-            <p style="margin: 0; opacity: 0.9; font-size: 16px;">New message from administrator</p>
-            ${data.caseReference ? `<p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 14px;">Case: ${data.caseReference}</p>` : ''}
+            <p style="margin: 0; color: #475569; font-size: 16px;">New message from administrator</p>
+            ${data.caseReference ? `<p style="margin: 5px 0 0 0; color: #475569; font-size: 14px;">Case: ${data.caseReference}</p>` : ''}
           </div>
           
           <div style="padding: 30px;">
@@ -518,7 +518,7 @@ To manage your notification preferences, visit your Profile settings in the port
         attachments: [
           {
             filename: 'logo.png',
-            path: path.join(__dirname, '../attached_assets/Acclaim rose.Cur_1752271300769.png'),
+            path: path.join(__dirname, '../attached_assets/acclaim-logo-nobg.png'),
             cid: 'logo'
           }
         ]
@@ -570,12 +570,12 @@ To manage your notification preferences, visit your Profile settings in the port
         : `${data.messageType}: ${data.messageSubject} - Acclaim Portal`;
       const htmlContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc;">
-          <div style="background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); color: white; padding: 30px; text-align: center;">
+          <div style="background-color: #ffffff; padding: 24px 30px 20px 30px; text-align: center; border-bottom: 4px solid #0d9488;">
             <div style="margin-bottom: 10px;">
-              <img src="cid:logo" alt="Acclaim Credit Management & Recovery" style="height: 40px; width: auto;" />
+              <img src="cid:logo" alt="Acclaim Credit Management & Recovery" style="width: 150px; height: auto;" />
             </div>
-            <p style="margin: 0; opacity: 0.9; font-size: 16px;">New case update received</p>
-            ${data.caseReference ? `<p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 14px;">Case: ${data.caseReference}</p>` : ''}
+            <p style="margin: 0; color: #475569; font-size: 16px;">New case update received</p>
+            ${data.caseReference ? `<p style="margin: 5px 0 0 0; color: #475569; font-size: 14px;">Case: ${data.caseReference}</p>` : ''}
           </div>
           
           <div style="padding: 30px;">
@@ -712,7 +712,7 @@ To manage your notification preferences, visit your Profile settings in the port
         attachments: [
           {
             filename: 'logo.png',
-            path: path.join(__dirname, '../attached_assets/Acclaim rose.Cur_1752271300769.png'),
+            path: path.join(__dirname, '../attached_assets/acclaim-logo-nobg.png'),
             cid: 'logo'
           }
         ]
@@ -760,12 +760,12 @@ To manage your notification preferences, visit your Profile settings in the port
 
       const htmlContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc;">
-          <div style="background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); color: white; padding: 30px; text-align: center;">
+          <div style="background-color: #ffffff; padding: 24px 30px 20px 30px; text-align: center; border-bottom: 4px solid #0d9488;">
             <div style="margin-bottom: 10px;">
-              <img src="cid:logo" alt="Acclaim Credit Management & Recovery" style="height: 40px; width: auto;" />
+              <img src="cid:logo" alt="Acclaim Credit Management & Recovery" style="width: 150px; height: auto;" />
             </div>
-            <h1 style="margin: 0; font-size: 24px;">Welcome to the Acclaim Credit Management & Recovery Portal!</h1>
-            <p style="margin: 10px 0 0 0; opacity: 0.9; font-size: 16px;">Your account is ready</p>
+            <h1 style="margin: 0; font-size: 22px; color: #1a2e44; font-weight: 600;">Welcome to the Acclaim Portal</h1>
+            <p style="margin: 10px 0 0 0; color: #475569; font-size: 16px;">Your account is ready</p>
           </div>
           
           <div style="padding: 30px;">
@@ -845,7 +845,7 @@ If you have any questions, please contact our support team.
         attachments: [
           {
             filename: 'logo.png',
-            path: path.join(__dirname, '../attached_assets/Acclaim rose.Cur_1752271300769.png'),
+            path: path.join(__dirname, '../attached_assets/acclaim-logo-nobg.png'),
             cid: 'logo'
           },
           ...(data.isAdmin ? [] : [{
