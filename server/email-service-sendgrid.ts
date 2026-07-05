@@ -21,9 +21,9 @@ function escapeHtml(value: string): string {
 
 function getLogoAttachment(): { filename: string; path: string; cid: string } | null {
   const possiblePaths = [
-    path.join(__dirname, '../attached_assets/acclaim-logo-nobg.png'),
-    path.join(__dirname, '../../attached_assets/acclaim-logo-nobg.png'),
-    path.join(process.cwd(), 'attached_assets/acclaim-logo-nobg.png'),
+    path.join(__dirname, '../attached_assets/acclaim-logo-cropped.png'),
+    path.join(__dirname, '../../attached_assets/acclaim-logo-cropped.png'),
+    path.join(process.cwd(), 'attached_assets/acclaim-logo-cropped.png'),
   ];
   
   for (const logoPath of possiblePaths) {
@@ -43,9 +43,9 @@ function getLogoAttachment(): { filename: string; path: string; cid: string } | 
 // Get logo as base64 for HTTP API
 function getLogoBase64(): { content: string; filename: string; type: string; content_id: string; disposition: string } | null {
   const possiblePaths = [
-    path.join(__dirname, '../attached_assets/acclaim-logo-nobg.png'),
-    path.join(__dirname, '../../attached_assets/acclaim-logo-nobg.png'),
-    path.join(process.cwd(), 'attached_assets/acclaim-logo-nobg.png'),
+    path.join(__dirname, '../attached_assets/acclaim-logo-cropped.png'),
+    path.join(__dirname, '../../attached_assets/acclaim-logo-cropped.png'),
+    path.join(process.cwd(), 'attached_assets/acclaim-logo-cropped.png'),
   ];
   
   for (const logoPath of possiblePaths) {

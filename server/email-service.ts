@@ -338,7 +338,7 @@ Please log in to the Acclaim Portal to respond to this message.
         attachments: [
           {
             filename: 'logo.png',
-            path: path.join(__dirname, '../attached_assets/acclaim-logo-nobg.png'),
+            path: path.join(__dirname, '../attached_assets/acclaim-logo-cropped.png'),
             cid: 'logo'
           }
         ]
@@ -518,7 +518,7 @@ To manage your notification preferences, visit your Profile settings in the port
         attachments: [
           {
             filename: 'logo.png',
-            path: path.join(__dirname, '../attached_assets/acclaim-logo-nobg.png'),
+            path: path.join(__dirname, '../attached_assets/acclaim-logo-cropped.png'),
             cid: 'logo'
           }
         ]
@@ -712,7 +712,7 @@ To manage your notification preferences, visit your Profile settings in the port
         attachments: [
           {
             filename: 'logo.png',
-            path: path.join(__dirname, '../attached_assets/acclaim-logo-nobg.png'),
+            path: path.join(__dirname, '../attached_assets/acclaim-logo-cropped.png'),
             cid: 'logo'
           }
         ]
@@ -845,7 +845,7 @@ If you have any questions, please contact our support team.
         attachments: [
           {
             filename: 'logo.png',
-            path: path.join(__dirname, '../attached_assets/acclaim-logo-nobg.png'),
+            path: path.join(__dirname, '../attached_assets/acclaim-logo-cropped.png'),
             cid: 'logo'
           },
           ...(data.isAdmin ? [] : [{
