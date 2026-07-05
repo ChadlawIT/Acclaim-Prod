@@ -477,9 +477,9 @@ class SendGridEmailService {
         : `${data.messageType}: ${data.messageSubject} - Acclaim Portal`;
 
       const caseHeaderHtml = (caseName || data.caseReference)
-        ? `<div style="margin: 18px auto 0 auto; display: inline-block; background: rgba(255,255,255,0.15); border-radius: 8px; padding: 10px 22px;">
-                        <p style="margin: 0; color: rgba(255,255,255,0.75); font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px;">Case</p>
-                        <p style="margin: 4px 0 0 0; color: #ffffff; font-size: 18px; font-weight: 700;">${caseName ? caseName : data.caseReference}${caseName && data.caseReference ? ` <span style="font-weight: 400; font-size: 14px; color: rgba(255,255,255,0.8);">(${data.caseReference})</span>` : ''}</p>
+        ? `<div style="margin: 14px auto 0 auto; display: inline-block; background: #f0fdfa; border: 1px solid #99f6e4; border-radius: 8px; padding: 10px 22px;">
+                        <p style="margin: 0; color: #0d9488; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600;">Case</p>
+                        <p style="margin: 4px 0 0 0; color: #1a2e44; font-size: 16px; font-weight: 700;">${caseName ? caseName : data.caseReference}${caseName && data.caseReference ? ` <span style="font-weight: 400; font-size: 13px; color: #475569;">(${data.caseReference})</span>` : ''}</p>
                       </div>`
         : '';
 
@@ -1176,9 +1176,9 @@ Open the portal: https://acclaim-api-prod-uks-001.azurewebsites.net/auth
             : 'New Message from Acclaim - Acclaim Portal');
 
       const caseHeaderHtml = (caseName || data.caseReference)
-        ? `<div style="margin: 18px auto 0 auto; display: inline-block; background: rgba(255,255,255,0.15); border-radius: 8px; padding: 10px 22px;">
-                        <p style="margin: 0; color: rgba(255,255,255,0.75); font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px;">Case</p>
-                        <p style="margin: 4px 0 0 0; color: #ffffff; font-size: 18px; font-weight: 700;">${caseName ? caseName : data.caseReference}${caseName && data.caseReference ? ` <span style="font-weight: 400; font-size: 14px; color: rgba(255,255,255,0.8);">(${data.caseReference})</span>` : ''}</p>
+        ? `<div style="margin: 14px auto 0 auto; display: inline-block; background: #f0fdfa; border: 1px solid #99f6e4; border-radius: 8px; padding: 10px 22px;">
+                        <p style="margin: 0; color: #0d9488; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600;">Case</p>
+                        <p style="margin: 4px 0 0 0; color: #1a2e44; font-size: 16px; font-weight: 700;">${caseName ? caseName : data.caseReference}${caseName && data.caseReference ? ` <span style="font-weight: 400; font-size: 13px; color: #475569;">(${data.caseReference})</span>` : ''}</p>
                       </div>`
         : '';
 
@@ -2631,9 +2631,9 @@ Please log in to the Acclaim Portal to view this document.
         : `New Document Available - Acclaim Portal`;
 
       const caseHeaderHtml = (data.caseName || data.caseReference)
-        ? `<div style="margin: 18px auto 0 auto; display: inline-block; background: rgba(255,255,255,0.15); border-radius: 8px; padding: 10px 22px;">
-                        <p style="margin: 0; color: rgba(255,255,255,0.75); font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px;">Case</p>
-                        <p style="margin: 4px 0 0 0; color: #ffffff; font-size: 18px; font-weight: 700;">${data.caseName ? data.caseName : data.caseReference}${data.caseName && data.caseReference ? ` <span style="font-weight: 400; font-size: 14px; color: rgba(255,255,255,0.8);">(${data.caseReference})</span>` : ''}</p>
+        ? `<div style="margin: 14px auto 0 auto; display: inline-block; background: #f0fdfa; border: 1px solid #99f6e4; border-radius: 8px; padding: 10px 22px;">
+                        <p style="margin: 0; color: #0d9488; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600;">Case</p>
+                        <p style="margin: 4px 0 0 0; color: #1a2e44; font-size: 16px; font-weight: 700;">${data.caseName ? data.caseName : data.caseReference}${data.caseName && data.caseReference ? ` <span style="font-weight: 400; font-size: 13px; color: #475569;">(${data.caseReference})</span>` : ''}</p>
                       </div>`
         : '';
 
@@ -3325,8 +3325,8 @@ You can disable these login notifications in your Profile Settings.
                   <!-- Header -->
                   <tr>
                     <td style="background-color: #ffffff; padding: 28px 40px 24px 40px; text-align: center; border-bottom: 4px solid #0d9488;">
-                      <img src="cid:logo" alt="Acclaim" style="height: 48px; width: auto; margin-bottom: 12px;" />
-                      <h1 style="margin: 0; color: #ffffff; font-size: 26px; font-weight: 600; letter-spacing: -0.5px;">Acclaim Portal</h1>
+                      <img src="cid:logo" alt="Acclaim" style="width: 160px; height: auto; margin-bottom: 14px;" />
+                      <h1 style="margin: 0; color: #1a2e44; font-size: 24px; font-weight: 600; letter-spacing: -0.5px;">Acclaim Portal</h1>
                     </td>
                   </tr>
                   
