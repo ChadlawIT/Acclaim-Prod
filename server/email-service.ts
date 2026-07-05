@@ -197,7 +197,7 @@ class EmailService {
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background-color: #ffffff; padding: 24px 30px 20px 30px; text-align: center; border-bottom: 4px solid #0d9488;">
             <div style="margin-bottom: 10px;">
-              <img src="cid:logo" alt="Acclaim Credit Management & Recovery" style="width: 150px; height: auto;" />
+              <img src="cid:logo" alt="Acclaim Credit Management & Recovery" style="width: 200px; height: auto;" />
             </div>
             <h2 style="margin: 0; font-size: 18px; color: #1a2e44; font-weight: 600;">New Message Received</h2>
             ${data.caseReference ? `<p style="margin: 5px 0 0 0; color: #475569; font-size: 14px;">Case: ${data.caseReference}</p>` : ''}
@@ -395,7 +395,7 @@ Please log in to the Acclaim Portal to respond to this message.
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc;">
           <div style="background-color: #ffffff; padding: 24px 30px 20px 30px; text-align: center; border-bottom: 4px solid #0d9488;">
             <div style="margin-bottom: 10px;">
-              <img src="cid:logo" alt="Acclaim Credit Management & Recovery" style="width: 150px; height: auto;" />
+              <img src="cid:logo" alt="Acclaim Credit Management & Recovery" style="width: 200px; height: auto;" />
             </div>
             <p style="margin: 0; color: #475569; font-size: 16px;">New message from administrator</p>
             ${data.caseReference ? `<p style="margin: 5px 0 0 0; color: #475569; font-size: 14px;">Case: ${data.caseReference}</p>` : ''}
@@ -572,7 +572,7 @@ To manage your notification preferences, visit your Profile settings in the port
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc;">
           <div style="background-color: #ffffff; padding: 24px 30px 20px 30px; text-align: center; border-bottom: 4px solid #0d9488;">
             <div style="margin-bottom: 10px;">
-              <img src="cid:logo" alt="Acclaim Credit Management & Recovery" style="width: 150px; height: auto;" />
+              <img src="cid:logo" alt="Acclaim Credit Management & Recovery" style="width: 200px; height: auto;" />
             </div>
             <p style="margin: 0; color: #475569; font-size: 16px;">New case update received</p>
             ${data.caseReference ? `<p style="margin: 5px 0 0 0; color: #475569; font-size: 14px;">Case: ${data.caseReference}</p>` : ''}
@@ -762,7 +762,7 @@ To manage your notification preferences, visit your Profile settings in the port
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc;">
           <div style="background-color: #ffffff; padding: 24px 30px 20px 30px; text-align: center; border-bottom: 4px solid #0d9488;">
             <div style="margin-bottom: 10px;">
-              <img src="cid:logo" alt="Acclaim Credit Management & Recovery" style="width: 150px; height: auto;" />
+              <img src="cid:logo" alt="Acclaim Credit Management & Recovery" style="width: 200px; height: auto;" />
             </div>
             <h1 style="margin: 0; font-size: 22px; color: #1a2e44; font-weight: 600;">Welcome to the Acclaim Portal</h1>
             <p style="margin: 10px 0 0 0; color: #475569; font-size: 16px;">Your account is ready</p>
