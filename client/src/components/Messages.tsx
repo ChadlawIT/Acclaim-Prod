@@ -336,13 +336,7 @@ const handleReply = (message: any) => {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-GB', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    return formatUKDateTime(dateString);
   };
 
   const getCaseAccountNumber = (caseId: number) => {
