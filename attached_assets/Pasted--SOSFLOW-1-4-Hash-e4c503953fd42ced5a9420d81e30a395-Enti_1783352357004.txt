@@ -1,0 +1,3283 @@
+# SOSFLOW 1.4
+#Hash e4c503953fd42ced5a9420d81e30a395
+#EntityType MA
+#LastSave 06/07/2026 16:35:06
+#Menu Nowhere
+#Contextual False
+#Location Nowhere
+#Icon MTon-hold.png
+#Exports userselectedfees,branch,PORTALPUSH,Portal,repstyle,amduser,note,CLIENTNAME1,MESSAGE1,DATETIME1,nType
+#ModifiedBy CHADLAW\Matt.Perry on vm-uks-sh-33
+#SubMenuIndex 7
+RunScriptFile RunScriptFile3
+	IgnoreMissingFile False
+	ScriptFile Applications\Debt\Scripts\Debt Due calculation.sos
+	CardPosX 550
+	CardPosY -110
+	GOTO RunScriptFile10
+
+SetVariables SetVariables8
+	Initializations showhideinternal='show'
+	CardPosX 550
+	CardPosY 10
+	GOTO SetCustomTabs1
+
+SetCustomTabs SetCustomTabs1
+	ShowDialog False
+	Tabs CONV1,Debt4
+	Navigate False
+	CardPosX 550
+	CardPosY 110
+	GOTO RefreshEntity3
+
+SetVariables SetVariables1
+	Initializations
+		IF PortalExist='True' THEN HTML2=HTML1
+		IF PortalExist='' THEN HTML2=''
+		#ACCLAIMLOGO=connectApp.FirmFolder+'\Applications\Debt\Images\Acclaim rose.png'
+		#if showhideinternal='show' then dnotestable=view(matter.custom.debtupd,"[Type]<>'Internal'")
+		#if showhideinternal='hide' then dnotestable=view(matter.custom.debtupd,"")
+		
+		dnotestable=view(matter.custom.debtupd,'','Date,Time,Note','dnotes')
+		dnotestable=addcolumnstring(dnotestable,"Icon","")
+		dnotestable=view(dnotestable,"","[DATE] desc")
+		#dnotestable=addcolumnstring(dnotestable,"TypeIcon","")
+		entityspecific=entityref
+		
+		userselectednote=''
+		
+		#ndate=now()
+		nuser=session.user.name
+		#session.user
+		nNote=''
+		#ntype='General'
+		
+		#NOTEUD='CLAIMNOREPLY'
+		
+		NOTEUD2=NOTEUD
+		
+		RepInclude="Yes"
+		IF matter.custom.INCASE.ISINCASE = 'true' THEN INCASE="Yes"
+		#IF PortalExist='True' THEN Portal='Yes'
+		IF PortalExist='True' THEN Portal='Push'
+		IF PortalExist='True' and matter.client.custom.debtfee4.INCASETP='Silent' THEN Portal='Silent'
+		#Repupdate=matter.custom.debtupd2.update
+		Repupdatetext=matter.custom.debtupd2.update
+		repupdatedate=format(matter.custom.debtupd2.date, "dd/MM/yyyy")
+		repupdatestyle=matter.custom.debtupd2.style
+		repupdateID=matter.custom.debtupd2.ID
+		Repupdate="*"+Repupdatedate+"* *"+repupdatestyle+"*"+CHCR()+ +CHCR()+""+Repupdatetext+""
+		
+		CURRENTR=matter.custom.debtkey.CURRENTR
+		
+		TOTALDEBT=MATTER.CUSTOM.DEBTNOTE.TOTAL
+		TOTALDEBT=money(TOTALDEBT)+ " (Debt Balance)"+""
+		
+		#Scratchpad
+		#Blanket=matter.custom.debtupd2.blanket
+		#Blanket2=matter.custom.debtupd2.blanket
+		Blanket=matter.custom.PCN.IMNOTES
+		Blanket2=matter.custom.PCN.IMNOTES
+		#Blanket=Matter.Custom.PCN.IMNOTES
+		#Blanket2=Matter.Custom.PCN.IMNOTES
+		
+		#All Claimants
+		if matter.rel.clasol.count=0 then Claimall=matter.client.full_name
+		if matter.rel.clasol.count>0 then Claimall=matter.rel.clasol1.shortdescription
+		if matter.rel.clasol.count>1 then Claimall=Claimall + ", " +matter.rel.clasol2.shortdescription
+		if matter.rel.clasol.count>2 then Claimall=Claimall + ", " +matter.rel.clasol3.shortdescription
+		if matter.rel.clasol.count>3 then Claimall=Claimall + ", " +matter.rel.clasol4.shortdescription
+		#All Defendants
+		if matter.rel.debt.count>0 then Defall=matter.rel.debt1.shortdescription
+		if matter.rel.debt.count>1 then Defall=Defall + ", " +matter.rel.debt2.shortdescription
+		if matter.rel.debt.count>2 then Defall=Defall + ", " +matter.rel.debt3.shortdescription
+		if matter.rel.debt.count>3 then Defall=Defall + ", " + matter.rel.debt4.shortdescription
+		
+		narrative1="Viewing Hub: " +matter.mt_code+"  " + matter.client.full_name +""
+		narrative2=""+ matter.description+""
+		
+		Updatedtime='False'
+		If Add=true then Updatedtime='True'
+		#
+		#
+		#
+		#
+		#
+		#
+		#OriginalMatter=matter.custom.debt4.origmatt
+		ORIGMCODE=matter.custom.debt4.origmatt
+		#OriginalMatter=matter.mt_type.department
+		OriginalMatter=getentity('MA',ORIGMCODE).mt_code
+		ORIGMATDEPT=getentity('MA',ORIGMCODE).mt_type.department
+		#matterfeeearner=matter.custom.debt4.MATTERFE
+		#if matter.custom.debt4.MATTERFE = '' then matterfeeearner=matter.fee_earner
+		matterfeeearner=getentity('MA',ORIGMCODE).fee_earner.shortdescription
+		#If ORIGMATDEPT = 'CNEG' THEN Debtbud ='N/A'
+		#If ORIGMATDEPT = 'CMPR' THEN Debtbud ='Cheryl Largue'
+		#If ORIGMATDEPT = 'DCON' THEN Debtbud ='Jodie Ingle'
+		#If ORIGMATDEPT = 'CORP' THEN Debtbud ='Christian Liceralde'
+		#If ORIGMATDEPT = 'EMPL' THEN Debtbud ='Jack Oldroyd'
+		#If ORIGMATDEPT = 'FAMI' THEN Debtbud ='Jo Jones'
+		#If ORIGMATDEPT = 'LITI' THEN Debtbud ='Peter Harling'
+		#If ORIGMATDEPT = 'PINJ' THEN Debtbud ='Howard Willis'
+		#If ORIGMATDEPT = 'PROB' THEN Debtbud ='Ellie Hirst'
+		#If ORIGMATDEPT = 'REGU' THEN Debtbud ='Hannah Evans'
+		#If ORIGMATDEPT = 'DEBT' THEN Debtbud ='Matt Perry'
+		Debtbud=matter.custom.debt4.Debtbud
+		#Debtbud=matter.custom.debt4.Debtbud
+		ORIGMATDEPT=getentity('MA',ORIGMCODE).mt_type.department.shortdescription
+		#From DebtCH10
+		TRACE=TRACE
+		HCEOTRACE=HCEOTRACE
+		#Latest position
+		latestposition=Matter.Custom.PCN.POSITION
+		#
+		NEWLINE = CHR(13) + CHR(10)
+		
+		LATESTTEXT1 = "The Latest Position field must always reflect the most up-to-date status of a matter. This allows anyone reviewing the file to immediately see the current position without having to trawl through emails or history notes." + NEWLINE + NEWLINE
+		
+		LATESTTEXT2 = "Please remember that the Latest Position may be used in reports sent to clients. Ensure the wording is client-appropriate and avoid including internal comments. Any internal observations should instead be recorded in the Scratchpad or in Notes within the Hub." + NEWLINE + NEWLINE
+		
+		LATESTTEXT3 = "WHAT TO INCLUDE" + NEWLINE + NEWLINE
+		
+		LATESTTEXT4 = "• A short, clear summary of the most recent position." + NEWLINE
+		LATESTTEXT5 = "• Avoid long narratives - one or two sentences is usually enough." + NEWLINE
+		LATESTTEXT6 = "• Use neutral and factual language." + NEWLINE
+		LATESTTEXT7 = "• Include next steps or deadlines if known." + NEWLINE + NEWLINE
+		
+		LATESTTEXT8 = "EXAMPLES" + NEWLINE + NEWLINE
+		
+		LATESTTEXT9 = "• Debtor acknowledged service on 27/08/2025 - defence due by 10/09/2025." + NEWLINE
+		LATESTTEXT10 ="• Payment proposal received: £500/month, client to confirm acceptance." + NEWLINE
+		LATESTTEXT11 ="• Judgment entered 22/08/2025 - enforcement options being considered." + NEWLINE
+		LATESTTEXT12 ="• Hearing listed for 15/10/2025 at Leeds County Court." + NEWLINE
+		LATESTTEXT13 ="• Chasing insurer - no response to LBA sent 12/08/2025." + NEWLINE
+		LATESTTEXT14 ="• Client instructed to proceed with Statutory Demand." + NEWLINE
+		
+		LATESTTEXT = LATESTTEXT1 + LATESTTEXT2 + LATESTTEXT3 + LATESTTEXT4 + LATESTTEXT5 + LATESTTEXT6 + LATESTTEXT7 + LATESTTEXT8 + LATESTTEXT9 + LATESTTEXT10 + LATESTTEXT11 + LATESTTEXT12
+	CardPosX 930
+	CardPosY 210
+	GOTO ForEach2
+
+CustomForm CustomForm1
+	Source
+		BackColor White
+		Size 1483, 836
+		Font Roboto, 9pt
+		ForeColor Black
+		ValidateOnEnter True
+		Widget TOTALDEBT
+			Bounds 17, 65, 384, 24
+			Font Tahoma, 10pt
+			DataType Text
+			Label Widget116
+			LabelMargin 0
+			LabelTextAlign MiddleRight
+			TabIndex 1050
+			WidgetType Label
+		Widget PORTALVIEW
+			Bounds 514, 51, 128, 24
+			DataType Text
+			Label View Portal
+			VisibleFormula PortalExist='true' and VIEWSOS=true
+			LabelTextAlign MiddleRight
+			TabIndex 1033
+			TextAlign Center
+			WidgetType Button
+		Widget SOSVIEW
+			Bounds 514, 51, 128, 24
+			DataType Text
+			Label View SOS
+			VisibleFormula PortalExist='true' and VIEWSOS<>true
+			LabelTextAlign MiddleRight
+			TabIndex 1015
+			TextAlign Center
+			WidgetType Button
+		Widget Portal
+			Bounds 974, 269, 64, 24
+			Font Tahoma, 8pt, style=Bold
+			DataType DataTable
+			Label Widget116
+			LabelMargin 0
+			VisibleFormula PortalExist='true'
+			LabelTextAlign MiddleCenter
+			TabIndex 997
+			TextAlign Center
+			WidgetBackColor Lavender
+			Table
+				Choose
+				Push
+				Silent
+				No
+		Widget Widget115
+			Bounds 954, 249, 112, 16
+			Font Tahoma, 8pt, style=Bold
+			ForeColor HotTrack
+			DataType Text
+			Label Push to Portal?
+			LabelMargin 200
+			VisibleFormula PortalExist='true'
+			LabelTextAlign MiddleCenter
+			TabIndex 996
+		Widget HTML2
+			Bounds 296, 429, 790, 389
+			DataType Text
+			Label Portal
+			LabelMargin 0
+			VisibleFormula PortalExist='true' and VIEWSOS<>True
+			LabelTextAlign MiddleRight
+			TabIndex 978
+			WidgetType HTMLPageV2
+		Widget LATESTINFO
+			Anchor None
+			Bounds 343, 103, 17, 17
+			Font Georgia, 9pt, style=Bold, Italic
+			ForeColor Blue
+			DataType Text
+			Label i
+			LabelMargin 0
+			LabelTextAlign MiddleCenter
+			TabIndex 960
+			TextAlign Center
+			WidgetType Button
+		Widget EditSelected
+			Bounds 440, 8, 72, 24
+			DataType Boolean
+			Label Widget3
+			VisibleFormula false
+			LabelTextAlign MiddleRight
+			TabIndex 941
+			WidgetType CheckEdit
+		Label Label6
+			Bounds 274, 103, 70, 16
+			Font Tahoma, 8pt, style=Bold
+			ForeColor HotTrack
+			Text Latest Position
+			TextAlign MiddleCenter
+		Widget Lock
+			Bounds 280, 120, 19, 17
+			Font Tahoma, 11pt
+			ForeColor IndianRed
+			DataType Color
+			Label 🔒
+			VisibleFormula EditSelected=true
+			LabelTextAlign TopCenter
+			TabIndex 923
+			TextAlign Center
+			WidgetType Button
+		Widget Unlock
+			Bounds 280, 120, 19, 17
+			Font Tahoma, 11pt
+			ForeColor IndianRed
+			DataType Color
+			Label 🔓
+			VisibleFormula EditSelected=False
+			LabelTextAlign TopCenter
+			TabIndex 922
+			TextAlign Center
+			WidgetType Button
+		Widget latestposition
+			Bounds 297, 120, 520, 32
+			Font Tahoma, 8pt, style=Bold
+			DataType RichText
+			Label Note
+			LabelPlacement Top
+			LabelMargin 0
+			EnabledFormula EditSelected=true
+			LabelTextAlign TopLeft
+			TabIndex 904
+			WidgetType MemoEdit
+		Widget Widget109
+			Bounds 2, 497, 16, 24
+			Font Tahoma, 20pt, style=Bold
+			ForeColor Blue
+			DataType Text
+			Label ↳
+			LabelMargin 200
+			VisibleFormula NOTEUD2='ICOREC'
+			LabelTextAlign MiddleCenter
+			TabIndex 886
+		Widget ICOREC
+			Bounds 18, 497, 120, 24
+			Font Tahoma, 8pt
+			DataType Text
+			Label Interim Charge Rec..
+			LabelTextAlign MiddleRight
+			TabIndex 885
+			TextAlign Center
+			WidgetType Button
+		Widget STATD72
+			Bounds 18, 369, 120, 24
+			Font Tahoma, 8pt
+			DataType Text
+			Label 72 Hour Demand
+			LabelTextAlign MiddleRight
+			TabIndex 867
+			TextAlign Center
+			WidgetType Button
+		Widget Widget106
+			Bounds 2, 434, 16, 24
+			Font Tahoma, 20pt, style=Bold
+			ForeColor Blue
+			DataType Text
+			Label ↳
+			LabelMargin 200
+			VisibleFormula NOTEUD2='STATDNOREPLY'
+			LabelTextAlign MiddleCenter
+			TabIndex 849
+		Widget STATREPLY
+			Bounds 18, 434, 120, 24
+			Font Tahoma, 8pt
+			DataType Text
+			Label Stat Demand Reply
+			LabelTextAlign MiddleRight
+			TabIndex 848
+			TextAlign Center
+			WidgetType Button
+		Widget Widget104
+			Bounds 1091, 229, 112, 17
+			Font Tahoma, 10pt, style=Bold
+			ForeColor HotTrack
+			DataType Text
+			CanBeBlank True
+			Label Internal Debt
+			LabelMargin 208
+			VisibleFormula matter.custom.debt4.Internal='Internal'
+			LabelTextAlign MiddleCenter
+			TabIndex 830
+			TextAlign Center
+			WidgetType Label
+		Widget Widget103
+			Bounds 1103, 389, 88, 17
+			DataType Text
+			CanBeBlank True
+			Label Debt Buddy
+			LabelMargin 208
+			VisibleFormula matter.custom.debt4.Internal='Internal'
+			LabelTextAlign MiddleCenter
+			TabIndex 829
+			WidgetType Label
+		Widget Widget102
+			Bounds 1103, 342, 88, 17
+			DataType Text
+			CanBeBlank True
+			Label Orig FE.
+			LabelMargin 208
+			VisibleFormula matter.custom.debt4.Internal='Internal'
+			LabelTextAlign MiddleCenter
+			TabIndex 828
+			WidgetType Label
+		Widget Widget101
+			Bounds 1103, 296, 88, 15
+			DataType Text
+			CanBeBlank True
+			Label Orig Dept.
+			LabelMargin 208
+			VisibleFormula matter.custom.debt4.Internal='Internal'
+			LabelTextAlign MiddleCenter
+			TabIndex 827
+			WidgetType Label
+		Widget Widget100
+			Bounds 1103, 245, 88, 23
+			DataType Text
+			CanBeBlank True
+			Label Orig Matter No.
+			LabelMargin 208
+			VisibleFormula matter.custom.debt4.Internal='Internal'
+			LabelTextAlign MiddleCenter
+			TabIndex 826
+			WidgetType Label
+		Widget ORIGMATDEPT
+			Bounds 1079, 314, 128, 24
+			DataType Text
+			CanBeBlank True
+			Label Original Matter Dept
+			LabelMargin 0
+			VisibleFormula matter.custom.debt4.Internal='Internal'
+			LabelTextAlign MiddleLeft
+			TabIndex 825
+			TextAlign Center
+			WidgetType Label
+		Widget Debtbud
+			Bounds 1079, 405, 128, 24
+			DataType FE
+			Label Debt Buddy
+			LabelMargin 0
+			VisibleFormula matter.custom.debt4.Internal='Internal'
+			LabelTextAlign MiddleLeft
+			TabIndex 824
+			TextAlign Center
+			WidgetType Label
+		Widget viewledger
+			Bounds 1086, 440, 128, 29
+			DataType Text
+			Label View Originating Matter Ledger
+			VisibleFormula debt4_Internal='Internal'
+			LabelTextAlign MiddleRight
+			TabIndex 823
+			TextAlign Center
+			WidgetType Button
+		Widget matterfeeearner
+			Bounds 1079, 359, 128, 24
+			DataType Text
+			CanBeBlank True
+			Label Originating Fee Earner
+			LabelMargin 0
+			VisibleFormula matter.custom.debt4.Internal='Internal'
+			LabelTextAlign MiddleLeft
+			TabIndex 821
+			TextAlign Center
+			WidgetType Label
+		Widget OriginalMatter
+			Bounds 1079, 269, 128, 24
+			DataType Text
+			CanBeBlank True
+			Label Original Matter No.
+			LabelMargin 0
+			VisibleFormula matter.custom.debt4.Internal='Internal'
+			LabelTextAlign MiddleLeft
+			TabIndex 822
+			TextAlign Center
+			WidgetType Label
+		Widget Widget95
+			Bounds 2, 337, 16, 24
+			Font Tahoma, 20pt, style=Bold
+			ForeColor Blue
+			DataType Text
+			Label ↳
+			LabelMargin 200
+			VisibleFormula NOTEUD2='ODACQCOMMITT'
+			LabelTextAlign MiddleCenter
+			TabIndex 803
+		Widget ODACQCOMMITT
+			Bounds 18, 337, 120, 24
+			Font Tahoma, 8pt
+			DataType Text
+			Label Committal Order Rec.
+			VisibleFormula NOTEUD2='ODACQCOMMITT'
+			LabelTextAlign MiddleRight
+			TabIndex 802
+			TextAlign Center
+			WidgetType Button
+		Widget Widget45
+			Bounds 263, 691, 24, 24
+			Font Tahoma, 10pt
+			ForeColor IndianRed
+			DataType Color
+			Label 🔓
+			VisibleFormula false
+			LabelTextAlign TopCenter
+			TabIndex 784
+			TextAlign Center
+			WidgetType Button
+			WidgetBackColor 224, 224, 224
+		Widget Widget94
+			Bounds 943, 227, 128, 16
+			Font Tahoma, 11pt, style=Bold
+			ForeColor HotTrack
+			DataType Text
+			Label Portal
+			LabelMargin 200
+			VisibleFormula PortalExist='true'
+			LabelTextAlign MiddleCenter
+			TabIndex 765
+		Label Label1
+			Bounds 509, 11, 136, 40
+			Font Comic Sans MS, 20pt, style=Bold
+			ForeColor HotTrack
+			Text The Hub
+			TextAlign MiddleCenter
+		Widget ODACQREC
+			Bounds 18, 337, 120, 24
+			Font Tahoma, 8pt
+			DataType Text
+			Label ODACQ Received
+			VisibleFormula NOTEUD2='ODACQREC'
+			LabelTextAlign MiddleRight
+			TabIndex 709
+			TextAlign Center
+			WidgetType Button
+		Widget Widget88
+			Bounds 2, 337, 16, 24
+			Font Tahoma, 20pt, style=Bold
+			ForeColor Blue
+			DataType Text
+			Label ↳
+			LabelMargin 200
+			VisibleFormula NOTEUD2='ODACQREC'
+			LabelTextAlign MiddleCenter
+			TabIndex 708
+		Widget Widget87
+			Bounds 146, 617, 16, 24
+			Font Tahoma, 20pt, style=Bold
+			ForeColor Blue
+			DataType Text
+			Label ↳
+			LabelMargin 200
+			VisibleFormula NOTEUD2='PPARREARS'
+			LabelTextAlign MiddleCenter
+			TabIndex 690
+		Widget PPARREARS
+			Bounds 162, 617, 120, 24
+			Font Tahoma, 8pt
+			DataType Text
+			Label Arrears Enquiry
+			LabelTextAlign MiddleRight
+			TabIndex 689
+			TextAlign Center
+			WidgetType Button
+		Widget Widget85
+			Bounds 2, 586, 16, 24
+			Font Tahoma, 20pt, style=Bold
+			ForeColor Blue
+			DataType Text
+			Label ↳
+			LabelMargin 200
+			VisibleFormula NOTEUD2='CALLLOG'
+			LabelTextAlign MiddleCenter
+			TabIndex 671
+		Widget CALLLOG
+			Bounds 18, 586, 120, 24
+			Font Tahoma, 8pt
+			DataType Text
+			Label Telephone call
+			VisibleFormula NOTEUD2='CALLLOG'
+			LabelTextAlign MiddleRight
+			TabIndex 670
+			TextAlign Center
+			WidgetType Button
+		Widget INCASEPUSH
+			Bounds 1091, 596, 128, 40
+			Font Tahoma, 8pt
+			DataType Text
+			Label Push selected note to Portal
+			VisibleFormula PortalExist='true' and VIEWSOS=True
+			LabelTextAlign MiddleRight
+			TabIndex 649
+			TextAlign Center
+			WidgetType Button
+			WidgetBackColor Lavender
+		Widget INCASE
+			Bounds 142, 761, 64, 24
+			Font Tahoma, 8pt, style=Bold
+			DataType DataTable
+			Label Widget80
+			LabelMargin 0
+			VisibleFormula False
+			EnabledFormula matter.custom.INCASE.ISINCASE = 'true'
+			LabelTextAlign MiddleCenter
+			TabIndex 630
+			TextAlign Center
+			WidgetBackColor Lavender
+			Table
+				Please choose
+				Yes
+				No
+		Widget Widget76
+			Bounds 2, 209, 16, 24
+			Font Tahoma, 20pt, style=Bold
+			ForeColor Blue
+			DataType Text
+			Label ↳
+			LabelMargin 200
+			VisibleFormula NOTEUD2='HCECK'
+			LabelTextAlign MiddleCenter
+			TabIndex 581
+		Widget HCECK
+			Bounds 18, 209, 120, 24
+			Font Tahoma, 8pt
+			DataType Text
+			Label Checked for update
+			VisibleFormula NOTEUD2='HCECK'
+			LabelTextAlign MiddleRight
+			TabIndex 580
+			TextAlign Center
+			WidgetType Button
+		Widget Widget74
+			Bounds 146, 417, 16, 24
+			Font Tahoma, 20pt, style=Bold
+			ForeColor Blue
+			DataType Text
+			Label ↳
+			LabelMargin 200
+			VisibleFormula NOTEUD2='DEFENCE'
+			LabelTextAlign MiddleCenter
+			TabIndex 565
+		Widget DEFENCE
+			Bounds 162, 417, 120, 24
+			Font Tahoma, 8pt
+			DataType Text
+			Label Defence Received
+			LabelTextAlign MiddleRight
+			TabIndex 564
+			TextAlign Center
+			WidgetType Button
+		Widget Widget72
+			Bounds 2, 466, 16, 24
+			Font Tahoma, 20pt, style=Bold
+			ForeColor Blue
+			DataType Text
+			Label ↳
+			LabelMargin 200
+			VisibleFormula NOTEUD2='WUPSERV'
+			LabelTextAlign MiddleCenter
+			TabIndex 549
+		Widget WUPSERV
+			Bounds 18, 466, 120, 24
+			Font Tahoma, 8pt
+			DataType Text
+			Label Petition Served
+			LabelTextAlign MiddleRight
+			TabIndex 548
+			TextAlign Center
+			WidgetType Button
+		Widget Widget70
+			Bounds 2, 401, 16, 24
+			Font Tahoma, 20pt, style=Bold
+			ForeColor Blue
+			DataType Text
+			Label ↳
+			LabelMargin 200
+			VisibleFormula NOTEUD2='STATSERV'
+			LabelTextAlign MiddleCenter
+			TabIndex 533
+		Widget STATSERV
+			Bounds 18, 401, 120, 24
+			Font Tahoma, 8pt
+			DataType Text
+			Label Stat Demand Served
+			LabelTextAlign MiddleRight
+			TabIndex 532
+			TextAlign Center
+			WidgetType Button
+		Widget Widget68
+			Bounds 2, 369, 16, 24
+			Font Tahoma, 20pt, style=Bold
+			ForeColor Blue
+			DataType Text
+			Label ↳
+			LabelMargin 200
+			VisibleFormula NOTEUD2='STATD' or NOTEUD2='STATD72'
+			LabelTextAlign MiddleCenter
+			TabIndex 517
+		Widget STATD
+			Bounds 18, 369, 120, 24
+			Font Tahoma, 8pt
+			DataType Text
+			Label Stat Demand Issued
+			LabelTextAlign MiddleRight
+			TabIndex 516
+			TextAlign Center
+			WidgetType Button
+		Widget Widget66
+			Bounds 2, 337, 16, 24
+			Font Tahoma, 20pt, style=Bold
+			ForeColor Blue
+			DataType Text
+			Label ↳
+			LabelMargin 200
+			VisibleFormula NOTEUD2='ODACQISSUE'
+			LabelTextAlign MiddleCenter
+			TabIndex 501
+		Widget ODACQ
+			Bounds 18, 337, 120, 24
+			Font Tahoma, 8pt
+			DataType Text
+			Label ODACQ Issued
+			LabelTextAlign MiddleRight
+			TabIndex 500
+			TextAlign Center
+			WidgetType Button
+		Widget Widget64
+			Bounds 2, 209, 16, 24
+			Font Tahoma, 20pt, style=Bold
+			ForeColor Blue
+			DataType Text
+			Label ↳
+			LabelMargin 200
+			VisibleFormula NOTEUD2='WARUPDATE'
+			LabelTextAlign MiddleCenter
+			TabIndex 485
+		Widget WARUD
+			Bounds 18, 209, 120, 24
+			Font Tahoma, 8pt
+			DataType Text
+			Label Update received
+			VisibleFormula NOTEUD2='WARUPDATE'
+			LabelTextAlign MiddleRight
+			TabIndex 484
+			TextAlign Center
+			WidgetType Button
+		Widget Widget62
+			Bounds 146, 586, 16, 24
+			Font Tahoma, 20pt, style=Bold
+			ForeColor Blue
+			DataType Text
+			Label ↳
+			LabelMargin 200
+			VisibleFormula NOTEUD2='PAYPLAN'
+			LabelTextAlign MiddleCenter
+			TabIndex 469
+		Widget PP
+			Bounds 162, 586, 120, 24
+			Font Tahoma, 8pt
+			DataType Text
+			Label Payment Offer
+			LabelTextAlign MiddleRight
+			TabIndex 468
+			TextAlign Center
+			WidgetType Button
+		Widget Widget60
+			Bounds 146, 649, 16, 24
+			Font Tahoma, 20pt, style=Bold
+			ForeColor Blue
+			DataType Text
+			Label ↳
+			LabelMargin 200
+			VisibleFormula NOTEUD2='AUTOSCRIPT'
+			LabelTextAlign MiddleCenter
+			TabIndex 453
+		Widget AUTO
+			Bounds 162, 649, 120, 24
+			Font Tahoma, 8pt
+			DataType Text
+			Label Auto
+			VisibleFormula NOTEUD2='AUTOSCRIPT'
+			LabelTextAlign MiddleRight
+			TabIndex 452
+			TextAlign Center
+			WidgetType Button
+		Widget Widget58
+			Bounds 2, 554, 16, 24
+			Font Tahoma, 20pt, style=Bold
+			ForeColor Blue
+			DataType Text
+			Label ↳
+			LabelMargin 200
+			VisibleFormula NOTEUD2='SMS'
+			LabelTextAlign MiddleCenter
+			TabIndex 437
+		Widget SMSsent
+			Bounds 18, 554, 120, 24
+			Font Tahoma, 8pt
+			DataType Text
+			Label SMS sent
+			LabelTextAlign MiddleRight
+			TabIndex 436
+			TextAlign Center
+			WidgetType Button
+		Widget narrative2
+			Bounds 17, 41, 384, 24
+			Font Tahoma, 10pt
+			DataType Text
+			Label Widget56
+			LabelMargin 0
+			LabelTextAlign MiddleRight
+			TabIndex 421
+			WidgetType Label
+		Widget NOTEEMAIL
+			Bounds 1091, 546, 128, 40
+			Font Tahoma, 8pt
+			DataType Text
+			Label Send Email with selected note
+			VisibleFormula PortalExist<>'true' or VIEWSOS=True
+			LabelTextAlign MiddleRight
+			TabIndex 405
+			TextAlign Center
+			WidgetType Button
+			WidgetBackColor AliceBlue
+		Widget Last
+			Bounds 1091, 491, 128, 40
+			Font Tahoma, 8pt
+			DataType Text
+			Label Add selected note to last update
+			VisibleFormula PortalExist<>'true' or VIEWSOS=True
+			LabelTextAlign MiddleRight
+			TabIndex 390
+			TextAlign Center
+			WidgetType Button
+			WidgetBackColor AliceBlue
+		Widget Widget52
+			Bounds 146, 146, 16, 24
+			Font Tahoma, 20pt, style=Bold
+			ForeColor Blue
+			DataType Text
+			Label ↳
+			LabelMargin 200
+			VisibleFormula NOTEUD2='COLLBASENT'
+			LabelTextAlign MiddleCenter
+			TabIndex 375
+		Widget COLLBA
+			Bounds 162, 146, 120, 24
+			Font Tahoma, 8pt
+			DataType Text
+			Label Demand letter sent
+			LabelTextAlign MiddleRight
+			TabIndex 374
+			TextAlign Center
+			WidgetType Button
+		Widget Defall
+			Bounds 62, 696, 192, 24
+			Font Tahoma, 8pt, style=Bold
+			ForeColor HotTrack
+			DataType Text
+			Label Widget
+			LabelMargin 0
+			VisibleFormula false
+			LabelTextAlign MiddleRight
+			TabIndex 359
+			WidgetType Label
+		Widget Widget47
+			Bounds 2, 306, 16, 24
+			Font Tahoma, 20pt, style=Bold
+			ForeColor Blue
+			DataType Text
+			Label ↳
+			LabelMargin 200
+			VisibleFormula NOTEUD2='COMPREC'
+			LabelTextAlign MiddleCenter
+			TabIndex 328
+		Widget COMP
+			Bounds 18, 306, 120, 24
+			Font Tahoma, 8pt
+			DataType Text
+			Label COMP received
+			LabelTextAlign MiddleRight
+			TabIndex 327
+			TextAlign Center
+			WidgetType Button
+		Widget CurrentR
+			Bounds 6, 727, 240, 24
+			Font Tahoma, 8pt, style=Bold
+			ForeColor IndianRed
+			DataType DataTable
+			Label Update Progress
+			LabelMargin 0
+			VisibleFormula False
+			EnabledFormula Widget45='True'
+			LabelTextAlign MiddleLeft
+			TabIndex 299
+			Table
+				Select Progress
+				Matter opened
+				Pre-Action correspondence sent
+				Pre-Action - No Reply
+				Pre-Action - Response Received
+				Demand letter sent
+				Demand letter sent - No Reply
+				Claim Issued
+				Notice of Issue received
+				No Reply to Claim
+				Acknowledgement of Service filed
+				Admission filed
+				Defence
+				Judgment requested
+				Judgment received
+				HCEO instructed
+				Bailiff instructed
+				Bailiff withdrawn
+				Charging Order
+				Order to attend court for questioning
+				Attachment of Earnings
+				Payment plan
+				Defaulted Payment Plan
+				Paid
+				Trace required
+				Debtor Insolvent
+				On hold
+				Pending closure
+				Closed
+		Widget Widget43
+			Bounds 146, 386, 16, 24
+			Font Tahoma, 20pt, style=Bold
+			ForeColor Blue
+			DataType Text
+			Label ↳
+			LabelMargin 200
+			VisibleFormula NOTEUD2='CLAIMAOS'
+			LabelTextAlign MiddleCenter
+			TabIndex 285
+		Widget CLAIMAOS
+			Bounds 162, 386, 120, 24
+			Font Tahoma, 8pt
+			DataType Text
+			Label AOS
+			LabelTextAlign MiddleRight
+			TabIndex 284
+			TextAlign Center
+			WidgetType Button
+		Widget Widget41
+			Bounds 146, 354, 16, 24
+			Font Tahoma, 20pt, style=Bold
+			ForeColor Blue
+			DataType Text
+			Label ↳
+			LabelMargin 200
+			VisibleFormula NOTEUD2='CLAIMADMISS'
+			LabelTextAlign MiddleCenter
+			TabIndex 270
+		Widget CLAIMADMISS
+			Bounds 162, 354, 120, 24
+			Font Tahoma, 8pt
+			DataType Text
+			Label Admission
+			LabelTextAlign MiddleRight
+			TabIndex 269
+			TextAlign Center
+			WidgetType Button
+		Label Label14
+			Bounds 90, 521, 112, 24
+			Font Tahoma, 8pt, style=Bold
+			ForeColor Desktop
+			Text Miscellaneous
+			TextAlign MiddleCenter
+		Widget Copy
+			Bounds 938, 11, 72, 24
+			Font Tahoma, 8pt
+			ForeColor DarkGreen
+			DataType Text
+			Label Copy
+			LabelTextAlign MiddleRight
+			TabIndex 254
+			TextAlign Center
+			WidgetType Button
+			WidgetBackColor AliceBlue
+		Widget Email
+			Bounds 974, 349, 64, 24
+			Font Tahoma, 8pt, style=Bold
+			DataType DataTable
+			Label Widget38
+			LabelMargin 0
+			LabelTextAlign MiddleCenter
+			TabIndex 225
+			TextAlign Center
+			WidgetBackColor Info
+			Table
+				Please choose
+				Yes
+				No
+		Label Label13
+			Bounds 958, 333, 96, 16
+			Font Tahoma, 8pt, style=Bold
+			ForeColor IndianRed
+			Text Send in email?
+			TextAlign MiddleCenter
+		Label Label12
+			Bounds 617, 160, 136, 16
+			Font Tahoma, 8pt, style=Bold
+			ForeColor HotTrack
+			Text Select the report style
+			TextAlign MiddleCenter
+		Label Label11
+			Bounds 377, 160, 136, 16
+			Font Tahoma, 8pt, style=Bold
+			ForeColor HotTrack
+			Text Select the action style
+			TextAlign MiddleCenter
+		Label Label10
+			Bounds 951, 293, 120, 16
+			Font Tahoma, 8pt, style=Bold
+			ForeColor IndianRed
+			Text Include in reports?
+			TextAlign MiddleCenter
+		Widget Repstyle
+			Bounds 561, 176, 256, 24
+			Font Tahoma, 8pt, style=Bold
+			ForeColor HotTrack
+			DataType DataTable
+			Label Select report style
+			LabelPlacement Top
+			LabelMargin 0
+			LabelTextAlign MiddleCenter
+			TabIndex 213
+			Table
+				Please choose
+				Client Update Received
+				Information for Client
+				Instructions Required
+				Internal
+				Payment
+				Miscellaneous
+		Label Label9
+			Bounds 829, 17, 103, 16
+			Font Tahoma, 8pt, style=Bold
+			ForeColor DarkGreen
+			Text Last update for reports
+			TextAlign MiddleCenter
+		Widget Repupdate
+			Bounds 829, 34, 383, 160
+			Font Tahoma, 8pt, style=Bold
+			DataType RichText
+			Label Note
+			LabelPlacement Top
+			LabelMargin 0
+			EnabledFormula false
+			LabelTextAlign TopLeft
+			TabIndex 204
+			WidgetType MemoEdit
+		Widget RepInclude
+			Bounds 974, 309, 64, 24
+			Font Tahoma, 8pt, style=Bold
+			DataType DataTable
+			Label Widget35
+			LabelMargin 0
+			LabelTextAlign MiddleCenter
+			TabIndex 202
+			TextAlign Center
+			WidgetBackColor Info
+			Table
+				Please choose
+				Yes
+				No
+		Widget Widget28
+			Bounds 2, 274, 16, 24
+			Font Tahoma, 20pt, style=Bold
+			ForeColor Blue
+			DataType Text
+			Label ↳
+			LabelMargin 200
+			VisibleFormula NOTEUD2='WARREC'
+			LabelTextAlign MiddleCenter
+			TabIndex 175
+		Widget Widget27
+			Bounds 146, 554, 16, 24
+			Font Tahoma, 20pt, style=Bold
+			ForeColor Blue
+			DataType Text
+			Label ↳
+			LabelMargin 200
+			VisibleFormula NOTEUD2='PAYMENT'
+			LabelTextAlign MiddleCenter
+			TabIndex 174
+		Widget Widget26
+			Bounds 2, 241, 16, 24
+			Font Tahoma, 20pt, style=Bold
+			ForeColor Blue
+			DataType Text
+			Label ↳
+			LabelMargin 200
+			VisibleFormula NOTEUD2='ISSUEWAR'
+			LabelTextAlign MiddleCenter
+			TabIndex 173
+		Widget Widget25
+			Bounds 2, 206, 16, 24
+			Font Tahoma, 20pt, style=Bold
+			ForeColor Blue
+			DataType Text
+			Label ↳
+			LabelMargin 200
+			VisibleFormula NOTEUD2='WRITREC'
+			LabelTextAlign MiddleCenter
+			TabIndex 172
+		Widget Widget24
+			Bounds 2, 174, 16, 24
+			Font Tahoma, 20pt, style=Bold
+			ForeColor Blue
+			DataType Text
+			Label ↳
+			LabelMargin 200
+			VisibleFormula NOTEUD2='HCEINST'
+			LabelTextAlign MiddleCenter
+			TabIndex 171
+		Widget Widget23
+			Bounds 146, 497, 16, 24
+			Font Tahoma, 20pt, style=Bold
+			ForeColor Blue
+			DataType Text
+			Label ↳
+			LabelMargin 200
+			VisibleFormula NOTEUD2='JMTREC'
+			LabelTextAlign MiddleCenter
+			TabIndex 170
+		Widget Widget22
+			Bounds 146, 466, 16, 24
+			Font Tahoma, 20pt, style=Bold
+			ForeColor Blue
+			DataType Text
+			Label ↳
+			LabelMargin 200
+			VisibleFormula NOTEUD2='JMTREQ'
+			LabelTextAlign MiddleCenter
+			TabIndex 169
+		Widget Widget21
+			Bounds 146, 321, 16, 24
+			Font Tahoma, 20pt, style=Bold
+			ForeColor Blue
+			DataType Text
+			Label ↳
+			LabelMargin 200
+			VisibleFormula NOTEUD2='CLAIMNOREPLY'
+			LabelTextAlign MiddleCenter
+			TabIndex 168
+		Widget Widget20
+			Bounds 146, 289, 16, 24
+			Font Tahoma, 20pt, style=Bold
+			ForeColor Blue
+			DataType Text
+			Label ↳
+			LabelMargin 200
+			VisibleFormula NOTEUD2='NOI'
+			LabelTextAlign MiddleCenter
+			TabIndex 167
+		Widget Widget19
+			Bounds 146, 257, 16, 24
+			Font Tahoma, 20pt, style=Bold
+			ForeColor Blue
+			DataType Text
+			Label ↳
+			LabelMargin 200
+			VisibleFormula NOTEUD2='ISSUED'
+			LabelTextAlign MiddleCenter
+			TabIndex 166
+		Widget Widget18
+			Bounds 146, 209, 16, 24
+			Font Tahoma, 20pt, style=Bold
+			ForeColor Blue
+			DataType Text
+			Label ↳
+			LabelMargin 200
+			VisibleFormula NOTEUD2='LBANOREPLY' or NOTEUD2='GENCOL'
+			LabelTextAlign MiddleCenter
+			TabIndex 165
+		Widget Widget17
+			Bounds 146, 177, 16, 24
+			Font Tahoma, 20pt, style=Bold
+			ForeColor Blue
+			DataType Text
+			Label ↳
+			LabelMargin 200
+			VisibleFormula NOTEUD2='LBASENT'
+			LabelTextAlign MiddleCenter
+			TabIndex 164
+		Widget Widget16
+			Bounds 2, 209, 16, 24
+			Font Tahoma, 20pt, style=Bold
+			ForeColor Blue
+			DataType Text
+			Label ↳
+			LabelMargin 200
+			VisibleFormula NOTEUD2='HCEUPDATE'
+			LabelTextAlign MiddleCenter
+			TabIndex 163
+		Widget HCEUD
+			Bounds 18, 209, 120, 24
+			Font Tahoma, 8pt
+			DataType Text
+			Label Update received
+			LabelTextAlign MiddleRight
+			TabIndex 162
+			TextAlign Center
+			WidgetType Button
+		Widget PAY
+			Bounds 162, 554, 120, 24
+			Font Tahoma, 8pt
+			DataType Text
+			Label Payment received
+			LabelTextAlign MiddleRight
+			TabIndex 161
+			TextAlign Center
+			WidgetType Button
+		Widget WARREC
+			Bounds 18, 274, 120, 24
+			Font Tahoma, 8pt
+			DataType Text
+			Label Warrant received
+			LabelTextAlign MiddleRight
+			TabIndex 160
+			TextAlign Center
+			WidgetType Button
+		Widget WAR
+			Bounds 18, 241, 120, 24
+			Font Tahoma, 8pt
+			DataType Text
+			Label Warrant applied for
+			LabelTextAlign MiddleRight
+			TabIndex 159
+			TextAlign Center
+			WidgetType Button
+		Label Label5
+			Bounds 10, 121, 136, 24
+			Font Tahoma, 8pt, style=Bold
+			ForeColor Desktop
+			Text Enforcement
+			TextAlign MiddleCenter
+		Label Label4
+			Bounds 154, 441, 136, 24
+			Font Tahoma, 8pt, style=Bold
+			ForeColor Desktop
+			Text Judgment
+			TextAlign MiddleCenter
+		Widget CLAIMNOREP
+			Bounds 162, 321, 120, 24
+			Font Tahoma, 8pt
+			DataType Text
+			Label No Reply
+			LabelTextAlign MiddleRight
+			TabIndex 158
+			TextAlign Center
+			WidgetType Button
+		Label Label3
+			Bounds 154, 234, 136, 24
+			Font Tahoma, 8pt, style=Bold
+			ForeColor Desktop
+			Text Claim
+			TextAlign MiddleCenter
+		Widget LBANOREP
+			Bounds 162, 209, 120, 24
+			Font Tahoma, 8pt
+			DataType Text
+			Label No Reply
+			LabelTextAlign MiddleRight
+			TabIndex 157
+			TextAlign Center
+			WidgetType Button
+		Label Label2
+			Bounds 154, 121, 136, 24
+			Font Tahoma, 8pt, style=Bold
+			ForeColor Desktop
+			Text Pre-Issue
+			TextAlign MiddleCenter
+		Widget HCEO
+			Bounds 18, 146, 120, 24
+			Font Tahoma, 8pt
+			DataType Text
+			Label HCE instructed
+			LabelTextAlign MiddleRight
+			TabIndex 156
+			TextAlign Center
+			WidgetType Button
+		Widget Writ
+			Bounds 18, 177, 120, 24
+			Font Tahoma, 8pt
+			DataType Text
+			Label Writ received
+			LabelTextAlign MiddleRight
+			TabIndex 155
+			TextAlign Center
+			WidgetType Button
+		Widget Judg_req
+			Bounds 162, 466, 120, 24
+			Font Tahoma, 8pt
+			DataType Text
+			Label Requested
+			LabelTextAlign MiddleRight
+			TabIndex 154
+			TextAlign Center
+			WidgetType Button
+		Widget Claimissue
+			Bounds 162, 257, 120, 24
+			Font Tahoma, 8pt
+			DataType Text
+			Label Issued
+			LabelTextAlign MiddleRight
+			TabIndex 153
+			TextAlign Center
+			WidgetType Button
+		Widget LBA
+			Bounds 162, 177, 120, 24
+			Font Tahoma, 8pt
+			DataType Text
+			Label LBA sent
+			LabelTextAlign MiddleRight
+			TabIndex 152
+			TextAlign Center
+			WidgetType Button
+		Widget Judgrecvd
+			Bounds 162, 497, 120, 24
+			Font Tahoma, 8pt
+			DataType Text
+			Label Received
+			LabelTextAlign MiddleRight
+			TabIndex 151
+			TextAlign Center
+			WidgetType Button
+		Widget NOI
+			Bounds 162, 289, 120, 24
+			Font Tahoma, 8pt
+			DataType Text
+			Label NOI
+			LabelTextAlign MiddleRight
+			TabIndex 150
+			TextAlign Center
+			WidgetType Button
+		Label Label7
+			Bounds 74, 97, 136, 24
+			Font Tahoma, 10pt
+			Text Quick Actions
+			TextAlign MiddleCenter
+		Widget nType
+			Bounds 297, 176, 264, 24
+			Font Tahoma, 8pt, style=Bold
+			ForeColor HotTrack
+			DataType DataTable
+			Label Select action style
+			LabelPlacement Top
+			LabelMargin 0
+			LabelTextAlign MiddleCenter
+			TabIndex 26
+			Table
+				Please Choose
+				Client Update Received
+				Correspondence In/Out
+				Telephone Call In/Out
+				SMS Sent
+				Enforcement Update
+				Payment Received
+				Internal Note
+				Miscellaneous
+		Widget nNote
+			Bounds 297, 200, 640, 229
+			DataType RichText
+			Label Note
+			LabelMargin 0
+			LabelTextAlign MiddleRight
+			TabIndex 24
+			WidgetType MemoEdit
+		Widget AMEND
+			Bounds 1091, 716, 128, 32
+			Font Tahoma, 8pt
+			DataType Text
+			Label Amend Note
+			VisibleFormula PortalExist<>'true' or VIEWSOS=True
+			LabelTextAlign MiddleRight
+			TabIndex 10
+			TextAlign Center
+			WidgetType Button
+			WidgetBackColor Info
+		Widget exit
+			Bounds 1091, 661, 128, 32
+			Font Tahoma, 8pt
+			ForeColor Red
+			DataType Text
+			Label Exit
+			LabelTextAlign MiddleRight
+			TabIndex 3
+			TextAlign Center
+			WidgetType Button
+			WidgetBackColor Snow
+		Widget delete
+			Bounds 1091, 756, 128, 32
+			Font Tahoma, 8pt
+			DataType Text
+			Label Delete Note
+			VisibleFormula PortalExist<>'true' or VIEWSOS=True
+			LabelTextAlign MiddleRight
+			TabIndex 2
+			TextAlign Center
+			WidgetType Button
+			WidgetBackColor MistyRose
+		Widget DNOTES
+			Bounds 296, 429, 790, 389
+			DataType DataTable
+			Label Widget1
+			LabelMargin 0
+			LabelTextAlign MiddleRight
+			TabIndex 0
+			WidgetType Grid
+		Widget Add
+			Bounds 943, 383, 128, 40
+			Font Tahoma, 9pt
+			ForeColor Blue
+			DataType Text
+			Label Add New Note
+			LabelTextAlign MiddleRight
+			TabIndex 1
+			TextAlign Center
+			WidgetType Button
+			WidgetBackColor Honeydew
+		Widget repupdatedate
+			Bounds 6, 687, 80, 24
+			DataType Text
+			Label Widget37
+			LabelMargin 0
+			VisibleFormula false
+			EnabledFormula false
+			LabelTextAlign MiddleRight
+			TabIndex 223
+			WidgetType Label
+		Widget Claimall
+			Bounds 6, 681, 192, 24
+			Font Tahoma, 8pt, style=Bold
+			ForeColor HotTrack
+			DataType Text
+			Label Widget
+			LabelMargin 0
+			VisibleFormula false
+			LabelTextAlign MiddleRight
+			TabIndex 358
+			WidgetType Label
+		Widget narrative1
+			Bounds 17, 17, 384, 24
+			Font Tahoma, 10pt
+			DataType Text
+			Label Widget
+			LabelMargin 0
+			LabelTextAlign MiddleRight
+			TabIndex 420
+			WidgetType Label
+		Widget Pushlabel
+			Bounds 14, 761, 112, 16
+			Font Tahoma, 8pt, style=Bold
+			ForeColor HotTrack
+			DataType Text
+			Label Push to Gateway?
+			LabelMargin 200
+			VisibleFormula False
+			EnabledFormula matter.custom.INCASE.ISINCASE = 'true'
+			LabelTextAlign MiddleCenter
+			TabIndex 668
+		Widget Updatetext
+			Bounds 514, 80, 145, 23
+			Font Comic Sans MS, 14pt, style=Bold
+			ForeColor Teal
+			DataType Text
+			Label Updated successfully
+			LabelMargin 208
+			VisibleFormula Updatedtime='True'
+			LabelTextAlign MiddleLeft
+			TabIndex 669
+		Widget VIEWSOS
+			Bounds 416, 24, 96, 24
+			DataType Boolean
+			Label Widget118
+			VisibleFormula false
+			LabelTextAlign MiddleRight
+			TabIndex 1016
+			WidgetType CheckEdit
+		Label Label19
+			BackColor Info
+			Bounds 704, 16, 120, 24
+			Font Tahoma, 8pt, style=Bold
+			Text Symbols Key
+			TextAlign MiddleCenter
+		Label Label18
+			BackColor Info
+			Bounds 704, 32, 120, 64
+			Font Tahoma, 8pt
+			Text
+				• = Alt+7
+				■ = Alt+254
+				→ = Alt+26
+			TextAlign MiddleCenter
+		OutputVariable MYEXTENT
+		OutputVariable Userselectednote
+		OutputVariable OutputVariable2
+	CardPosX 1330
+	CardPosY 210
+	GOTO Deck1 WHEN delete
+	GOTO Deck5 WHEN Amend
+	GOTO Deck7 WHEN Add and ntype<>'' and Repstyle<>''
+	GOTO Deck9 WHEN Exit
+	GOTO SetVariables1 WHEN Add and nnote=''
+	GOTO Message16 WHEN Add ='TRUE' and nType=''
+	GOTO Message17 WHEN Add='TRUE' and Repstyle=''
+	GOTO RunScriptFile2 WHEN LBANOREP
+	GOTO SetVariables117 WHEN COLLBA or LBA or claimissue or NOI or CLAIMNOREP or CLAIMADMISS or CLAIMAOS or DEFENCE or Judg_req or HCEO or HCECK or Writ or HCEUD or WAR or WARREC or WARUD or COMP or SMSsent or AUTO or PP or ODACQ or ODACQREC or ODACQCOMMITT or STATD or STATD72 or STATSERV or STATREPLY or WUPSERV or CALLLOG or PPARREARS or ICOREC
+	GOTO SetVariables119 WHEN PAY
+	GOTO SetVariables125 WHEN Last or NOTEEMAIL or INCASEPUSH
+	GOTO SetVariables123 WHEN Copy
+	GOTO RunScriptFile7 WHEN Judgrecvd
+	GOTO SetCustomData21 WHEN Save
+	GOTO RunScriptFile9 WHEN Scratch
+	GOTO SetVariables140 WHEN Lock
+	GOTO SetVariables141 WHEN Unlock
+	GOTO Message21 WHEN LATESTINFO
+	GOTO SetVariables142 WHEN SOSVIEW or PORTALVIEW
+	GOTO SetCustomData14
+	SUB validate
+		DoNothing DoNothing1
+			CardPosX 781
+			CardPosY 214
+			GOTO SetVariables1
+
+		SetVariables SetVariables1
+			Initializations
+				IF nType='Internal Note' THEN Repstyle='Internal'
+				IF Repstyle='Internal' THEN Repinclude='No'
+				#IF Repstyle='Internal' THEN INCASE='No'
+				IF Repstyle='Internal' THEN PORTAL='No'
+				IF nType='Client Update Received' THEN Repstyle ='Client Update Received'
+				IF Repstyle='Client Update Received' THEN PORTAL='Silent'
+				
+				userselectednote=customform1.validatedcard.dnotes.selectedrows
+				
+				userselectedrow=CustomForm1.validatedCard.dnotes.FocusedRow.entityref
+				
+				MYEXTENT=entry(3,userselectedrow,":")
+				
+				#userselecteddis=customform1.validatedcard.matredis.selectedrows
+				
+				#userselectedrow2=CustomForm1.validatedCard.matredis.FocusedRow.entityref
+				
+				#MYEXTENT2=entry(3,userselectedrow2,":")
+			CardPosX 790
+			CardPosY 310
+			GOTO SetVariables13
+
+		ForEach ForEach1
+			VariableName row
+			CollectionVariable userselectednote
+			CardPosX 970
+			CardPosY 410
+			GOTO DoNothing2
+			SUB main
+				SetVariables SetVariables12
+					Initializations
+						count=count+1
+						SELNOTES=SELNOTES+row.note
+						
+						#TabArrayCode='MATREFEE'
+						#tabarrayextent=entry(3,row.entityref,':')
+					CardPosX 672
+					CardPosY 337
+
+
+		DoNothing DoNothing2
+			CardPosX 1530
+			CardPosY 410
+
+		SetVariables SetVariables13
+			Initializations
+				count=0
+				SELNOTES=0
+				#SELDISBS=0
+			CardPosX 790
+			CardPosY 410
+			GOTO ForEach1
+
+		ForEach ForEach2
+			VariableName row
+			CollectionVariable userselecteddis
+			CardPosX 1150
+			CardPosY 290
+			GOTO SetVariables14
+			SUB main
+				SetVariables SetVariables12
+					Initializations
+						count=count+1
+						SELDISBS=SELDISBS+row.Disb
+						
+						#TabArrayCode='MATREFEE'
+						#tabarrayextent=entry(3,row.entityref,':')
+					CardPosX 672
+					CardPosY 337
+
+
+		SetVariables SetVariables14
+			Initializations SELTOTAL=decimal(SELFEES)+decimal(SELDISBS)
+			CardPosX 1350
+			CardPosY 310
+
+		SetVariables SetVariables15
+			CardPosX 970
+			CardPosY 110
+
+
+DoNothing DoNothing1
+	CardPosX 1770
+	CardPosY 110
+	GOTO Deck9 WHEN nnote=''
+	GOTO Message15
+
+Deck Deck1
+	CardPosX 1210
+	CardPosY 390
+	GOTO DoNothing4
+	SUB main
+		Question Question1
+			Message
+				Are you sure that you want to delete the selected note by %[matter.custom.DEBTUPD(MYEXTENT).user] on %[matter.custom.DEBTUPD(MYEXTENT).date] at 
+				%[matter.custom.DEBTUPD(MYEXTENT).time]?
+				
+				NOTE:
+				%[matter.custom.DEBTUPD(MYEXTENT).note]
+			Answer1 Yes, delete
+			Answer2 No, cancel
+			NbColumns 2
+			CustomAllowed False
+			ShowAsButtons True
+			CardPosX 570
+			CardPosY 230
+			GOTO DoNothing5 WHEN answer='No, cancel'
+			GOTO SetVariables2
+
+		SetVariables SetVariables2
+			Initializations
+				count=0
+				userselectednotetotal=0
+			CardPosX 570
+			CardPosY 330
+			GOTO ForEach1
+
+		ForEach ForEach1
+			VariableName row
+			CollectionVariable userselectednote
+			CardPosX 570
+			CardPosY 430
+			SUB main
+				SetVariables SetVariables9
+					Initializations
+						count=count+1
+						
+						TabArrayCode='debtupd'
+						tabarrayextent=entry(3,row.entityref,':')
+						
+						userselectednotetotal=userselectednotetotal+row.note
+					CardPosX 110
+					CardPosY 70
+					GOTO DeleteTabArrayEntry2
+
+				DeleteTabArrayEntry DeleteTabArrayEntry2
+					CardPosX 290
+					CardPosY 70
+
+
+		DoNothing DoNothing5
+			CardPosX 890
+			CardPosY 230
+
+		SetMatterDetails SetMatterDetails5
+			CardPosX 790
+			CardPosY 430
+			SUB main
+				SetVariables SetVariables1
+					Initializations
+						Vsave=decimal(fixed_fee)
+						fixed_fee=decimal(Vsave) -decimal(userselectedfeestotal)
+						#fixed_fee='0.00'
+					CardPosX 631
+					CardPosY 182
+
+
+
+DoNothing DoNothing2
+	CardPosX 930
+	CardPosY 490
+	GOTO SetVariables1
+
+DoNothing DoNothing4
+	CardPosX 1290
+	CardPosY 550
+	GOTO SetCustomData11 WHEN add='True' and nnote<>"" and RepInclude="Yes"
+	GOTO DoNothing17 WHEN add='True' and nnote<>"" and RepInclude="No"
+	GOTO DoNothing2
+
+Message Message11
+	Message Please hide Billed Fees before creating new Bill
+	Centred True
+	Location main_area
+	MessageType Warning
+	CardPosX 970
+	CardPosY 110
+	GOTO SetVariables1
+
+Deck Deck5
+	CardPosX 1390
+	CardPosY 390
+	GOTO SetVariables122
+	SUB main
+		SetVariables SetVariables25
+			Initializations
+				date=matter.custom.DEBTUPD(MYEXTENT).date
+				Time=matter.custom.DEBTUPD(MYEXTENT).time
+				amduser=matter.custom.DEBTUPD(MYEXTENT).user
+				note=matter.custom.DEBTUPD(MYEXTENT).note
+				type=matter.custom.DEBTUPD(MYEXTENT).style
+				repstyle=matter.custom.DEBTUPD(MYEXTENT).rep
+				ID=matter.custom.DEBTUPD(MYEXTENT).ID
+				IF matter.custom.DEBTUPD(MYEXTENT).INCLUDE=True THEN RepInclude='Yes'
+				IF matter.custom.DEBTUPD(MYEXTENT).INCLUDE=False THEN RepInclude='No'
+				IF matter.custom.DEBTUPD(MYEXTENT).INCLUDE='' THEN RepInclude='No'
+			CardPosX 10
+			CardPosY 10
+			GOTO CustomForm6
+
+		SetCustomData SetCustomData9
+			CardPosX 410
+			CardPosY 10
+			SUB main
+				SetVariables SetVariables24
+					Initializations
+						matter.custom.DEBTUPD(MYEXTENT).date=Date
+						matter.custom.DEBTUPD(MYEXTENT).time=Time
+						matter.custom.DEBTUPD(MYEXTENT).user=amduser
+						matter.custom.DEBTUPD(MYEXTENT).note=note
+						matter.custom.DEBTUPD(MYEXTENT).style=type
+						matter.custom.DEBTUPD(MYEXTENT).rep=repstyle
+						matter.custom.DEBTUPD(MYEXTENT).INCLUDE=Repinclude
+					CardPosX 70
+					CardPosY 50
+
+
+		CustomForm CustomForm6
+			Source
+				Size 500, 400
+				ForeColor Black
+				Label Label10
+					Bounds 200, 16, 160, 24
+					Font Tahoma, 8pt, style=Bold
+					ForeColor IndianRed
+					Text Include update in reports?
+				Widget RepInclude
+					Bounds 248, 40, 64, 24
+					Font Tahoma, 8pt, style=Bold
+					DataType DataTable
+					Label Widget35
+					LabelMargin 0
+					LabelTextAlign MiddleCenter
+					TabIndex 412
+					TextAlign Center
+					WidgetBackColor Info
+					Table
+						Please choose
+						Yes
+						No
+				Widget repstyle
+					Bounds 72, 312, 312, 24
+					DataType DataTable
+					Label Report Style
+					TabIndex 7
+					WidgetBackColor White
+					Table
+						Please choose
+						Information for Client
+						Instructions Required
+						Internal
+						Payment
+						Miscellaneous
+				Widget Time
+					Bounds 280, 80, 136, 24
+					DataType Text
+					Label Time
+					LabelMargin 40
+					TabIndex 6
+					WidgetBackColor White
+				Widget Type
+					Bounds 72, 288, 312, 24
+					DataType DataTable
+					Label Action Style
+					TabIndex 5
+					WidgetBackColor White
+					Table
+						Please Choose
+						Client Update Received
+						Correspondence In/Out
+						Telephone Call In/Out
+						SMS Sent
+						Enforcement Update
+						Payment Received
+						Internal Note
+						Miscellaneous
+				Widget Note
+					Bounds 72, 144, 392, 136
+					DataType Text
+					Label Note
+					TabIndex 2
+					WidgetType MemoEdit
+					WidgetBackColor White
+				Widget amduser
+					Bounds 72, 112, 232, 24
+					DataType Text
+					Label User
+					TabIndex 1
+					WidgetBackColor White
+				Widget date
+					Bounds 72, 80, 200, 24
+					DataType Text
+					Label Date
+					TabIndex 0
+					WidgetType DateEdit
+					WidgetBackColor White
+			CardPosX 210
+			CardPosY 10
+			GOTO SetCustomData9
+			SUB validate
+
+		SetVariables SetVariables121
+			Initializations
+				IDcheck=matter.custom.debtupd2.ID
+				repamend=FALSE
+				IF IDcheck=ID THEN repamend=TRUE
+			CardPosX 410
+			CardPosY 150
+			GOTO DoNothing13
+
+		DoNothing DoNothing13
+			CardPosX 590
+			CardPosY 150
+			GOTO SetCustomData12 WHEN repamend='True'
+			GOTO DoNothing14
+
+		DoNothing DoNothing14
+			CardPosX 770
+			CardPosY 150
+
+		SetCustomData SetCustomData12
+			CardPosX 590
+			CardPosY 310
+			SUB main
+				SetVariables SetVariables4
+					Initializations
+						matter.custom.debtupd2.date=date
+						matter.custom.debtupd2.update=note
+						matter.custom.debtupd2.style=repstyle
+						#matter.custom.debtupd2.ID=debtupd1.ID
+					CardPosX 850
+					CardPosY 330
+
+
+
+Deck Deck7
+	CardPosX 1030
+	CardPosY 390
+	GOTO SetVariables130
+	SUB main
+		DoNothing DoNothing10
+			CardPosX 710
+			CardPosY 330
+			GOTO DoNothing11 WHEN nnote=''
+			GOTO SetVariables3
+
+		SetVariables SetVariables3
+			Initializations
+				tabcount=1
+				tabarraycode='debtupd'
+			CardPosX 970
+			CardPosY 330
+			GOTO AddTabArrayEntries1
+
+		AddTabArrayEntries AddTabArrayEntries1
+			CardPosX 1150
+			CardPosY 330
+			GOTO SetCustomData1
+
+		SetCustomData SetCustomData1
+			CardPosX 1330
+			CardPosY 330
+			GOTO SetCustomData17
+			SUB main
+				SetVariables SetVariables4
+					Initializations
+						now=now.timeofday
+						Day=now.date
+						
+						debtupd1.date=now() 
+						debtupd1.time=format(now,"HH:mm:ss")
+						#now.date +"at "+ now.timeofday
+						debtupd1.user=nuser
+						debtupd1.note=nnote
+						debtupd1.style=ntype
+						debtupd1.Rep=repstyle
+						debtupd1.ID='CLSUD'+format(now,"ddMMyyyy")+''+session.user.user_id+''+format(now,"HHmmss")
+						debtupd1.INCLUDE=RepInclude
+						IF INCASE<>'Yes' THEN debtupd1.INCASE=''
+						IF INCASE='Yes' THEN debtupd1.INCASE=format(now,"dd/MM/yyyy")
+						
+						#format(day,"dd:MM:yy") +" at "+ format(now,"HH:mm:ss")
+					CardPosX 750
+					CardPosY 330
+
+
+		DoNothing DoNothing11
+			CardPosX 710
+			CardPosY 490
+
+		SetCustomData SetCustomData17
+			CardPosX 1330
+			CardPosY 430
+			GOTO DoNothing21
+			SUB main
+				SetVariables SetVariables4
+					Initializations
+						matter.custom.debtkey.CURRENTR=CURRENTR
+						Matter.Custom.PCN.POSITION=latestposition
+					CardPosX 690
+					CardPosY 330
+
+
+		RunScriptFile RunScriptFile8
+			IgnoreMissingFile False
+			ScriptFile Applications\Debt\AcclaimPortal\Send Message.sos
+			CardPosX 1330
+			CardPosY 610
+
+		DoNothing DoNothing20
+			CardPosX 1550
+			CardPosY 430
+
+		DoNothing DoNothing21
+			CardPosX 1150
+			CardPosY 490
+			GOTO RunScriptFile8 WHEN Portal='Push' or Portal='Silent' and Repstyle<>'Client Update Received'
+			GOTO CustomForm8 WHEN Portal='Push' or Portal='Silent' and Repstyle='Client Update Received'
+			GOTO DoNothing20
+
+		CustomForm CustomForm8
+			Source
+				BackColor White
+				Size 381, 286
+				Font Roboto, 9pt
+				ForeColor 36, 36, 36
+				Label Label1
+					Bounds 6, 6, 371, 17
+					Text Please add details for the client update received.
+					TextAlign MiddleCenter
+				Widget ClientName1
+					Bounds 6, 29, 314, 21
+					ForeColor Black
+					DataType Text
+					Label Client Name who provided instruction? E.g. John Smith
+					LabelMargin 200
+					LabelTextAlign MiddleRight
+					TabIndex 1
+				Widget METHOD1
+					Bounds 6, 57, 314, 23
+					ForeColor Black
+					DataType Text
+					Label How was the instruction received? E.g. Email or Telephone
+					LabelMargin 200
+					LabelTextAlign MiddleRight
+					TabIndex 2
+				Widget DATETIME1
+					Bounds 6, 86, 251, 21
+					ForeColor Black
+					DataType DateOnly
+					Label What date and time was the instruction received?
+					LabelMargin 200
+					LabelTextAlign MiddleRight
+					TabIndex 3
+				Widget Message1
+					Bounds 46, 120, 303, 80
+					ForeColor Black
+					DataType Text
+					Label Widget4
+					LabelMargin 0
+					VisibleFormula ClientName1<>'' and METHOD1<>'' and DATETIME1<>''
+					EnabledFormula false
+					LabelTextAlign MiddleRight
+					TabIndex 4
+					WidgetType MemoEdit
+				Widget TIMEDATE1
+					Bounds 263, 86, 57, 21
+					ForeColor Black
+					DataType Time
+					Label Widget5
+					LabelMargin 0
+					VisibleFormula False
+					LabelTextAlign MiddleRight
+					TabIndex 5
+					WidgetType ShortTimeEdit
+				Widget PROCEED
+					Bounds 143, 206, 109, 21
+					ForeColor Black
+					DataType Text
+					Label PROCEED
+					EnabledFormula ClientName1<>'' and METHOD1<>'' and DATETIME1<>''
+					LabelTextAlign MiddleRight
+					TabIndex 6
+					TextAlign Center
+					WidgetType Button
+			CardPosX 1090
+			CardPosY 610
+			GOTO RunScriptFile8 WHEN PROCEED
+			GOTO Message22
+			SUB validate
+				SetVariables SetVariables1
+					Initializations
+						#DATETIME1=format(DATETIME1, "dd/MM/yyyy")
+						#TIMEDATE1=format(TIMEDATE1, "HH:mm")
+						#Message1="Update received via "+METHOD1+": "+chcr()+"On: "+format(DATETIME1, "dd/MM/yyyy")+ ", "+format(TIMEDATE1, "HH:mm")+": "+chcr()+chcr()+nNote+""
+						Message1=nNote
+					CardPosX 0
+					CardPosY 0
+
+
+		Message Message22
+			Message Enter all information and click proceed
+			Centred True
+			Location message_box
+			MessageType Information
+			CardPosX 870
+			CardPosY 610
+			GOTO CustomForm8
+
+
+SetVariables SetVariables117
+	Initializations
+		Defendantcount=view(matter.custom.DEBTDEFS,'','Name,Address,Sued','Defendants')
+		Defendantcount=tablecount(Defendantcount,'')
+		#AUTO
+		if AUTO=true then nNOTE=""+AUTOTEXT+""
+		if AUTO=true then nType=AUTOTYPE
+		if AUTO=true then Repstyle=AUTOSTYLE
+		#Call Log
+		if CALLLOG=true then nNOTE=""+CALLNOTETEXT+""
+		if CALLLOG=true then nType='Telephone Call In/Out'
+		if CALLLOG=true then Repstyle=''
+		#Demand Letter
+		if COLLBA=true then nType='Correspondence In/Out'  
+		if COLLBA=true then Repstyle='Information for Client' 
+		if COLLBA=true then nNOTE="A letter of demand has been raised and sent to the debtor."
+		#LBA
+		if LBA=true then nType='Correspondence In/Out'  
+		if LBA=true then Repstyle='Information for Client' 
+		#if LBA=true then nNOTE="A letter of claim has been raised and sent to the debtor. The total amount sought from the debtor is £" +twodec(MATTER.CUSTOM.DEBT1.TDEBT) +"."
+		if LBA=true and matter.custom.debtnote.tint=0 and matter.custom.debtnote.lpfees=0 then nNOTE="A letter of claim has been issued and will be sent to the debtor."+CHCR()+CHCR()+"The total amount being pursued from the debtor is " +money(MATTER.CUSTOM.DEBT1.TDEBT) +"."+CHCR()+CHCR()+""+LBARESPONDTEXT+""
+		if LBA=true and matter.custom.debtnote.tint>0 and matter.custom.debtnote.lpfees=0 then nNOTE="A letter of claim has been issued and will be sent to the debtor."+CHCR()+CHCR()+"The total amount being pursued from the debtor is " +money(MATTER.CUSTOM.DEBT1.TDEBT) +". This includes the principal debt together with claimed interest of "+money(Matter.custom.debtnote.tint)+"."+CHCR()+CHCR()+""+LBARESPONDTEXT+""
+		if LBA=true and matter.custom.debtnote.tint=0 and matter.custom.debtnote.lpfees>0 then nNOTE="A letter of claim has been issued and will be sent to the debtor."+CHCR()+CHCR()+"The total amount being pursued from the debtor is " +money(MATTER.CUSTOM.DEBT1.TDEBT) +". This includes the principal debt together with claimed costs of "+money(Matter.custom.debtnote.LPFEES)+"."+CHCR()+CHCR()+""+LBARESPONDTEXT+""
+		if LBA=true and matter.custom.debtnote.tint>0 and matter.custom.debtnote.lpfees>0 then nNOTE="A letter of claim has been issued and will be sent to the debtor."+CHCR()+CHCR()+"The total amount being pursued from the debtor is " +money(MATTER.CUSTOM.DEBT1.TDEBT) +". This includes the principal debt together with claimed interest of "+money(Matter.custom.debtnote.tint)+" and costs of "+money(Matter.custom.debtnote.LPFEES)+"."+CHCR()+CHCR()+""+LBARESPONDTEXT+""
+		#
+		# Motor LBA Sent
+		if matter.mattertype='5001' and LBA=true then nNOTE="A letter of claim has been issued and will be sent to the third party/insurers."+CHCR()+CHCR()+"They have 14 days to respond to the letter of claim. If we receive no satisfactory response within this time frame, we will reach out to discuss the next steps. Should we hear directly from them before the time frame expires, we will contact you immediately to update you."
+		
+		#requesting £"+matter.custom.debt1.tdebt
+		#LBA no Reply
+		if LBANOREP=true then nType='Miscellaneous'
+		if LBANOREP=true then Repstyle='Instructions Required' 
+		if LBANOREP=true and fixedfee=0 then nNOTE="We have not received any response to the letter of claim that was sent to the debtor regarding this matter."+CHCR()+CHCR()+ "At this point, we have reached a stage where we can initiate court proceedings on your behalf. This process involves us submitting a claim to the court."+CHCR()+CHCR()+"Once the court receives the claim, they will officially issue it and serve a copy of the claim to the debtor. Subsequently, the debtor will have a 14-day window within which to respond to the claim. During this period, they can choose to admit the claim, acknowledge it, defend against it, or make a payment. In the event that the debtor files an acknowledgement of the claim, they will be granted an additional 14-day extension to prepare and submit their defence or make a payment."+CHCR()+CHCR()+"If you decide to proceed with the claim, please note that there will be a court fee of £"+twodec(COURTFEE)+" payable upon presentation of the claim." +CHCR()+CHCR()+"Please confirm whether you wish for us to proceed with initiating these court proceedings on your behalf."
+		if LBANOREP=true and fixedfee>0 then nNOTE="We have not received any response to the letter of claim that was sent to the debtor regarding this matter."+CHCR()+CHCR()+ "At this point, we have reached a stage where we can initiate court proceedings on your behalf. This process involves us submitting a claim to the court."+CHCR()+CHCR()+"Once the court receives the claim, they will officially issue it and serve a copy of the claim to the debtor. Subsequently, the debtor will have a 14-day window within which to respond to the claim. During this period, they can choose to admit the claim, acknowledge it, defend against it, or make a payment. In the event that the debtor files an acknowledgement of the claim, they will be granted an additional 14-day extension to prepare and submit their defence or make a payment."+CHCR()+CHCR()+"If you decide to proceed with the claim, please note that there will be a court fee of £"+twodec(COURTFEE)+" payable upon presentation of the claim and costs of £"+twodec(fixedfee)+" plus VAT." +CHCR()+CHCR()+"Please confirm whether you wish for us to proceed with initiating these court proceedings on your behalf."
+		if LBANOREP=true and fixedfee=0 and MATTER.CUSTOM.DEBTNOTE.TOTAL >10000 and <200000 THEN nNote="We have not received any response to the letter of claim that was sent to the debtor regarding this matter."+CHCR()+CHCR()+ "At this point, we have reached a stage where we can initiate court proceedings on your behalf. This process involves us submitting a claim to the court."+CHCR()+CHCR()+"Once the court receives the claim, they will officially issue it and serve a copy of the claim to the debtor. Subsequently, the debtor will have a 14-day window within which to respond to the claim. During this period, they can choose to admit the claim, acknowledge it, defend against it, or make a payment. In the event that the debtor files an acknowledgement of the claim, they will be granted an additional 14-day extension to prepare and submit their defence or make a payment."+CHCR()+CHCR()+"If you decide to proceed with the claim, please note that there will be a court fee of 5% of the claimed value payable upon presentation of the claim." +CHCR()+CHCR()+"Please confirm whether you wish for us to proceed with initiating these court proceedings on your behalf." 
+		if LBANOREP=true and fixedfee>0 and MATTER.CUSTOM.DEBTNOTE.TOTAL >10000 and <200000 THEN nNote="We have not received any response to the letter of claim that was sent to the debtor regarding this matter."+CHCR()+CHCR()+ "At this point, we have reached a stage where we can initiate court proceedings on your behalf. This process involves us submitting a claim to the court."+CHCR()+CHCR()+"Once the court receives the claim, they will officially issue it and serve a copy of the claim to the debtor. Subsequently, the debtor will have a 14-day window within which to respond to the claim. During this period, they can choose to admit the claim, acknowledge it, defend against it, or make a payment. In the event that the debtor files an acknowledgement of the claim, they will be granted an additional 14-day extension to prepare and submit their defence or make a payment."+CHCR()+CHCR()+"If you decide to proceed with the claim, please note that there will be a court fee of 5% of the claimed value payable upon presentation of the claim and costs of £"+twodec(fixedfee)+" plus VAT." +CHCR()+CHCR()+"Please confirm whether you wish for us to proceed with initiating these court proceedings on your behalf." 
+		if LBANOREP=true and fixedfee=0 and MATTER.CUSTOM.DEBTNOTE.TOTAL >200000 THEN nNote="We have not received any response to the letter of claim that was sent to the debtor regarding this matter."+CHCR()+CHCR()+ "At this point, we have reached a stage where we can initiate court proceedings on your behalf. This process involves us submitting a claim to the court."+CHCR()+CHCR()+"Once the court receives the claim, they will officially issue it and serve a copy of the claim to the debtor. Subsequently, the debtor will have a 14-day window within which to respond to the claim. During this period, they can choose to admit the claim, acknowledge it, defend against it, or make a payment. In the event that the debtor files an acknowledgement of the claim, they will be granted an additional 14-day extension to prepare and submit their defence or make a payment."+CHCR()+CHCR()+"If you decide to proceed with the claim, please note that there will be a court fee of £10,000 payable upon presentation of the claim." +CHCR()+CHCR()+"Please confirm whether you wish for us to proceed with initiating these court proceedings on your behalf."
+		if LBANOREP=true and fixedfee>0 and MATTER.CUSTOM.DEBTNOTE.TOTAL >200000 THEN nNote="We have not received any response to the letter of claim that was sent to the debtor regarding this matter."+CHCR()+CHCR()+ "At this point, we have reached a stage where we can initiate court proceedings on your behalf. This process involves us submitting a claim to the court."+CHCR()+CHCR()+"Once the court receives the claim, they will officially issue it and serve a copy of the claim to the debtor. Subsequently, the debtor will have a 14-day window within which to respond to the claim. During this period, they can choose to admit the claim, acknowledge it, defend against it, or make a payment. In the event that the debtor files an acknowledgement of the claim, they will be granted an additional 14-day extension to prepare and submit their defence or make a payment."+CHCR()+CHCR()+"If you decide to proceed with the claim, please note that there will be a court fee of £10,000 payable upon presentation of the claim and costs of £"+twodec(fixedfee)+" plus VAT."+CHCR()+CHCR()+ "Please confirm whether you wish for us to proceed with initiating these court proceedings on your behalf."
+		#
+		#Motor LBA NO REPLY and client is FMG
+		If LBANOREP=true and matter.mattertype='5001' and matter.client.full_name='FMG Support (FIM) Limited' and fixedfee=0 THEN nNOTE="We write to advise that we have not received a response, or a satisfactory response, to the letter of claim. As a result, we are now preparing to issue proceedings." +chcr()+chcr()+"Once our review is complete and the claim forms have been finalised, we will provide you with a further update."
+		#
+		#Collections
+		if LBANOREP=true and NOTEUD2='GENCOL' then nNOTE="The initial demand letter has now expired and we have not received a response from the debtor."+CHCR()+CHCR()+"Please let us know if the debtor has contacted you directly, raised any dispute, or made any payment since our instruction. If so, please provide details so that we can review the position."+CHCR()+CHCR()+"In the absence of any payment or genuine dispute, our recommendation would be to escalate matters by issuing a formal Letter of Claim pursuant to the relevant Pre-Action Protocol. This places the debtor on notice that court proceedings may be commenced should the debt remain unpaid."+CHCR()+CHCR()+"Please confirm your instructions and whether the balance remains outstanding in full."
+		#Hird collections
+		if entitytype='MA' and matter.custom.debtfee2.default=false THEN LBAFEE = decimal(matter.custom.DEBTFEE1.W11)
+		if entitytype='MA' and matter.custom.debtfee2.default=true THEN LBAFEE = decimal(matter.client.custom.DEBTFEE1.W11)
+		If matter.client.full_name='Hird & Partners LLP' and LBANOREP=true and NOTEUD2='GENCOL' and LBAFEE<>0.00 then nNOTE="The demand letter has expired and there has been no reply, please confirm if you would like us to issue a protocol letter? ("+money(LBAFEE)+")"
+		If matter.client.full_name='Hird & Partners LLP' and LBANOREP=true and NOTEUD2='GENCOL' and LBAFEE=0.00 then nNOTE="The demand letter has expired and there has been no reply, please confirm if you would like us to issue a protocol letter?"
+		#
+		#NOI received
+		if NOI=true then nType='Correspondence In/Out'
+		if NOI=true then Repstyle='Information for Client' 
+		if NOI=true then nNOTE="We confirm that we have received the notice of issue of claim from court regarding this matter."+CHCR()+CHCR()+"The Defendant has until "+format(matter.custom.debt5.EXPDATE1,"dd/MM/yyyy")+" to respond to the claim."+CHCR()+CHCR()+"In the event that no response is received by this deadline, we will be able to apply for judgment after this date."+CHCR()+CHCR()+"During this interim period, should you receive payment or any form of direct contact in relation to this matter, we kindly request that you promptly inform us."
+		#if claimissue=true then nNOTE="The claim has been issued and sent to Court"
+		#Claim issued
+		if claimissue=true then nType='Correspondence In/Out'  
+		if claimissue=true then Repstyle='Information for Client' 
+		IF claimissue=true then nNOTE="We have raised the claim and sent it to court for issuing. We will keep you updated once we receive confirmation of the date of issue from the Court."+CHCR()+CHCR()+"Once the claim is issued, it will be served on the defendant, who will then have 14 days to respond. During this time, they may choose to acknowledge the claim, file a defence, or make payment to settle the matter."
+		IF claimissue=true and Defendantcount>1 then nNOTE="We have raised the claim and sent it to court for issuing. We will keep you updated once we receive confirmation of the date of issue from the Court."+CHCR()+CHCR()+"Once the claim is issued, it will be served on the defendants, who will then have 14 days to respond. During this time, they may choose to acknowledge the claim, file a defence, or make payment to settle the matter."
+		#Claim issued CNBC
+		IF claimissue=true and matter.custom.debt4.online=false then nNOTE="We have prepared and submitted the claim to the Court for issuing. As it has been sent to the Civil National Business Centre by paper, we are aware that there is currently a backlog, and it may take in excess of four weeks for the claim to be processed."+CHCR()+CHCR()+"We will keep you updated once we receive confirmation of the date of issue from the Court."+CHCR()+CHCR()+"Once the claim is issued, it will be served on the defendant, who will then have 14 days to respond. During this time, they may choose to acknowledge the claim, file a defence, or make payment to settle the matter."
+		IF claimissue=true and Defendantcount>1 and matter.custom.debt4.online=false then nNOTE="We have prepared and submitted the claim to the Court for issuing. As it has been sent to the Civil National Business Centre by paper, we are aware that there is currently a backlog, and it may take in excess of four weeks for the claim to be processed."+CHCR()+CHCR()+"We will keep you updated once we receive confirmation of the date of issue from the Court."+CHCR()+CHCR()+"Once the claim is issued, it will be served on the defendants, who will then have 14 days to respond. During this time, they may choose to acknowledge the claim, file a defence, or make payment to settle the matter."
+		# Claim No Reply
+		######## SET JUDGMENT FEE ###########
+		# Matter fees
+		if CLAIMNOREP = true and entitytype = 'MA' and matter.custom.debtfee2.default = false and MATTER.CUSTOM.DEBTNOTE.TOTAL > 4999.99 and matter.custom.DEBTFEE1.W34 > 0 THEN JUDGMENTFEE = matter.custom.DEBTFEE1.W34
+		if CLAIMNOREP = true and entitytype = 'MA' and matter.custom.debtfee2.default = false and MATTER.CUSTOM.DEBTNOTE.TOTAL < 5000.00 and matter.custom.DEBTFEE1.W33 > 0 THEN JUDGMENTFEE = matter.custom.DEBTFEE1.W33
+		# Client fees
+		if CLAIMNOREP = true and entitytype = 'MA' and matter.custom.debtfee2.default = true and MATTER.CUSTOM.DEBTNOTE.TOTAL > 4999.99 and matter.client.custom.DEBTFEE1.W34 > 0 THEN JUDGMENTFEE = matter.client.custom.DEBTFEE1.W34
+		if CLAIMNOREP = true and entitytype = 'MA' and matter.custom.debtfee2.default = true and MATTER.CUSTOM.DEBTNOTE.TOTAL < 5000.00 and matter.client.custom.DEBTFEE1.W33 > 0 THEN JUDGMENTFEE = matter.client.custom.DEBTFEE1.W33
+		JUDGMENTFEE=decimal(JUDGMENTFEE)
+		# SET SCRIPT
+		if CLAIMNOREP=true then nType='Miscellaneous'
+		if CLAIMNOREP=true then Repstyle='Instructions Required' 
+		if CLAIMNOREP=true and JUDGMENTFEE = 0.00 and matter.custom.debt3.JURIS='England/Wales' and matter.custom.debt5.EXPDATE1 <> cdate(today) then nNOTE="The deadline for the debtor to respond to this claim has lapsed, and we have not received any response from them."+CHCR()+CHCR()+"As such, we are now in a position to request Judgment from the Court."+CHCR()+CHCR()+"Please let us know if you would like us to proceed with this request on your behalf."
+		if CLAIMNOREP=true and JUDGMENTFEE = 0.00 and matter.custom.debt3.JURIS='England/Wales' and matter.custom.debt5.EXPDATE1 = cdate(today) then nNOTE="The deadline for the debtor to respond to this claim has lapsed today, and we have not received any response from them."+CHCR()+CHCR()+"As such, we are now in a position to request Judgment from the Court."+CHCR()+CHCR()+"Please let us know if you would like us to proceed with this request on your behalf."
+		if CLAIMNOREP=true and JUDGMENTFEE <> 0.00 and matter.custom.debt3.JURIS='England/Wales' and matter.custom.debt5.EXPDATE1 <> cdate(today) then nNOTE="The deadline for the debtor to respond to this claim has lapsed, and we have not received any response from them."+CHCR()+CHCR()+"As such, we are now in a position to request Judgment from the Court."+CHCR()+CHCR()+"The cost to request Judgment in default will be " +money(JUDGMENTFEE)+ ". Please let us know if you would like us to proceed with this request on your behalf."
+		if CLAIMNOREP=true and JUDGMENTFEE <> 0.00 and matter.custom.debt3.JURIS='England/Wales' and matter.custom.debt5.EXPDATE1 = cdate(today) then nNOTE="The deadline for the debtor to respond to this claim has lapsed today, and we have not received any response from them."+CHCR()+CHCR()+"As such, we are now in a position to request Judgment from the Court."+CHCR()+CHCR()+"The cost to request Judgment in default will be " +money(JUDGMENTFEE)+ ". Please let us know if you would like us to proceed with this request on your behalf."
+		########### OUT OF JURISDICTION ###########
+		if CLAIMNOREP=true and JUDGMENTFEE = 0.00 and matter.custom.debt3.JURIS<>'England/Wales' and matter.custom.debt5.EXPDATE1 <> cdate(today) then nNOTE="The deadline for the debtor to respond to this claim has lapsed, and we have not received any response from them."+CHCR()+CHCR()+"As such, we are now in a position to request Judgment from the Court. Given that the Defendant resides outside of the Jurisdiction of the England and Welsh Courts, we will need to make an Application for Judgment supported by an Affidavit. The fees for the Application and Affidavit is approximately £138.00."+CHCR()+CHCR()+"Please let us know if you would like us to proceed with this request on your behalf."
+		if CLAIMNOREP=true and JUDGMENTFEE = 0.00 and matter.custom.debt3.JURIS<>'England/Wales' and matter.custom.debt5.EXPDATE1 = cdate(today) then nNOTE="The deadline for the debtor to respond to this claim expires today, and we have not received any response from them."+CHCR()+CHCR()+"As such, we are now in a position to request Judgment from the Court. Given that the Defendant resides outside of the Jurisdiction of the England and Welsh Courts, we will need to make an Application for Judgment supported by an Affidavit. The fees for of the Application and Affidavit is approximately £138.00."+CHCR()+CHCR()+"Please let us know if you would like us to proceed with this request on your behalf."
+		if CLAIMNOREP=true and JUDGMENTFEE <> 0.00 and matter.custom.debt3.JURIS<>'England/Wales' and matter.custom.debt5.EXPDATE1 <> cdate(today) then nNOTE="The deadline for the debtor to respond to this claim has lapsed, and we have not received any response from them."+CHCR()+CHCR()+"As such, we are now in a position to request Judgment from the Court. Given that the Defendant resides outside of the Jurisdiction of the England and Welsh Courts, we will need to make an Application for Judgment supported by an Affidavit. The cost to request Judgment in default will be " +money(JUDGMENTFEE)+ " solicitor costs and the fees for the Application and Affidavit is approximately £138.00."+CHCR()+CHCR()+"Please let us know if you would like us to proceed with this request on your behalf."
+		if CLAIMNOREP=true and JUDGMENTFEE <> 0.00 and matter.custom.debt3.JURIS<>'England/Wales' and matter.custom.debt5.EXPDATE1 = cdate(today) then nNOTE="The deadline for the debtor to respond to this claim expires today, and we have not received any response from them."+CHCR()+CHCR()+"As such, we are now in a position to request Judgment from the Court. Given that the Defendant resides outside of the Jurisdiction of the England and Welsh Courts, we will need to make an Application for Judgment supported by an Affidavit. The cost to request Judgment in default will be " +money(JUDGMENTFEE)+ " solicitor costs and the fees for of the Application and Affidavit is approximately £138.00."+CHCR()+CHCR()+"Please let us know if you would like us to proceed with this request on your behalf."
+		
+		#########
+		#if LBANOREP=true and fixedfee=0 then nNOTE="We have not received any response to the letter of claim that was sent to the debtor regarding this matter."+CHCR()+CHCR()+ "At this point, we have reached a stage where we can initiate court proceedings on your behalf. This process involves us submitting a claim to the court."+CHCR()+CHCR()+"Once the court receives the claim, they will officially issue it and serve a copy of the claim to the debtor. Subsequently, the debtor will have a 14-day window within which to respond to the claim. During this period, they can choose to admit the claim, acknowledge it, defend against it, or make a payment. In the event that the debtor files an acknowledgement of the claim, they will be granted an additional 14-day extension to prepare and submit their defence or make a payment."+CHCR()+CHCR()+"If you decide to proceed with the claim, please note that there will be a court fee of £"+twodec(COURTFEE)+" payable upon presentation of the claim." +CHCR()+CHCR()+"Please confirm whether you wish for us to proceed with initiating these court proceedings on your behalf."
+		#if LBANOREP=true and fixedfee>0 then nNOTE="We have not received any response to the letter of claim that was sent to the debtor regarding this matter."+CHCR()+CHCR()+ "At this point, we have reached a stage where we can initiate court proceedings on your behalf. This process involves us submitting a claim to the court."+CHCR()+CHCR()+"Once the court receives the claim, they will officially issue it and serve a copy of the claim to the debtor. Subsequently, the debtor will have a 14-day window within which to respond to the claim. During this period, they can choose to admit the claim, acknowledge it, defend against it, or make a payment. In the event that the debtor files an acknowledgement of the claim, they will be granted an additional 14-day extension to prepare and submit their defence or make a payment."+CHCR()+CHCR()+"If you decide to proceed with the claim, please note that there will be a court fee of £"+twodec(COURTFEE)+" payable upon presentation of the claim and costs of £"+twodec(fixedfee)+" plus VAT." +CHCR()+CHCR()+"Please confirm whether you wish for us to proceed with initiating these court proceedings on your behalf."
+		#if LBANOREP=true and fixedfee=0 and MATTER.CUSTOM.DEBTNOTE.TOTAL >10000 and <200000 THEN nNote="We have not received any response to the letter of claim that was sent to the debtor regarding this matter."+CHCR()+CHCR()+ "At this point, we have reached a stage where we can initiate court proceedings on your behalf. This process involves us submitting a claim to the court."+CHCR()+CHCR()+"Once the court receives the claim, they will officially issue it and serve a copy of the claim to the debtor. Subsequently, the debtor will have a 14-day window within which to respond to the claim. During this period, they can choose to admit the claim, acknowledge it, defend against it, or make a payment. In the event that the debtor files an acknowledgement of the claim, they will be granted an additional 14-day extension to prepare and submit their defence or make a payment."+CHCR()+CHCR()+"If you decide to proceed with the claim, please note that there will be a court fee of 5% of the claimed value payable upon presentation of the claim." +CHCR()+CHCR()+"Please confirm whether you wish for us to proceed with initiating these court proceedings on your behalf." 
+		#if LBANOREP=true and fixedfee>0 and MATTER.CUSTOM.DEBTNOTE.TOTAL >10000 and <200000 THEN nNote="We have not received any response to the letter of claim that was sent to the debtor regarding this matter."+CHCR()+CHCR()+ "At this point, we have reached a stage where we can initiate court proceedings on your behalf. This process involves us submitting a claim to the court."+CHCR()+CHCR()+"Once the court receives the claim, they will officially issue it and serve a copy of the claim to the debtor. Subsequently, the debtor will have a 14-day window within which to respond to the claim. During this period, they can choose to admit the claim, acknowledge it, defend against it, or make a payment. In the event that the debtor files an acknowledgement of the claim, they will be granted an additional 14-day extension to prepare and submit their defence or make a payment."+CHCR()+CHCR()+"If you decide to proceed with the claim, please note that there will be a court fee of 5% of the claimed value payable upon presentation of the claim and costs of £"+twodec(fixedfee)+" plus VAT." +CHCR()+CHCR()+"Please confirm whether you wish for us to proceed with initiating these court proceedings on your behalf." 
+		#if LBANOREP=true and fixedfee=0 and MATTER.CUSTOM.DEBTNOTE.TOTAL >200000 THEN nNote="We have not received any response to the letter of claim that was sent to the debtor regarding this matter."+CHCR()+CHCR()+ "At this point, we have reached a stage where we can initiate court proceedings on your behalf. This process involves us submitting a claim to the court."+CHCR()+CHCR()+"Once the court receives the claim, they will officially issue it and serve a copy of the claim to the debtor. Subsequently, the debtor will have a 14-day window within which to respond to the claim. During this period, they can choose to admit the claim, acknowledge it, defend against it, or make a payment. In the event that the debtor files an acknowledgement of the claim, they will be granted an additional 14-day extension to prepare and submit their defence or make a payment."+CHCR()+CHCR()+"If you decide to proceed with the claim, please note that there will be a court fee of £10,000 payable upon presentation of the claim." +CHCR()+CHCR()+"Please confirm whether you wish for us to proceed with initiating these court proceedings on your behalf."
+		#if LBANOREP=true and fixedfee>0 and MATTER.CUSTOM.DEBTNOTE.TOTAL >200000 THEN nNote="We have not received any response to the letter of claim that was sent to the debtor regarding this matter."+CHCR()+CHCR()+ "At this point, we have reached a stage where we can initiate court proceedings on your behalf. This process involves us submitting a claim to the court."+CHCR()+CHCR()+"Once the court receives the claim, they will officially issue it and serve a copy of the claim to the debtor. Subsequently, the debtor will have a 14-day window within which to respond to the claim. During this period, they can choose to admit the claim, acknowledge it, defend against it, or make a payment. In the event that the debtor files an acknowledgement of the claim, they will be granted an additional 14-day extension to prepare and submit their defence or make a payment."+CHCR()+CHCR()+"If you decide to proceed with the claim, please note that there will be a court fee of £10,000 payable upon presentation of the claim and costs of £"+twodec(fixedfee)+" plus VAT."+CHCR()+CHCR()+ "Please confirm whether you wish for us to proceed with initiating these court proceedings on your behalf."
+		
+		
+		#Admission
+		Admin_1=Matter.custom.Debt5.ADMITYPE
+		Admin_2=Matter.custom.Debt5.CLAIMAD
+		Admin_3=Matter.custom.Debt5.FREQ
+		Admin_4=Matter.custom.Debt5.DUEBY
+		Admin_5=Matter.custom.Debt5.INSTAMO
+		IF Admi_1='Admission to the whole Claim' THEN Admit="an admission to the whole of the Claim from the Defendant"
+		IF Admi_1='Admission to part of the Claim' THEN Admit="an admission to part of the Claim from the Defendant, admitting to owing £"+twodec(Admi_2)+""
+		IF Admi_3 = "In full by a date" THEN frequency="in full by "+format(Admi_4,"dd/MM/yyyy")+""
+		IF Admi_3 = "Weekly instalments" THEN frequency="by weekly instalments of £"+twodec(Admi_5)+""
+		IF Admi_3 = "Monthly instalments" THEN frequency="by monthly instalments of £"+twodec(Admi_5)+""
+		IF CLAIMADMISS=true then nnote="We have received "+Admit+". The Defendant has proposed to pay the Claim as admitted " +frequency+"."+CHCR()+CHCR()+"We would be grateful if you could confirm whether this is acceptable and whether we are to accept the same by judgment."
+		#AOS
+		if CLAIMAOS=true then nType='Correspondence In/Out'  
+		if CLAIMAOS=true then Repstyle='Information for Client' 
+		IF CLAIMAOS=true then nnote="We have been informed that the Defendant has submitted an Acknowledgement of Service in response to the claim."+CHCR()+CHCR()+"As a result of this action, the Defendant has been granted an extension of time, with a deadline of "+format(duedate,"dd/MM/yyyy")+" within which to either file a Defence or reach a settlement in relation to the claim."+CHCR()+CHCR()+"We will monitor the matter and keep you informed."
+		#DEFENCE
+		if DEFENCE=true then nType='Correspondence In/Out'  
+		if DEFENCE=true then Repstyle='Instructions Required'
+		IF DEFENCE=true then nnote="We have received a defence to the claim from the Defendant."+CHCR()+CHCR()+"Before proceeding further, we would appreciate your comments or instructions regarding the content of the defence. If there are any particular points you wish to highlight or address, please let us know."+chcr()+chcr()+"Where appropriate, we will reach out to the Defendant to attempt to resolve any issues directly before the matter is formally allocated. This approach could help bring the matter to an early resolution and potentially mitigate further costs."
+		IF DEFENCE=true and DQISDUE='True' then nnote="We have received a defence to the claim from the Defendant."+CHCR()+CHCR()+"As part of the court process, the next step is to submit a Directions Questionnaire. This helps the court understand the nature of the case and enables it to allocate the matter to the appropriate track for management and resolution."+chcr()+chcr()+"Before proceeding further, we would appreciate your comments or instructions regarding the content of the defence. If there are any particular points you wish to highlight or address, please let us know."+chcr()+chcr()+"Where appropriate, we will reach out to the Defendant to attempt to resolve any issues directly before the matter is formally allocated. This approach could help bring the matter to an early resolution and potentially mitigate further costs."
+		#RFJ
+		if Judg_req=true then nType='Correspondence In/Out'  
+		if Judg_req=true then Repstyle='Information for Client' 
+		if Judg_req=true then nNOTE="We have submitted a request for Judgment to the Court, and we will provide you with further updates as soon as we receive confirmation from the Court regarding the Judgment date."
+		#Judgment received
+		if Judgrecvd=true then nType='Correspondence In/Out'
+		if Judgrecvd=true then Repstyle='Instructions Required' 
+		Addnote=""
+		IF JMTLET=True then Addnote="We have advised the debtor of same requesting payment by return."
+		if Judgrecvd=true and fixedwarrantfee=0 and matter.custom.debt7.JUDGEAMT > 600.00 THEN nNote="We confirm that we have received confirmation from the court that judgment has been entered. " +addnote+""+CHCR()+CHCR()+ "The next step involves enforcement of the judgment, and one option to initiate this is by enlisting the services of a High Court Enforcement Officer (HCEO). Please note that the associated court fee for this step amounts to £"+twodec(CourtwarrantFEE)+"."+CHCR()+CHCR()+ "Would you like us to proceed with this enforcement process now? If you are not ready to proceed yet, we can revisit this matter with you in approximately one month to allow for any necessary payment arrangements or further contact."
+		if Judgrecvd=true and fixedwarrantfee=0 and matter.custom.debt7.JUDGEAMT < 600.00 THEN nNote="We confirm that we have received confirmation from the court that judgment has been entered. " +addnote+""+CHCR()+CHCR()+ "The next step involves enforcement of the judgment, and one option to initiate this is by enlisting the services of a County Court Bailiff (CCB). Please note that the associated court fee for this step amounts to £"+twodec(CourtwarrantFEE)+"."+CHCR()+CHCR()+ "Would you like us to proceed with this enforcement process now? If you are not ready to proceed yet, we can revisit this matter with you in approximately one month to allow for any necessary payment arrangements or further contact."
+		if Judgrecvd=true and fixedwarrantfee>0 and matter.custom.debt7.JUDGEAMT > 600.00 THEN nNote="We confirm that we have received confirmation from the court that judgment has been entered. " +addnote+""+CHCR()+CHCR()+ "The next step involves enforcement of the judgment, and one option to initiate this is by enlisting the services of a High Court Enforcement Officer (HCEO). Please note that the associated court fee for this step amounts to £"+twodec(CourtwarrantFEE)+", with solicitor costs totalling £"+twodec(Fixedwarrantfee)+" plus VAT."+CHCR()+CHCR()+ "Would you like us to proceed with this enforcement process now? If you are not ready to proceed yet, we can revisit this matter with you in approximately one month to allow for any necessary payment arrangements or further contact."
+		if Judgrecvd=true and fixedwarrantfee>0 and matter.custom.debt7.JUDGEAMT < 600.00 THEN nNote="We confirm that we have received confirmation from the court that judgment has been entered. " +addnote+""+CHCR()+CHCR()+ "The next step involves enforcement of the judgment, and one option to initiate this is by enlisting the services of a County Court Bailiff (CCB). Please note that the associated court fee for this step amounts to £"+twodec(CourtwarrantFEE)+", with solicitor costs totalling £"+twodec(Fixedwarrantfee)+" plus VAT."+CHCR()+CHCR()+ "Would you like us to proceed with this enforcement process now? If you are not ready to proceed yet, we can revisit this matter with you in approximately one month to allow for any necessary payment arrangements or further contact."
+		#### NEW ####
+		#if Judgrecvd=true and fixedwarrantfee=0 and matter.custom.debt7.JUDGEAMT > 600.00 THEN nNote="We confirm that we have received confirmation from the court that judgment has been entered. " +addnote+""+CHCR()+CHCR()+ "The next step involves enforcement of the judgment, and one option to initiate this is by enlisting the services of a High Court Enforcement Officer (HCEO). Please note that the associated court fee for this step amounts to %COURTFEE%."+CHCR()+CHCR()+ "Would you like us to proceed with this enforcement process now? If you are not ready to proceed yet, we can revisit this matter with you in approximately one month to allow for any necessary payment arrangements or further contact."
+		#if Judgrecvd=true and fixedwarrantfee=0 and matter.custom.debt7.JUDGEAMT < 600.00 THEN nNote="We confirm that we have received confirmation from the court that judgment has been entered. " +addnote+""+CHCR()+CHCR()+ "The next step involves enforcement of the judgment, and one option to initiate this is by enlisting the services of a County Court Bailiff (CCB). Please note that the associated court fee for this step amounts to %COURTFEE%."+CHCR()+CHCR()+ "Would you like us to proceed with this enforcement process now? If you are not ready to proceed yet, we can revisit this matter with you in approximately one month to allow for any necessary payment arrangements or further contact."
+		#if Judgrecvd=true and fixedwarrantfee>0 and matter.custom.debt7.JUDGEAMT > 600.00 THEN nNote="We confirm that we have received confirmation from the court that judgment has been entered. " +addnote+""+CHCR()+CHCR()+ "The next step involves enforcement of the judgment, and one option to initiate this is by enlisting the services of a High Court Enforcement Officer (HCEO). Please note that the associated court fee for this step amounts to %COURTFEE%, with solicitor costs totalling £"+twodec(Fixedwarrantfee)+" plus VAT."+CHCR()+CHCR()+ "Would you like us to proceed with this enforcement process now? If you are not ready to proceed yet, we can revisit this matter with you in approximately one month to allow for any necessary payment arrangements or further contact."
+		#if Judgrecvd=true and fixedwarrantfee>0 and matter.custom.debt7.JUDGEAMT < 600.00 THEN nNote="We confirm that we have received confirmation from the court that judgment has been entered. " +addnote+""+CHCR()+CHCR()+ "The next step involves enforcement of the judgment, and one option to initiate this is by enlisting the services of a County Court Bailiff (CCB). Please note that the associated court fee for this step amounts to %COURTFEE%, with solicitor costs totalling £"+twodec(Fixedwarrantfee)+" plus VAT."+CHCR()+CHCR()+ "Would you like us to proceed with this enforcement process now? If you are not ready to proceed yet, we can revisit this matter with you in approximately one month to allow for any necessary payment arrangements or further contact."
+		
+		
+		
+		
+		#Scottish Judgment
+		if Judgrecvd=true and matter.custom.debt3.JURIS='Scotland/N.Ireland' THEN nNote="We confirm that we have received confirmation from the court that judgment has been entered. " +CHCR()+CHCR()+"We have advised the debtor of same requesting payment by return. In the meantime, we are able to apply for a certificate of money provisions. The certificate allows enforcement of the Judgment in Scotland. To obtain the certificate, an application must be made to Court. The cost of the application is £108. "+CHCR()+CHCR()+"Once we are in receipt of the sealed certificate from court, we will be able to refer the matter to Sheriffs in Scotland for enforcement. We can apply for the certificate now or at a later date to allow for contact/payment from the debtor."
+		#
+		IF matter.client.full_name='Hains & Lund Recoveries Limited' and Judgrecvd=true and fixedwarrantfee=0 and matter.custom.debt7.JUDGEAMT > 600.00 THEN nNote="We confirm that we have received confirmation from the court that judgment has been entered. " +addnote+""+CHCR()+CHCR()+ "The next step involves enforcement of the judgment, and one option to initiate this is by enlisting the services of a High Court Enforcement Officer (HCEO). Please note that the associated court fee for this step amounts to £"+twodec(CourtwarrantFEE)+"."+CHCR()+CHCR()+ "Would you like us to proceed with this enforcement process now? If you are not ready to proceed yet, we can revisit this matter with you in approximately one month to allow for any necessary payment arrangements or further contact. Alternatively, we can close our matter to allow you to enforce direct."
+		IF matter.client.full_name='Hains & Lund Recoveries Limited' and Judgrecvd=true and fixedwarrantfee=0 and matter.custom.debt7.JUDGEAMT < 600.00 THEN nNote="We confirm that we have received confirmation from the court that judgment has been entered. " +addnote+""+CHCR()+CHCR()+ "The next step involves enforcement of the judgment, and one option to initiate this is by enlisting the services of a County Court Bailiff (CCB). Please note that the associated court fee for this step amounts to £"+twodec(CourtwarrantFEE)+"."+CHCR()+CHCR()+ "Would you like us to proceed with this enforcement process now? If you are not ready to proceed yet, we can revisit this matter with you in approximately one month to allow for any necessary payment arrangements or further contact. Alternatively, we can close our matter to allow you to enforce direct."
+		IF matter.client.full_name='Hains & Lund Recoveries Limited' and Judgrecvd=true and fixedwarrantfee>0 and matter.custom.debt7.JUDGEAMT > 600.00 THEN nNote="We confirm that we have received confirmation from the court that judgment has been entered. " +addnote+""+CHCR()+CHCR()+ "The next step involves enforcement of the judgment, and one option to initiate this is by enlisting the services of a High Court Enforcement Officer (HCEO). Please note that the associated court fee for this step amounts to £"+twodec(CourtwarrantFEE)+", with solicitor costs totalling £"+twodec(Fixedwarrantfee)+" plus VAT."+CHCR()+CHCR()+ "Would you like us to proceed with this enforcement process now? If you are not ready to proceed yet, we can revisit this matter with you in approximately one month to allow for any necessary payment arrangements or further contact. Alternatively, we can close our matter to allow you to enforce direct."
+		IF matter.client.full_name='Hains & Lund Recoveries Limited' and Judgrecvd=true and fixedwarrantfee>0 and matter.custom.debt7.JUDGEAMT < 600.00 THEN nNote="We confirm that we have received confirmation from the court that judgment has been entered. " +addnote+""+CHCR()+CHCR()+ "The next step involves enforcement of the judgment, and one option to initiate this is by enlisting the services of a County Court Bailiff (CCB). Please note that the associated court fee for this step amounts to £"+twodec(CourtwarrantFEE)+", with solicitor costs totalling £"+twodec(Fixedwarrantfee)+" plus VAT."+CHCR()+CHCR()+ "Would you like us to proceed with this enforcement process now? If you are not ready to proceed yet, we can revisit this matter with you in approximately one month to allow for any necessary payment arrangements or further contact. Alternatively, we can close our matter to allow you to enforce direct."
+		#
+		#HCEO instructed
+		if HCEO=true then nType='Correspondence In/Out'  
+		if HCEO=true then Repstyle='Information for Client' 
+		if HCEO=true then nNOTE="We have engaged the services of High Court Enforcement Officers, who will proceed to apply to the Court for a Writ of Control. This Writ of Control grants the High Court Enforcement Officer the authority to enforce the debt and, if feasible, seize assets."+CHCR()+CHCR()+"We will keep you informed and provide further updates once we receive notification from them regarding the issuance of the Writ of Control."
+		#Writ received
+		if Writ=true then nType='Correspondence In/Out'  
+		if Writ=true then Repstyle='Information for Client' 
+		if Writ=true then nNOTE="We confirm that we have received confirmation that the Writ of Control has been issued. The High Court Enforcement Officers will now assume the role of executing this Writ."+CHCR()+CHCR()+"The primary aim of the High Court Enforcement Officer is to secure full payment of the outstanding debt. This may involve obtaining a direct payment from the debtor or, if necessary, seizing assets owned by the debtor as a means of satisfying the debt. In the event that the High Court Enforcement Officer considers it appropriate, they may also explore the possibility of negotiating a payment proposal with the debtor. In such cases, we will seek your further instructions to determine whether any offers proposed to the High Court Enforcement Officers are acceptable."+CHCR()+CHCR()+"Throughout this enforcement process, we will remain in communication with the High Court Enforcement Officer and monitor their activities. Our priority is to keep you fully informed of the developments and any significant steps taken by the High Court Enforcement Officers to recover the debt."
+		#Enforcement update 
+		if HCEUD=true then Ntype="Enforcement Update"
+		if HCEUD=true and Type="Case closed - abortive invoice received" then Repstyle='Information for Client' 
+		if HCEUD=true and Type="Case closed - abortive invoice received" then nNOTE="We have received an update from the High Court Enforcement Officers confirming that their involvement in the matter has now concluded. An abortive invoice for the creditor compliance fee has been issued and provided to us."
+		if HCEUD=true and Type="Acknowledgement of instructions" then Repstyle='Information for Client' 
+		if HCEUD=true and Type="Acknowledgement of instructions" then nNOTE="We have received confirmation from the High Court Enforcement Officers that they have acknowledged and accepted our instruction."+CHCR()+CHCR()+"We will continue to monitor their progress and provide updates accordingly."
+		if HCEUD=true and Type="General report chasing further instructions" then Repstyle='Instructions Required' 
+		if HCEUD=true and Type="General report chasing further instructions" then nNOTE="We have received correspondence from the High Court Enforcement Officers requesting further instructions."+CHCR()+CHCR()+"Following our review of the matter, we confirm that they require guidance in relation to [ ]."
+		if HCEUD=true and Type="File remains with collections - no contact made" then Repstyle='Information for Client' 
+		if HCEUD=true and Type="File remains with collections - no contact made" then nNOTE="We have received correspondence from the High Court Enforcement Officers who advise that the matter remains with their collections department who have so far been unable to make contact with the debtor."+CHCR()+CHCR()+"We will continue to monitor their progress."
+		if HCEUD=true and Type="Debtor not at address – trace required" and HUBTRACE="FALSE" then Repstyle='Instructions Required' 
+		if HCEUD=true and Type="Debtor not at address – trace required" and HUBTRACE="FALSE" then nNOTE="The High Court Enforcement Officers attended the property but was advised the debtor no longer resides there."+CHCR()+CHCR()+"We wondered whehter you were aware of an alternative address for the debtor."
+		if HCEUD=true and Type="Debtor not at address – HCEO tracing" and HUBTRACE="FALSE" then Repstyle='Information for Client' 
+		if HCEUD=true and Type="Debtor not at address – HCEO tracing" and HUBTRACE="FALSE" and HUBHCEOTRACE="TRUE" then nNOTE="The High Court Enforcement Officers attended the property but was advised the debtor no longer resides there. Internal tracing has now been initiated to identify a current address."+CHCR()+CHCR()+"Whilst they under take their internal trace, we wondered whehter you were aware of an alternative address for the debtor."
+		if HCEUD=true and Type="Debtor not at address – trace required" and HUBTRACE="TRUE" then Repstyle='Instructions Required' 
+		if HCEUD=true and Type="Debtor not at address – trace required" and HUBTRACE="TRUE" then nNOTE="We have received an update from the High Court Enforcement Officers who have advised that the debtor is not at the property."+CHCR()+CHCR()+"We wondered whether you were aware of an alternative address for the debtor."+CHCR()+CHCR()+"In the event that you do not have an alternative address, we can look to refer the matter to an external enquiry agent to trace. The costs for which are on a no-find-no-fee basis. We utilise several enquiry agents with costs starting from £54, where in the event the first agent cannot locate, we can ask a second to trace if required."+CHCR()+CHCR()+"We look forward to hearing from you."
+		if HCEUD=true and Type="Default on payment plan" then Repstyle='Information for Client' 
+		if HCEUD=true and Type="Default on payment plan" then nNOTE="We have received an update from the High Court Enforcement Officers who have advised us that the debtor is in default with their payments."+CHCR()+CHCR()+"We will continue to monitor their progress."
+		#if HCEUD=true and Type="HCEGENUD" then nNOTE="We have received a recent activity report from the HCEO."+CHCR()+CHCR()+"We will continue to monitor their progress."
+		if HCEUD=true and Type="New address found for debtor" then Repstyle='Information for Client' 
+		if HCEUD=true and Type="New address found for debtor" then nNOTE="We have received an update from the High Court Enforcement Officers who have advised that they have located a new address for the debtor. The High Court Enforcement Officers wil lnow look to make an attendance at the new address."+CHCR()+CHCR()+"We will continue to monitor their progress."
+		if HCEUD=true and Type="Payment proposal made" then Repstyle='Instructions Required' 
+		if HCEUD=true and Type="Payment proposal made" then nNOTE="We have received an update from the High Court Enforcement Officers who have advised that they have received a payment proposal from the debtor."+CHCR()+CHCR()+"We would be grateful if you could confirm whether the proposals are acceptable or not."+CHCR()+CHCR()+"We will continue to monitor their progress."
+		if HCEUD=true and Type="Part payment received" then Repstyle='Information for Client' 
+		if HCEUD=true and Type="Part payment received" then nNOTE="We have received an update from the High Court Enforcement Officers who have advised that they have received a part payment from the debtor."+CHCR()+CHCR()+"We will monitor our matter for the payment being received by us."
+		if HCEUD=true and Type="Full payment received" then Repstyle='Information for Client' 
+		if HCEUD=true and Type="Full payment received" then nNOTE="We have received an update from the High Court Enforcement Officers who have advised that they have received full payment from the debtor."+CHCR()+CHCR()+"We will monitor our matter for the payment being received by us."
+		if HCEUD=true and Type="Trace was unsuccesful" then Repstyle='Instructions Required' 
+		if HCEUD=true and Type="Trace was unsuccesful" then nNOTE="We have received an update from the High Court Enforcement Officers who have advised that their in-house trace has been unsuccesful. Given the situation, we could look at referring the matter to an external enquiry agent to trace. The costs associated with this service operate on a no-find-no-fee basis. We collaborate with serveal enquiry agents, and their fees start from £54. In the event the initial agent is unable to locate the subject, due to the no find no fee basis, we have the option engage a second agent is necessary."+CHCR()+CHCR()+"We look forward to hearing from you."
+		if HCEUD=true and Type="Notice of enforcement sent to debtor" then Repstyle='Information for Client' 
+		if HCEUD=true and Type="Notice of enforcement sent to debtor" then nNOTE="We have received confirmation from the High Court Enforcement Officers that the notice of enforcement has been sent to the debtor. Once the notice period expires (typically after 7 days), if settlement in full has not been received, an agent will be assigned to make a visit. While we generally anticipate the first attendance to occur within 7 days following the notice expiry, this may sometimes take longer. However, we will actively chase regular updates to help expedite the attendance. "+CHCR()+CHCR()+"We will continue to monitor their progress closely."
+		if HCEUD=true and Type="Address confirmed – further visit booked" then Repstyle='Information for Client' 
+		if HCEUD=true and Type="Address confirmed – further visit booked" then nNOTE="We have received confirmation from the High Court Enforcement Officers that they have confirmed the address for the debtor. A further visit has been scheduled by the HCEO to continue enforcement."
+		if HCEUD=true and Type="Case referred back – insufficient assets" then Repstyle='Information for Client' 
+		if HCEUD=true and Type="Case referred back – insufficient assets" then nNOTE="We have received an update from the High Court Enforcement Officers confirming that their involvement in the matter has now concluded due to insufficient assets or unsuccessful enforcement."+CHCR()+CHCR()+"We are reviewing alternaitve enforcement options and will advise further."
+		if HCEUD=true and Type="Debtor evading contact" then Repstyle='Information for Client' 
+		if HCEUD=true and Type="Debtor evading contact" then nNOTE="We have received an update from the High Court Enforcement Officers confirming that the debtor appears to be evading contact."
+		if HCEUD=true and Type="Goods identified – Controlled Goods Agreement offered" then Repstyle='Information for Client' 
+		if HCEUD=true and Type="Goods identified – Controlled Goods Agreement offered" then nNOTE="We have received an update from the High Court Enforcement Officers confirming that they have identified assets suitable for seizure. A Controlled Goods Agreement has been offered to the debtor."
+		if HCEUD=true and Type="No goods available – considering alternative options" then Repstyle='Information for Client'
+		if HCEUD=true and Type="No goods available – considering alternative options" then nNOTE="The High Court Enforcement Officers attended but found no goods of sufficient value to enforce against."+CHCR()+CHCR()+"We are reviewing the next steps."
+		if HCEUD=true and Type="Revisit scheduled" then Repstyle='Information for Client'
+		if HCEUD=true and Type="Revisit scheduled" then nNOTE="We have received an update from the High Court Enforcement Officers confirming that a further visit has been scheduled following an initial attendance."+CHCR()+CHCR()+"We will update once further progress is made."
+		if HCEUD=true and Type="Vehicle sighted – DVLA check underway" then Repstyle='Information for Client'
+		if HCEUD=true and Type="Vehicle sighted – DVLA check underway" then nNOTE="We have received an update from the High Court Enforcement Officers confirming that a vehicle believed to belong to the debtor was sighted at the address. DVLA checks are underway to confirm ownership and assess enforcement options."
+		if HCEUD=true and Type="Visit made – no contact" then Repstyle='Information for Client'
+		if HCEUD=true and Type="Visit made – no contact" then nNOTE="We have received an update from the High Court Enforcement Officers confirming that a visit has been made to the debtor's property but nfortunately, no contact was made."+CHCR()+CHCR()+"We will continue to monitor their progress."
+		#visitdate=format_date(Matter.Custom.Debt8.ENFVISIT,"d m y")
+		#if HCEUD=true and Type="HCEVISIT1" then nNOTE="We have received a recent activity report from the HCEO following a visit to the debtor's property made on "+visitdate+". Their efforts continue and we will continue to monitor their progress."
+		#if HCEUD=true and Type="HCEVISIT2" then nNOTE="We have received a recent activity report from the HCEO following a visit to the debtor's property made on "+visitdate+". Unfortunately, no contact was made."+CHCR()+CHCR()+"We will continue to monitor their progress."
+		#
+		#
+		#Checked for HCE update
+		if HCECK=true then Ntype="Enforcement Update"
+		if HCECK=true then nNOTE=""+CKUD+""
+		#Warrant requested
+		if WAR=true then nType='Correspondence In/Out'  
+		if WAR=true then Repstyle='Information for Client' 
+		if WAR=true then nNOTE="We confirm that we have applied to Court for a Warrant of Control. This Warrant of Control grants the County Court Bailiff (CCB) the authority to enforce the debt and, if feasible, seize assets."+CHCR()+CHCR()+"We will keep you informed and provide further updates once we receive notification from them regarding the issuance of the Warrant of Control."
+		#Warrant received
+		if WARREC=true then nType='Correspondence In/Out'  
+		if WARREC=true then Repstyle='Information for Client' 
+		if WARREC=true then nNOTE="We confirm that we have received confirmation that the Warrant of Control has been issued. The County Court Bailiff (CCB) will now assume the role of executing this Warrant."+CHCR()+CHCR()+"The primary aim of the CCB is to secure full payment of the outstanding debt. This may involve obtaining a direct payment from the debtor or, if necessary, seizing assets owned by the debtor as a means of satisfying the debt. In the event that the CCB considers it appropriate, they may also explore the possibility of negotiating a payment proposal with the debtor. In such cases, we will seek your further instructions to determine whether any offers proposed to the CCB are acceptable."+CHCR()+CHCR()+"We will monitor your matter for updates received from the CCB and will keep you informed on their progress."
+		#Warrant update
+		if WARUD=true then nType='Correspondence In/Out'  
+		if WARUD=true then Repstyle='Information for Client' 
+		if WARUD=true then nNOTE="We have received an update on the execution of the warrant from the Bailiff."
+		#Certificate Of Money Provisions
+		if COMP=true then nType='Correspondence In/Out'  
+		if COMP=true then Repstyle='Instructions Required' 
+		if COMP=true then nNOTE="We have received the sealed Certificate of Money Provisions (COMP) from Court. We are therefore in a position where we can pass this to or Scottish agents who will register the COMP with the Books of Council in Session in Edinburgh which has the effect of converting them onto Scottish judgments. They will then send them to sheriff officer to serve charges for payment. Then, once 14 days elapse without payment, further action can be taken."+CHCR()+CHCR()+"In terms of costs for this action, these are circa, £15 to register the COMP, £110 for Sheriff officers to serve the charge for payment and £50 for the agents cost. When the sheriff officer serves a charge, they will normally provide a report that will give some guidance as to what the next steps should be to receive the debt. Our Scottish agents would give us costings for further action at that stage."+CHCR()+CHCR()+"Please confirm if you would like us to continue and refer the COMP to Scotland."
+		#ODACQ issued
+		if ODACQ=true then nType='Correspondence In/Out'  
+		if ODACQ=true then Repstyle='Information for Client' 
+		IF ODACQ=true then nNOTE="We have issued an application for an oral exam and will update you again when we have heard from the Court with the date of the appointment."
+		#ODACQ Received
+		if ODACQREC=true then nType='Correspondence In/Out'  
+		if ODACQREC=true then Repstyle='Information for Client' 
+		IF ODACQREC=true then nNOTE="We are writing to confirm the receipt of the appointment for the Order to attend court for questioning scheduled for "+format_date(matter.custom.debtkey.hearing,"d m y")+"."+CHCR()+CHCR()+"We confirm that we have already passed the ODACQ to a process server to carry out the task of attempting personal service upon the debtor."+CHCR()+CHCR()+"We will keep you informed of the progress of the service and any direct responses we may receive from the debtor."
+		#Suspended Committal Order
+		if ODACQCOMMITT=true then nType='Correspondence In/Out'  
+		if ODACQCOMMITT=true then Repstyle='Instructions Required' 
+		IF ODACQCOMMITT=true then nNOTE="We are writing to confirm that the court have issued a suspended committal order for the debtor's failure to attend court for questioning. A new appointment has been scheduled for "+format_date(matter.custom.debtkey.hearing,"d m y")+" for the examination to take place. Should the debtor fail to attend this new appointment, they may be committed to prison."+CHCR()+CHCR()+"This order needs to be personally served upon the debtor, so we will need to engage the services of a process server with the task of attempting personal service upon the debtor. The fee for the Process Server is £102."+CHCR()+CHCR()+"Please confirm if you are happy for us to proceed."
+		#STATD
+		if STATD=true then nType='Correspondence In/Out'  
+		if STATD=true then Repstyle='Information for Client' 
+		if STATD=true then nNOTE="We confirm that we have raised a Stat Demand."
+		#STATD72
+		if STATD72=true then nType='Correspondence In/Out'  
+		if STATD72=true then Repstyle='Information for Client' 
+		if STATD72=true then nNOTE="We confirm that we have raised a 72-hour notice before Winding-Up letter."
+		#STATREPLY
+		if STATREPLY=true then nType='Miscellaneous'
+		if STATREPLY=true then Repstyle='Instructions Required' 
+		if STATREPLY=true then nNOTE="Following our previous correspondence regarding the service of the Demand, I confirm that there has been no response from the debtor within the time frame."+chcr()+chcr()+"As a result, we have reached a crucial juncture in this matter. Given the lack of response, the next step is to issue a Petition. This action serves as a formal mechanism to initiate insolvency proceedings."+chcr()+chcr()+"Please find attached an overview of the Petition process, including the associated fees, which are outlined under Stage 2."+chcr()+chcr()+"Please let us know if you would like to present a Petition, and should you wish to discuss this further or have any questions regarding the process, please do not hesitate to reach out."
+		#STATSERV
+		if STATSERV=true then nType='Correspondence In/Out'  
+		if STATSERV=true then Repstyle='Information for Client' 
+		if STATSERV=true then nNOTE="We confirm that the Process Server has served the Stat Demand on " +format(matter.custom.debtinso.STATSERV,"dd/MM/yyyy")+". The Debtor has until " +format(matter.custom.debtinso.STATREP,"dd/MM/yyyy")+ " to reply to the Demand. In default of any reply, we can proceed with a petition after this date."
+		#WUPSERV
+		if WUPSERV=true then nType='Correspondence In/Out'  
+		if WUPSERV=true then Repstyle='Information for Client' 
+		#if WUPSERV=true then nNOTE="We confirm that the Process Server has served the Petition on "+format(matter.custom.debtinso.WUPSERV,"dd/MM/yyyy")+"."
+		if WUPSERV=true then nNOTE="We confirm that the Process Server successfully served the Winding-Up Petition on "+format(matter.custom.debtinso.WUPSERV,"dd/MM/yyyy")+". At the time of writing, we are yet to hear from the company. We will attempt to follow up and encourage settlement. The next step in the process is to advertise the Petition in the London Gazette."+chcr()+chcr()+"In line with the Insolvency Rules, the Petition may be advertised in the London Gazette no earlier than seven days after service and no less than seven days before the hearing."+chcr()+chcr()+"Once the Petition is advertised, it will become public knowledge, and any creditors wishing to support or oppose the Petition may contact us or the Court to lodge their interest. Additionally, the company's bank accounts may be frozen, as the banks often take precautionary measures upon learning of a Winding-Up Petition. This can work to your advantage as the creditor, as it restricts the company's ability to dissipate assets, potentially increasing the likelihood of recovering outstanding debts."+chcr()+chcr()+"That said, should a settlement be reached after the Petition has been advertised, permission from the Court will be required to dismiss the Petition. However, as the Petition would now be a matter of public record, there is a risk that a supporting creditor may come forward and seek carriage of the Petition. If this occurs, any settlement payments made by the company could be at risk. This is because, should the supporting creditor successfully wind up the company, the liquidator may attempt to recall any settlement payments made while the Petition was active, as such payments could be deemed a preference."+chcr()+chcr()+"We will continue our efforts to contact the company. In the meantime, please let us know your preference regarding the timing of the advertisement - whether you would like it to be published promptly or closer to the hearing date."
+		
+		#SMS
+		if SMSsent=true then nType='SMS Sent'  
+		if SMSsent=true then Repstyle='Information for Client' 
+		if SMSsent=true then nNote="We have sent a text message to the debtor."+CHCR()+CHCR()+"*****"+CHCR()+""+TextMessage+""+CHCR()+"*****"
+		#Payment Offer
+		if PP=true then nType='Correspondence In/Out'  
+		if PP=true then Repstyle='Instructions Required' 
+		if PP=true then nNote="We have received a proposal for settlement."+CHCR()+CHCR()+"The offer is to pay "+matter.custom.debt6.PPDETAIL+ ""+CHCR()+CHCR()+"We wondered whether you would be willing to accept the offer or if you wish to make a counterproposal."
+		#Arrears Enquiry
+		if PPARREARS=true then nType='Miscellaneous'  
+		if PPARREARS=true then Repstyle='Instructions Required' 
+		if PPARREARS=true then nNote="I wondered whether the debtor has paid the arrears of "+money(PPARR)+" due under the payment plan to you direct."+CHCR()+CHCR()+"If no payment has been received, we will issue a default notice letter."
+		#ICO Received
+		if ICOREC=true then nType='Correspondence In/Out'  
+		if ICOREC=true then Repstyle='Information for Client' 
+		if ICOREC=true then nNote="We confirm receipt of the Interim Charging Order in this matter. We will arrange service on the debtor and any other interested parties. The Court is expected to consider making the Order final in approximately 7 weeks, and we will keep you updated on the outcome."
+	CardPosX 1110
+	CardPosY -190
+	GOTO CustomForm1
+
+SetVariables SetVariables118
+	Initializations
+		tabcount=1
+		tabarraycode='DEBTUPD'
+	CardPosX 1390
+	CardPosY 810
+	GOTO AddTabArrayEntries2
+
+AddTabArrayEntries AddTabArrayEntries2
+	CardPosX 1570
+	CardPosY 810
+	GOTO SetCustomData10
+
+SetCustomData SetCustomData10
+	CardPosX 1750
+	CardPosY 810
+	SUB main
+		SetVariables SetVariables4
+			Initializations
+				#ndate=debtupd.date
+				#nuser=debtupd.user
+				#nnote=debtupd.note
+				#ntype=debtupd.type
+				
+				DEBTUPD1.date=now()
+				DEBTUPD1.user=nuser
+				DEBTUPD1.note=nnote
+				DEBTUPD1.type=ntype
+			CardPosX 810
+			CardPosY 330
+
+
+DoNothing DoNothing9
+	CardPosX 1770
+	CardPosY -90
+
+Message Message15
+	Message
+		There is text entered for a new note.
+		-
+		Please delete the text in the notes box or ADD the note before you leave this screen as it will not save the text.
+	Centred True
+	Location message_box
+	MessageType Information
+	CardPosX 1770
+	CardPosY 10
+	GOTO CustomForm1
+
+DoNothing DoNothing12
+	CardPosX 2250
+	CardPosY 190
+
+SetVariables SetVariables119
+	Initializations
+		nType='Payment Received'
+		Repstyle='Payment'
+		IF Payment1='True' THEN Repstyle='Internal'
+		#if Pay=true THEN 
+		nNote="Payment received: "+Desc+", £"+twodec(Amount)
+		if NOTEUD2 ='PAYMENT' THEN nNote=Paymentscript
+	CardPosX 1050
+	CardPosY -90
+	GOTO CustomForm1
+
+RefreshEntity RefreshEntity3
+	Initializations entity=matter.custom
+	CardPosX 550
+	CardPosY 210
+	GOTO RefreshEntity4
+
+RefreshEntity RefreshEntity4
+	Initializations entity=matter.custom.debtupd
+	CardPosX 730
+	CardPosY 210
+	GOTO SetVariables1
+
+SetCustomData SetCustomData11
+	CardPosX 970
+	CardPosY 710
+	GOTO Deck8 WHEN Email="Yes" and INCASE<>"Yes"
+	GOTO SetVariables132 WHEN INCASE="Yes"
+	GOTO DoNothing2
+	SUB main
+		SetVariables SetVariables4
+			Initializations
+				matter.custom.debtupd2.date=now()
+				matter.custom.debtupd2.update=nnote
+				matter.custom.debtupd2.style=repstyle
+				matter.custom.debtupd2.ID=debtupd1.ID
+			CardPosX 810
+			CardPosY 330
+
+
+Message Message16
+	Message Action Style not selected
+	Centred True
+	Location message_box
+	MessageType Information
+	CardPosX 1750
+	CardPosY 390
+	GOTO CustomForm1
+
+Message Message17
+	Message Report Style not selected
+	Centred True
+	Location message_box
+	MessageType Information
+	CardPosX 1570
+	CardPosY 390
+	GOTO CustomForm1
+
+SetVariables SetVariables122
+	Initializations
+		IDcheck=matter.custom.debtupd2.ID
+		repamend=FALSE
+		IF IDcheck=ID THEN repamend=TRUE
+	CardPosX 1530
+	CardPosY 490
+	GOTO SetCustomData13 WHEN repamend='True'
+	GOTO DoNothing4
+
+SetCustomData SetCustomData13
+	CardPosX 1530
+	CardPosY 610
+	GOTO DoNothing4
+	SUB main
+		SetVariables SetVariables4
+			Initializations
+				matter.custom.debtupd2.date=date
+				matter.custom.debtupd2.update=note
+				matter.custom.debtupd2.style=repstyle
+				#matter.custom.debtupd2.ID=debtupd1.ID
+			CardPosX 830
+			CardPosY 330
+			GOTO DoNothing15
+
+		DoNothing DoNothing15
+			CardPosX 1030
+			CardPosY 330
+
+
+Deck Deck8
+	CardPosX 730
+	CardPosY 710
+	GOTO DoNothing2
+	SUB main
+		RunScriptFile RunScriptFile1
+			IgnoreMissingFile False
+			ScriptFile Applications\Debt\Scripts\Debt Due calculation.sos
+			CardPosX 10
+			CardPosY -30
+			GOTO RunScriptFile4
+
+		SetVariables SetVariables9
+			Initializations
+				#entityType=If(docOwnerType="",entityType,docOwnerType)
+				#entityRef=if(docOwnerRef="",docOwnerRef)
+				#entityType=docOwnerType
+				#entityRef=docOwnerRef
+				docOwnerType=entityType
+				docOwnerRef=entityRef
+				entityType= 'MA' 
+				#if(RecipientType="",entityType,RecipientType)
+				entityRef=if(RecipientRef="",entityRef,RecipientRef)
+				#SelectedType=EntityType
+				#SelectedRef=entityref
+				#Attachment=filename
+				Subject=matter.description
+				box="To"
+				#box="Cc"
+				
+				
+				maincont=''
+				IF matter.custom.debt4.CLTCONT<>'' then maincont ='Main contact ' +matter.custom.debt4.CLTCONT+
+				
+				Internal='False'
+			CardPosX 30
+			CardPosY 70
+			GOTO Question2
+
+		SelectRelationship SelectRelationship1
+			SelectionMandatory True
+			TopMessage Please select Email address to send the Hub message to
+			ShowDirectEmails True
+			ShowDirectTelephones False
+			ShowDirectClients True
+			ShowDirectOther True
+			ShowDirectMatters False
+			ShowDirectArchives False
+			ShowDirectAddresses False
+			ShowIndirectEmails True
+			ShowIndirectTelephones False
+			ShowIndirectClients False
+			ShowIndirectOther True
+			ShowIndirectMatters False
+			ShowIndirectArchives False
+			ShowIndirectAddresses False
+			RestrictToMainEntity False
+			OnlyShowPreselectRole False
+			RestrictDrillDown False
+			CardPosX 38
+			CardPosY 302
+			GOTO SetVariables2 WHEN box="To"
+			GOTO SetVariables5 WHEN box="Cc"
+
+		Message Message1
+			Message
+				Attachment=%[Attachment]
+				Bcc=%[Bcc]
+				Body=%[Body]
+				Category=%[Category]
+				CC=%[CC]
+				Entitytype=%[Entitytype]
+				EntityRef=%[EntityRef]
+				Fe=%[Fe]
+				Subject=%[Subject]
+				To=%[To]
+				selectedref %[selectedref]
+				selectedtype %[selectedtype]
+				relationship.all
+				%[relationship.all]
+			Centred False
+			Location main_area
+			CardPosX 8
+			CardPosY 758
+			GOTO Message18 WHEN emailselect=""
+			GOTO Question1
+
+		OLCreateEmail OLCreateEmail1
+			CardPosX 710
+			CardPosY 850
+			GOTO SetVariables127
+
+		SetVariables SetVariables2
+			Initializations
+				#IF relationship.default_email_addr<>'' THEN To=To + relationship.default_email_addr + ";"
+				#IF relationship.default_email_addr='' THEN To=To + relationship.relationship.tel_number + ";"
+				IF Internal<>'True' THEN emailselect=relationship.tel_number
+				#IF Internal<>'True' and emailselect='' Then To=''
+				IF Internal<>'True' and  emailselect<>'' Then To=To + relationship.tel_number + ";"
+				IF Internal='True' THEN emailselect=userent.email_addr
+				#IF Internal='True' and emailselect='' Then To=''
+				IF Internal='True' and emailselect<>'' Then To=To + userent.email_addr + ";"
+				Internal='False'
+				UserSelect=''
+				userent=''
+				entityRef=''
+			CardPosX 350
+			CardPosY 470
+			GOTO Question1
+
+		Question Question1
+			Message
+				Any other recipients for the email?
+				
+				To: %[To]
+				Cc: %[Cc]
+			Answer1 To - Relationship
+			Answer2 Cc - Relationship
+			Answer3 To - within Chadwick Lawrence
+			Answer4 Cc - within Chadwick Lawrence
+			Answer5 Create email
+			NbColumns 1
+			CustomAllowed False
+			ShowAsButtons True
+			CardPosX 770
+			CardPosY 550
+			GOTO SetVariables3 WHEN Answer=answer3
+			GOTO SetVariables4 WHEN Answer=answer4
+			GOTO SetVariables139 WHEN Answer=answer5
+			GOTO SetVariables12
+
+		SetVariables SetVariables3
+			Initializations
+				#entityType=SelectedType
+				#entityRef=SelectedRef
+				#entityType= 'MA' 
+				#docOwnerType=entityType
+				#docOwnerRef=entityRef
+				box="To"
+				CCInternal='False'
+			CardPosX 350
+			CardPosY 90
+			GOTO SetVariables135
+
+		SetVariables SetVariables4
+			Initializations
+				#entityType=SelectedType
+				#entityRef=SelectedRef
+				#entityType= 'MA' 
+				#docOwnerType=entityType
+				#docOwnerRef=entityRef
+				box="Cc"
+				CCInternal='true'
+			CardPosX 390
+			CardPosY 310
+			GOTO SetVariables135
+
+		SetVariables SetVariables5
+			Initializations
+				IF Internal<>'True' THEN emailselect=relationship.tel_number
+				#IF Internal<>'True' and emailselect='' Then Cc=''
+				IF Internal<>'True' and  emailselect<>'' Then Cc=Cc + relationship.tel_number + ";"
+				IF Internal='True' THEN emailselect=userent.email_addr
+				#IF Internal='True' and emailselect='' Then Cc=''
+				IF Internal='True' and emailselect<>'' Then Cc=Cc + userent.email_addr + ";"
+				Internal='False'
+				UserSelect=''
+				userent=''
+				entityRef=''
+			CardPosX 42
+			CardPosY 602
+			GOTO Question1
+
+		SetVariables SetVariables6
+			Initializations
+				Emailedto=To
+				Emailedcc=Cc
+				entityType=If(docOwnerType="",entityType,docOwnerType)
+				entityRef=if(docOwnerRef="",entityRef,docOwnerRef)
+				#vtime='Good morning'
+				now=now.timeofday
+				nowtime=format(now,"tt")
+				#if PPARREARS=true THEN attachment ='\\cl-app01\sos\FirmScripts\Live\Firm\Applications\Debt\Documents\Miscellaneous\D0Nxxxxx Payplan update.docx'
+				
+				IF nowtime='AM' THEN vtime='Good morning,'
+				IF nowtime='PM' THEN vtime='Good afternoon,'
+				#All Claimants
+				if matter.rel.clasol.count=0 then Claimall=matter.client.full_name
+				if matter.rel.clasol.count>0 then Claimall=matter.rel.clasol1.shortdescription
+				if matter.rel.clasol.count>1 then Claimall=Claimall + ", " +matter.rel.clasol2.shortdescription
+				if matter.rel.clasol.count>2 then Claimall=Claimall + ", " +matter.rel.clasol3.shortdescription
+				if matter.rel.clasol.count>3 then Claimall=Claimall + ", " +matter.rel.clasol4.shortdescription
+				#All Defendants
+				if matter.rel.debt.count>0 then Defall=matter.rel.debt1.shortdescription
+				if matter.rel.debt.count>1 then Defall=Defall + ", " +matter.rel.debt2.shortdescription
+				if matter.rel.debt.count>2 then Defall=Defall + ", " +matter.rel.debt3.shortdescription
+				if matter.rel.debt.count>3 then Defall=Defall + ", " + matter.rel.debt4.shortdescription
+				#body="Dear "+CHCR()+CHCR()+"I confirm that I have issued the claim on the above matter."+CHCR()+CHCR()+"I will update you again when we have heard from the court with the date of issue."+CHCR()+CHCR()+"In the meantime, if you receive payment or contact direct, please let me know."+CHCR()+CHCR()+"Kind Regards"
+				#HTMLBody='<p style="font-family:Calibri;font-size:11pt">vtime <br><br>I confirm that I have issued the claim on the above matter.<br><br>I will update you again when we have heard from the court with the date of issue.<br><br>In the meantime, if you receive payment or contact direct, please let me know.<br><br>Kind Regards<br></p>'
+				
+				#HTMLBody="<p><b><u>"+Claimall+" -v- "+Defall+"<br>Debt Due: £"+twodec(MATTER.CUSTOM.DEBTNOTE.TOTAL)+"</u></b><br><br>Dear <br><br>I confirm that we have raised the letter of claim which will be sent to the debtor today. <br><br>The total amount sought from the debtor is £" +twodec(MATTER.CUSTOM.DEBT1.TDEBT) +", please note this sum in case the debtor contacts you direct. <br><br>Please let me know if you receive any correspondence or payments direct.<br><br>Kind Regards <br></p>"
+				
+				debt=money(MATTER.CUSTOM.DEBTNOTE.TOTAL)
+				
+				#HTMLBody="<p><b><u>"+Claimall+" -v- "+Defall+"<br>Debt Due: £"+twodec(MATTER.CUSTOM.DEBTNOTE.TOTAL)+"</u></b><br><br>"+vtime+"<br><br>"+nnote+"<br><br>Kind Regards <br></p>"
+				casename=Matter.Custom.Debt3.CASENAME
+				#HTMLBody="<p><b><u>"+Casename+"<br>Debt Due: £"+twodec(MATTER.CUSTOM.DEBTNOTE.TOTAL)+"</u></b><br><br>"+vtime+"<br><br>"+nnote+"<br><br>Kind Regards <br></p>"
+				
+				#replace chcr with <br> for html email formatting
+				nnote_new=replace(nnote,chcr,"<br>")
+				
+				html=LoadFromFile2.value
+				htmlbody=html
+				htmlbody=replace(htmlbody,"%casename%",casename)
+				htmlbody=replace(htmlbody,"%nnote%",nnote_new)
+				#htmlbody=replace(htmlbody,"%nnote%",matter.custom.debtupd2.UPDATE)
+				htmlbody=replace(htmlbody,"%debt%",debt)
+				htmlbody=replace(htmlbody,"%vtime%",vtime)
+				
+				#HTMLBody=HTMLBody
+				#TEMPLATEFILE='\Applications\Laserforms\COURTUNIFIED,CO\F0Nxxxxx N510- Notice of Service out of the jurisdiction where perm of the court is not required (CPR 6.34).docxsos'
+				
+				#IF Payment2='true' and From='HCEO' and HCEOVAT=>0.01 
+				#IF EMAILHCEVAT='True' THEN HTMLBody="<p><b><u>"+Claimall+" -v- "+Defall+"<br>Debt Due: £"+twodec(MATTER.CUSTOM.DEBTNOTE.TOTAL)+"</u></b><br><br>"+vtime+"<br><br>"+nnote+"<br><br><a href="https://chadlaw.box.com/s/5rmdsr9wa5gi1lwf13byoyvwtjr929y2">Click here to understand more about VAT payable on High Court Enforcement Officers fees.</a><br><br>Kind Regards <br></p>"
+				
+				#HTMLHeader=HTMLBody="<p><b><u>"+Claimall+" -v- "+Defall+"<br>Debt Due: £"+twodec(MATTER.CUSTOM.DEBTNOTE.TOTAL)+"</u></b><br><br>"+vtime+""
+				#+nnote+"<br><br>Kind Regards <br></p>"
+				#Body=""+HTMLHeader+CHCR()+CHCR()+""+nnote+""+CHCR()+CHCR()+"Kind Regards"
+			CardPosX 710
+			CardPosY 730
+			GOTO OLCreateEmail1
+
+		SetVariables SetVariables10
+			Initializations
+				entityType=SelectedType
+				entityRef=SelectedRef
+				box="To"
+				Hyourref=entry(0,selectedrelreference,"@")
+				hheading=entry(1,selectedrelreference,"@")
+				ROLE=SELECTEDROLE
+				Subject=hheading +" (" + Hyourref +")"
+				IF Hheading ='' THEN subject=Matter.Custom.Debt3.CASENAME
+				#matter.description
+			CardPosX -150
+			CardPosY 310
+			GOTO Message2
+
+		SetVariables SetVariables11
+			Initializations
+				entityType=SelectedType
+				entityRef=SelectedRef
+				box="cc"
+			CardPosX -50
+			CardPosY 430
+			GOTO Message2
+
+		SelectRelationship SelectRelationship2
+			SelectionMandatory True
+			TopMessage Please select Email address to send the Hub message to
+			ShowDirectEmails True
+			ShowDirectTelephones False
+			ShowDirectClients True
+			ShowDirectOther True
+			ShowDirectMatters False
+			ShowDirectArchives False
+			ShowDirectAddresses False
+			ShowIndirectEmails True
+			ShowIndirectTelephones False
+			ShowIndirectClients False
+			ShowIndirectOther True
+			ShowIndirectMatters False
+			ShowIndirectArchives False
+			ShowIndirectAddresses False
+			RestrictToMainEntity False
+			OnlyShowPreselectRole False
+			RestrictDrillDown True
+			CardPosX -150
+			CardPosY 170
+			GOTO SetVariables10
+			GOTO SetVariables11
+
+		SetVariables SetVariables12
+			Initializations
+				entityType=If(docOwnerType="",entityType,docOwnerType)
+				entityRef=if(docOwnerRef="",docOwnerRef)
+				entityType=docOwnerType
+				entityRef=docOwnerRef
+				#docOwnerType=entityType
+				#docOwnerRef=entityRef
+				entityType= 'MA' 
+				#if(RecipientType="",entityType,RecipientType)
+				entityRef=if(RecipientRef="",entityRef,RecipientRef)
+				#SelectedType=EntityType
+				#SelectedRef=entityref
+				#Attachment=filename
+				#Subject=matter.description
+				#box="To"
+				#box="Cc"
+			CardPosX 850
+			CardPosY 330
+			GOTO SelectRelationship3
+
+		SelectRelationship SelectRelationship3
+			SelectionMandatory True
+			TopMessage Please select Email address to send the Hub message to
+			ShowDirectEmails True
+			ShowDirectTelephones False
+			ShowDirectClients True
+			ShowDirectOther True
+			ShowDirectMatters False
+			ShowDirectArchives False
+			ShowDirectAddresses False
+			ShowIndirectEmails True
+			ShowIndirectTelephones False
+			ShowIndirectClients False
+			ShowIndirectOther True
+			ShowIndirectMatters False
+			ShowIndirectArchives False
+			ShowIndirectAddresses False
+			RestrictToMainEntity False
+			OnlyShowPreselectRole False
+			RestrictDrillDown True
+			CardPosX 830
+			CardPosY 110
+			GOTO SetVariables14 WHEN Answer=answer1
+			GOTO SetVariables13 WHEN Answer=answer2
+
+		SelectRelationship SelectRelationship4
+			SelectionMandatory True
+			TopMessage Please select Email address to send the Hub message to
+			ShowDirectEmails True
+			ShowDirectTelephones False
+			ShowDirectClients True
+			ShowDirectOther True
+			ShowDirectMatters False
+			ShowDirectArchives False
+			ShowDirectAddresses False
+			ShowIndirectEmails True
+			ShowIndirectTelephones False
+			ShowIndirectClients False
+			ShowIndirectOther True
+			ShowIndirectMatters False
+			ShowIndirectArchives False
+			ShowIndirectAddresses False
+			RestrictToMainEntity False
+			OnlyShowPreselectRole False
+			RestrictDrillDown False
+			CardPosX 230
+			CardPosY 210
+			GOTO SetVariables2 WHEN box="To"
+			GOTO SetVariables5 WHEN box="Cc"
+
+		SetVariables SetVariables13
+			Initializations
+				entityType=SelectedType
+				entityRef=SelectedRef
+				#entityType= 'MA' 
+				#docOwnerType=entityType
+				#docOwnerRef=entityRef
+				box="Cc"
+			CardPosX 630
+			CardPosY 230
+			GOTO SelectRelationship4
+
+		SetVariables SetVariables14
+			Initializations
+				entityType=SelectedType
+				entityRef=SelectedRef
+				#entityType= 'MA' 
+				#docOwnerType=entityType
+				#docOwnerRef=entityRef
+				box="To"
+			CardPosX 590
+			CardPosY 110
+			GOTO SelectRelationship4
+
+		Message Message2
+			Message %[maincont]
+			Centred False
+			Location inset_error_control
+			MessageType Information
+			CardPosX 50
+			CardPosY 170
+			GOTO SelectRelationship1
+
+		Message Message18
+			Message You must select an email address, please drill down into the record or add an email address to the record by right clicking.
+			Centred False
+			MessageTitle Select email address
+			Location message_box
+			MessageType Information
+			CardPosX 290
+			CardPosY 770
+
+		RunScriptFile RunScriptFile4
+			IgnoreMissingFile False
+			ScriptFile Applications\Debt\Scripts\Check Case Name.sos
+			CardPosX 190
+			CardPosY -30
+			GOTO SetVariables9
+
+		SetVariables SetVariables127
+			Initializations
+				#invoicedetailstable=view(matter.custom.debt1A,'','Payments','Invoice_Table')
+				
+				IF EMAIL ='Yes' THEN ID=EmailID
+				#matter.custom.DEBTUPD1(MYEXTENT).ID
+				IF EMAIL ='Yes' THEN uniqueref=ID
+				IF EMAIL ='Yes' THEN filter='[ID]='+"'"+uniqueref+"'"
+				
+				IF EMAIL ='Yes' THEN dnotestable=view(matter.custom.debtupd,filter)
+				
+				IF EMAIL ='Yes' THEN TabArrayCode="debtupd"
+				IF EMAIL ='Yes' THEN TabArrayExtent=MYEXTENT
+				
+				IF NOTEEMAIL=TRUE THEN uniqueref=ID
+				IF NOTEEMAIL=TRUE THEN filter='[ID]='+"'"+uniqueref+"'"
+				
+				IF NOTEEMAIL=TRUE THEN dnotestable=view(matter.custom.debtupd,filter)
+				
+				IF NOTEEMAIL=TRUE THEN TabArrayCode="debtupd"
+				IF NOTEEMAIL=TRUE THEN TabArrayExtent=MYEXTENT
+			CardPosX 710
+			CardPosY 950
+			GOTO SetCustomData18
+
+		SetCustomData SetCustomData18
+			CardPosX 710
+			CardPosY 1050
+			GOTO SetVariables129
+			SUB main
+				SetVariables SetVariables128
+					Initializations
+						Emailedto=Emailedto
+						Emailedcc=Emailedcc
+						IF matter.custom.DEBTUPD(MYEXTENT).Emailto ='' then Text=""
+						IF matter.custom.DEBTUPD(MYEXTENT).Emailto <>'' then Text="also "
+						Emailedreceipients="To: "+Emailedto+ " Cc: "+Emailedcc+""
+						IF NOTEEMAIL=true THEN matter.custom.debtupd(myextent).Emailto=""+matter.custom.DEBTUPD(MYEXTENT).Emailto+" "+Text+ ""+ Emailedreceipients
+						IF EMAIL='Yes' then debtupd1.Emailto=Emailedreceipients
+						IF NOTEEMAIL=true and BlankTo='True' THEN matter.custom.debtupd(myextent).Emailto=""+matter.custom.DEBTUPD(MYEXTENT).Emailto+" "+Text+ " Manual receipient"
+						IF EMAIL='Yes' and BlankTo='True' THEN debtupd1.Emailto='Manual receipient'
+					CardPosX 843
+					CardPosY 400
+
+
+		SetVariables SetVariables129
+			Initializations
+				To=""
+				Cc=""
+				BlankTo='False'
+			CardPosX 910
+			CardPosY 1050
+
+		LoadFromFile LoadFromFile2
+			CardPosX 910
+			CardPosY 710
+			GOTO SetVariables6
+
+		Question Question2
+			Message
+				Select the First for the email.
+				
+				To: %[To]
+			Answer1 To - a Relationship
+			Answer2 To - within Chadwick Lawrence
+			Answer3 Leave Receipients Blank
+			NbColumns 1
+			CustomAllowed False
+			ShowAsButtons True
+			CardPosX -150
+			CardPosY 70
+			GOTO SelectRelationship2 WHEN Answer=answer1
+			GOTO SetVariables135 WHEN Answer=answer2
+			GOTO SetVariables136
+
+		CustomForm CustomForm7
+			Source
+				Size 500, 400
+				Widget UserSelect
+					Bounds 88, 96, 264, 24
+					DataType User
+					CanBeBlank True
+					Label Select
+					LabelTextAlign MiddleLeft
+					TabIndex 0
+					WidgetBackColor White
+			CardPosX -370
+			CardPosY 210
+			GOTO SetVariables134
+			SUB validate
+
+		SetVariables SetVariables134
+			Initializations
+				entityType='USR'
+				entityRef=UserSelect
+				userent=getentity(entityType,entityRef)
+				box="To"
+				IF CCINTERNAL='True' THEN box="Cc"
+				Hyourref=entry(0,selectedrelreference,"@")
+				hheading=entry(1,selectedrelreference,"@")
+				ROLE=SELECTEDROLE
+				Subject=hheading +" (" + Hyourref +")"
+				IF Hheading ='' THEN subject=Matter.Custom.Debt3.CASENAME
+				#matter.description
+			CardPosX -370
+			CardPosY 330
+			GOTO SetVariables5 WHEN box="Cc"
+			GOTO SetVariables2
+
+		SetVariables SetVariables135
+			Initializations Internal='True'
+			CardPosX -370
+			CardPosY 70
+			GOTO CustomForm7
+
+		Message Message20
+			CardPosX -170
+			CardPosY 550
+
+		DoNothing DoNothing19
+			CardPosX 510
+			CardPosY 710
+			GOTO Message18 WHEN emailselect=""
+
+		SetVariables SetVariables136
+			Initializations BlankTo='True'
+			CardPosX 570
+			CardPosY 610
+			GOTO SetVariables139
+
+		SetVariables SetVariables139
+			Initializations
+				FilePath=connectapp.firmfolder+"\Applications\Debt\Documents\Emails\Hubemail.html"
+				if matter.mattertype='5001' THEN FilePath=connectapp.firmfolder+"\Applications\Debt\Documents\Emails\HubemailUL.html"
+			CardPosX 970
+			CardPosY 590
+			GOTO LoadFromFile2
+
+
+SetVariables SetVariables123
+	Initializations nnote=Repupdatetext
+	CardPosX 1010
+	CardPosY 10
+	GOTO CustomForm1
+
+SetCustomData SetCustomData14
+	CardPosX 1570
+	CardPosY 150
+	GOTO DoNothing1
+	SUB main
+		SetVariables SetVariables124
+			Initializations
+				matter.custom.debtkey.CURRENTR=CURRENTR
+				matter.custom.debtupd2.blanket=blanket
+				Matter.Custom.PCN.POSITION=latestposition
+			CardPosX 590
+			CardPosY 250
+
+
+RunScriptFile RunScriptFile2
+	IgnoreMissingFile False
+	ScriptFile Applications\Debt\Scripts\Issue Fees Calculation.sos
+	CardPosX 1170
+	CardPosY -330
+	GOTO SetVariables117
+
+SetCustomData SetCustomData15
+	CardPosX 630
+	CardPosY 310
+	GOTO DoNothing2 WHEN Last
+	SUB main
+		SetVariables SetVariables4
+			Initializations
+				matter.custom.debtupd2.date=date
+				matter.custom.debtupd2.update=note
+				matter.custom.debtupd2.style=repstyle
+				matter.custom.debtupd2.ID=ID
+			CardPosX 830
+			CardPosY 330
+			GOTO DoNothing15
+
+		DoNothing DoNothing15
+			CardPosX 1030
+			CardPosY 330
+
+
+SetVariables SetVariables125
+	Initializations
+		date=matter.custom.DEBTUPD(MYEXTENT).date
+		Time=matter.custom.DEBTUPD(MYEXTENT).time
+		amduser=matter.custom.DEBTUPD(MYEXTENT).user
+		note=matter.custom.DEBTUPD(MYEXTENT).note
+		type=matter.custom.DEBTUPD(MYEXTENT).style
+		repstyle=matter.custom.DEBTUPD(MYEXTENT).rep
+		ID=matter.custom.DEBTUPD(MYEXTENT).ID
+	CardPosX 830
+	CardPosY 310
+	GOTO SetCustomData15 WHEN Last
+	GOTO SetVariables126 WHEN NOTEEMAIL
+	GOTO Question3 WHEN INCASEPUSH
+
+DoNothing DoNothing16
+	CardPosX 770
+	CardPosY 110
+	GOTO SetVariables1
+
+SetVariables SetVariables126
+	Initializations nnote=note
+	CardPosX 650
+	CardPosY 550
+	GOTO Deck8 WHEN NOTEEMAIL
+
+ForEach ForEach2
+	VariableName row
+	CollectionVariable dnotestable
+	CardPosX 1130
+	CardPosY 210
+	GOTO CustomForm1
+	SUB main
+		SetVariables SetVariables19
+			Initializations
+				row.Icon='Comment_blue.gif'
+				#if row.act_due_date<today.adddays(7) then row.DateIcon='Orangeaction.png'
+				if row.Style='Correspondence In/Out' then row.Icon='Postcode.png'
+				if row.Style='Telephone Call In/Out' then row.Icon='TELfax.png'
+				if row.Style='SMS Sent' then row.Icon='TELmobile.png'
+				if row.Style='Client Update Received' then row.Icon='Client.png'
+				#'TelephoneADD.png'
+				if row.Style='Internal Note' then row.Icon='Notes.png'
+				if row.Style='Enforcement Update' then row.Icon='Icon_security.gif'
+				if row.Style='Payment Received' then row.Icon='PayItem.png'
+				#row.TypeIcon=row.acd_code+'.png'
+			CardPosX 490
+			CardPosY 210
+
+
+Deck Deck9
+	CardPosX 1490
+	CardPosY 50
+	GOTO DoNothing9
+	SUB main
+		SetCustomData SetCustomData16
+			CardPosX 0
+			CardPosY 0
+			SUB main
+				SetVariables SetVariables124
+					Initializations matter.custom.debtkey.CURRENTR=CURRENTR
+					CardPosX 590
+					CardPosY 250
+
+
+
+RefreshEntity RefreshEntity5
+	Initializations entity=matter.custom.debtupd2
+	CardPosX 270
+	CardPosY 770
+
+SetVariables SetVariables130
+	Initializations EmailID=debtupd1.ID
+	CardPosX 1110
+	CardPosY 490
+	GOTO DoNothing4
+
+DoNothing DoNothing17
+	CardPosX 1130
+	CardPosY 810
+	GOTO Deck8 WHEN Email="Yes" and INCASE<>"Yes"
+	GOTO SetVariables132 WHEN INCASE="Yes" and Email <>"Yes"
+	GOTO DoNothing2
+
+Message Message19
+	Message
+		INCASE.
+		-
+		Please select whether this note is to be sent to the InCase app.
+	Centred True
+	Location message_box
+	MessageType Information
+	CardPosX 1970
+	CardPosY 30
+
+RunScriptFile RunScriptFile5
+	IgnoreMissingFile False
+	ScriptFile Applications\Debt\AcclaimPortal\Send Message.sos
+	CardPosX 410
+	CardPosY 350
+	GOTO SetCustomData19
+
+SetVariables SetVariables131
+	Initializations
+		FROMSCRIPT='true'
+		PORTALPUSH='True'
+		TitleTextBox=repstyle
+		MessageEditMemo=note
+		Portal='Push'
+		If Question3.answer='Silent' THEN Portal='Silent'
+	CardPosX 410
+	CardPosY 470
+	GOTO RunScriptFile5
+
+SetCustomData SetCustomData19
+	CardPosX 250
+	CardPosY 210
+	GOTO DoNothing2
+	SUB main
+		SetVariables SetVariables4
+			Initializations
+				IF matter.custom.DEBTUPD(MYEXTENT).INCASE ='' then Text=""
+				IF matter.custom.DEBTUPD(MYEXTENT).INCASE <>'' then Text=", "
+				
+				matter.custom.debtupd(myextent).INCASE=format(now,"dd/MM/yyyy")
+			CardPosX 670
+			CardPosY 330
+
+
+SetVariables SetVariables132
+	Initializations
+		FROMSCRIPT='true'
+		TitleTextBox=repstyle
+		MessageEditMemo=nnote
+	CardPosX 910
+	CardPosY 910
+	GOTO SetCustomData20
+
+RunScriptFile RunScriptFile6
+	IgnoreMissingFile False
+	ScriptFile Scripts\Chadwick Lawrence\Chadwick Lawrence\SOS Scripts\incase\Acclaim Scripts\02.Send app message acclaim.sos
+	CardPosX 710
+	CardPosY 930
+	GOTO SetCustomData20
+
+DoNothing DoNothing18
+	CardPosX 550
+	CardPosY 710
+	GOTO DoNothing2
+
+SetCustomData SetCustomData20
+	CardPosX 510
+	CardPosY 910
+	GOTO Deck8 WHEN EMAIL="Yes"
+	GOTO DoNothing18
+	SUB main
+		SetVariables SetVariables4
+			CardPosX 810
+			CardPosY 330
+
+
+RunScriptFile RunScriptFile7
+	IgnoreMissingFile False
+	ScriptFile Applications\Debt\Scripts\Warrant Fees Calculation.sos
+	CardPosX 1310
+	CardPosY -190
+	GOTO SetVariables117
+
+SetCustomData SetCustomData21
+	CardPosX 1430
+	CardPosY -50
+	GOTO SetVariables133
+	SUB main
+		SetVariables SetVariables117
+			Initializations custom.debtupd2.blanket=blanket
+			CardPosX 780
+			CardPosY 390
+
+
+SetVariables SetVariables133
+	Initializations
+		UDBlanket='false'
+		Blanket=matter.custom.debtupd2.blanket
+		Blanket2=matter.custom.debtupd2.blanket
+	CardPosX 1590
+	CardPosY -150
+	GOTO CustomForm1
+
+SetVariables SetVariables137
+	Initializations LoadFromFile3.FilePath='\Applications\Debt\Debt Installation\Debt - Court Fees.csv'
+	CardPosX 930
+	CardPosY -310
+	GOTO LoadFromFile3
+
+LoadFromFile LoadFromFile3
+	CardPosX 750
+	CardPosY -310
+	GOTO SetVariables138
+
+SetVariables SetVariables138
+	Initializations
+		if Judgrecvd=true and matter.custom.debt7.JUDGEAMT > 600.00 THEN myDEBTFEENO='18'
+		if Judgrecvd=true and matter.custom.debt7.JUDGEAMT < 600.00 THEN myDEBTFEENO='23'
+		
+		myfee=view(value,"[DEBTFEENO]='"+myDEBTFEENO+"'","","DebtCourtFees")
+		
+		COURTFEE=Myfee(0).DEBTFEEVALUE
+		COURTFEE=money(COURTFEE)
+		
+		#Replace to add fee
+		nNOTE=replace(nNOTE,"%COURTFEE%",COURTFEE)
+	CardPosX 750
+	CardPosY -210
+	GOTO CustomForm1
+
+RunScriptFile RunScriptFile9
+	IgnoreMissingFile False
+	ScriptFile Applications\Debt\Scripts\Scratchpad.sos
+	CardPosX 810
+	CardPosY -50
+	GOTO SetVariables1
+
+SetVariables SetVariables140
+	Initializations EditSelected=False
+	CardPosX 1750
+	CardPosY 210
+	GOTO CustomForm1
+
+SetVariables SetVariables141
+	Initializations EditSelected=True
+	CardPosX 1750
+	CardPosY 290
+	GOTO CustomForm1
+
+Message Message21
+	Message %[LATESTTEXT]
+	Centred True
+	MessageTitle Service method
+	Location message_box
+	MessageType Information
+	CardPosX 1950
+	CardPosY 250
+	GOTO CustomForm1
+
+RunScriptFile RunScriptFile10
+	IgnoreMissingFile False
+	ScriptFile Applications\Debt\AcclaimPortal\Test GET Messages.sos
+	CardPosX 350
+	CardPosY -110
+	GOTO SetVariables8
+
+SetVariables SetVariables142
+	Initializations
+		IF SOSVIEW=True THEN VIEWSOS=True
+		IF PORTALVIEW=True THEN VIEWSOS=False
+	CardPosX 1530
+	CardPosY -250
+	GOTO CustomForm1
+
+Question Question3
+	Message
+		Do you want the Portal to push a notification to Client about this message, or send silent to Portal?
+		
+		Silent messages = the client will not receive a portal notification about it.
+	Answer1 Silent
+	Answer2 Push
+	NbColumns 1
+	CustomAllowed False
+	ShowAsButtons False
+	CardPosX 610
+	CardPosY 450
+	GOTO SetVariables131
+
