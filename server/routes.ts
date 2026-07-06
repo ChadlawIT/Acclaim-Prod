@@ -6180,8 +6180,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         messageDate = req.body.messageDate;
       }
 
-      // Parse optional backdated timestamp — accepts ISO 8601 or any JS-parseable string
-      const resolvedDate = messageDate ? new Date(messageDate) : new Date();
+      // Parse optional backdated timestamp — accepts ISO 8601 or any JS-parseable string.
+      // If no timezone indicator is present (no Z or ±HH:MM suffix), treat as Europe/London
+      // local time so that SOS timestamps (which are UK local) are stored as correct UTC.
+      function parseAsUKTime(str: string): Date {
+        const trimmed = str.trim();
+        if (/[Zz]$|[+-]\d{2}:?\d{2}$/.test(trimmed)) {
+          return new Date(trimmed); // already has timezone info — use as-is
+        }
+        // No timezone: Node.js would treat as UTC, but the value is actually UK local time.
+        // Find Europe/London's offset at this approximate moment and subtract it.
+        const naive = new Date(trimmed); // parsed as UTC by Node.js
+        if (isNaN(naive.getTime())) return new Date();
+        const londonHour = parseInt(
+          new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', hour12: false }).format(naive),
+          10
+        );
+        let offsetHours = londonHour - naive.getUTCHours();
+        if (offsetHours > 12) offsetHours -= 24;
+        if (offsetHours < -12) offsetHours += 24;
+        return new Date(naive.getTime() - offsetHours * 3_600_000);
+      }
+      const resolvedDate = messageDate ? parseAsUKTime(messageDate) : new Date();
       const effectiveDate = isNaN(resolvedDate.getTime()) ? new Date() : resolvedDate;
       
       if (!message || !senderName) {
