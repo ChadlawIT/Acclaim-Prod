@@ -454,8 +454,15 @@ function resolveEmbeddedSender(m: any): any {
 
   const match = (m.content || '').match(/^([^\n]+):\n\n([\s\S]*)$/);
   if (match) {
-    // These are always outgoing from Acclaim, regardless of whether the system
-    // account itself is flagged as an admin in the database.
+    // If the subject is "Client Update Received" (case-insensitive), treat as an
+    // inbound client-side message so it displays on the organisation (left) side.
+    // This lets admins log updates received outside the portal (phone, email, letter)
+    // via the SOS API without any database schema changes.
+    const isClientUpdate = (m.subject || '').toLowerCase().includes('client update received');
+    if (isClientUpdate) {
+      return { ...m, senderName: match[1].trim(), senderIsAdmin: false, content: match[2] };
+    }
+    // All other external API messages are outgoing from Acclaim.
     return { ...m, senderName: `Acclaim (${match[1].trim()})`, senderIsAdmin: true, content: match[2] };
   }
   return m;
