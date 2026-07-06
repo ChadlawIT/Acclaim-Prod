@@ -72,9 +72,9 @@ function getLogoBase64(): { content: string; filename: string; type: string; con
 // Get the Portal User Guide PDF as base64 for attaching to welcome emails
 function getUserGuideBase64(): { content: string; filename: string; type: string; disposition: string } | null {
   const possiblePaths = [
-    path.join(__dirname, '../attached_assets/Acclaim Portal User Guide.pdf'),
-    path.join(__dirname, '../../attached_assets/Acclaim Portal User Guide.pdf'),
-    path.join(process.cwd(), 'attached_assets/Acclaim Portal User Guide.pdf'),
+    path.join(__dirname, '../attached_assets/Portal_User_Guide_1783325085426.pdf'),
+    path.join(__dirname, '../../attached_assets/Portal_User_Guide_1783325085426.pdf'),
+    path.join(process.cwd(), 'attached_assets/Portal_User_Guide_1783325085426.pdf'),
   ];
 
   for (const guidePath of possiblePaths) {

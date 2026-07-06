@@ -850,7 +850,7 @@ If you have any questions, please contact our support team.
           },
           ...(data.isAdmin ? [] : [{
             filename: 'Acclaim Portal User Guide.pdf',
-            path: path.join(__dirname, '../attached_assets/Acclaim Portal User Guide.pdf'),
+            path: path.join(__dirname, '../attached_assets/Portal_User_Guide_1783325085426.pdf'),
             contentType: 'application/pdf'
           }])
         ]
