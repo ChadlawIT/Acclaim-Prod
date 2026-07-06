@@ -6214,12 +6214,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Use custom subject if provided, otherwise generate automatically
       const messageSubject = subject || `${messageType}: ${case_.caseName}`;
-
-      // "Client Update Received" messages always use the real posted time —
-      // ignore any backdated messageDate so the portal timestamp reflects when
-      // the update was actually logged, not when it was originally received.
-      const messageCreatedAt = isClientUpdate ? new Date() : effectiveDate;
-
+      
       // Create message linked to the case
       const newMessage = await storage.createMessage({
         senderId: systemUserId,
@@ -6230,12 +6225,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         subject: messageSubject,
         content: contentWithSender,
         isRead: false,
-        createdAt: messageCreatedAt,
+        createdAt: effectiveDate,
       });
 
       // Handle email notifications if requested
       // Never email clients about "Client Update Received" messages — these are
       // internal records of updates the client already gave us outside the portal.
+      const isClientUpdate = (messageSubject || '').toLowerCase().includes('client update received');
       let notificationsSent = 0;
       if (sendNotifications && !isClientUpdate) {
         try {
