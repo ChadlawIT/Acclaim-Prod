@@ -6229,8 +6229,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Handle email notifications if requested
+      // Never email clients about "Client Update Received" messages — these are
+      // internal records of updates the client already gave us outside the portal.
+      const isClientUpdate = (messageSubject || '').toLowerCase().includes('client update received');
       let notificationsSent = 0;
-      if (sendNotifications) {
+      if (sendNotifications && !isClientUpdate) {
         try {
           // Get all users linked to the case's organisation
           const organisationUsers = await storage.getUsersByOrganisationId(case_.organisationId);
