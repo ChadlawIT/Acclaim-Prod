@@ -10,8 +10,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend,
+  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, Legend, PieChart, Pie, Cell,
 } from "recharts";
 import { formatUKDateLong } from "@/lib/dateUtils";
 
@@ -64,7 +64,14 @@ interface AnalyticsData {
 
 const TEAL   = "#0d9488";
 const NAVY   = "#1e3a5f";
-const SLATE  = "#94a3b8";
+
+const METRIC_COLORS = {
+  activities: "#f59e0b",
+  messages:   "#0ea5e9",
+  cases:      "#7c3aed",
+};
+
+const PIE_PALETTE = ["#0d9488","#0ea5e9","#7c3aed","#f59e0b","#f97316","#ec4899","#10b981","#6366f1"];
 
 const PERIODS: { value: Period; label: string }[] = [
   { value: "week",    label: "This Week" },
@@ -97,30 +104,18 @@ function Delta({ current, previous, isAllTime }: { current: number; previous: nu
   const delta = current - previous;
   const pct = previous === 0 ? (current > 0 ? 100 : 0) : Math.round((delta / previous) * 100);
   if (delta === 0 && previous === 0) return (
-    <span className="flex items-center gap-1 text-xs text-gray-400">
-      <Minus className="h-3 w-3" /> No data yet
-    </span>
+    <span className="flex items-center gap-1 text-xs text-gray-400"><Minus className="h-3 w-3" /> No data yet</span>
   );
   if (delta > 0) return (
-    <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600">
-      <TrendingUp className="h-3 w-3" /> +{fmt(delta)} ({pct}%)
-    </span>
+    <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600"><TrendingUp className="h-3 w-3" /> +{fmt(delta)} ({pct}%)</span>
   );
   if (delta < 0) return (
-    <span className="flex items-center gap-1 text-xs font-semibold text-rose-500">
-      <TrendingDown className="h-3 w-3" /> {fmt(delta)} ({pct}%)
-    </span>
+    <span className="flex items-center gap-1 text-xs font-semibold text-rose-500"><TrendingDown className="h-3 w-3" /> {fmt(delta)} ({pct}%)</span>
   );
-  return (
-    <span className="flex items-center gap-1 text-xs text-gray-400">
-      <Minus className="h-3 w-3" /> No change
-    </span>
-  );
+  return <span className="flex items-center gap-1 text-xs text-gray-400"><Minus className="h-3 w-3" /> No change</span>;
 }
 
-function KpiCard({
-  icon: Icon, label, total, current, previous, isAllTime, accent, sub,
-}: {
+function KpiCard({ icon: Icon, label, total, current, previous, isAllTime, accent, sub }: {
   icon: any; label: string; total: number; current: number; previous: number;
   isAllTime: boolean; accent: string; sub?: string;
 }) {
@@ -132,14 +127,10 @@ function KpiCard({
             <Icon className="h-5 w-5" style={{ color: accent }} />
           </div>
           {!isAllTime && (
-            <span className="text-xs text-gray-400 bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded-full">
-              vs last period
-            </span>
+            <span className="text-xs text-gray-400 bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded-full">vs last</span>
           )}
         </div>
-        <div className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-0.5 tabular-nums">
-          {fmt(total)}
-        </div>
+        <div className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-0.5 tabular-nums">{fmt(total)}</div>
         <div className="text-sm text-gray-500 dark:text-gray-400 font-medium mb-2">{label}</div>
         {sub && <div className="text-xs text-gray-400 mb-2">{sub}</div>}
         {!isAllTime && (
@@ -160,42 +151,31 @@ function KpiCard({
   );
 }
 
-function SimpleBar({ data, labelKey, valueKey, color }: { data: any[]; labelKey: string; valueKey: string; color: string }) {
-  const max = Math.max(...data.map(d => d[valueKey]), 1);
+const ChartTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload?.length) return null;
   return (
-    <div className="space-y-2">
-      {data.map((d, i) => (
-        <div key={i} className="flex items-center gap-3">
-          <div className="text-xs text-gray-600 dark:text-gray-400 w-28 truncate flex-shrink-0" title={d[labelKey]}>
-            {d[labelKey]}
+    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-3 shadow-lg text-xs min-w-[140px]">
+      <p className="font-semibold text-gray-700 dark:text-gray-300 mb-2">{label}</p>
+      {payload.map((p: any, i: number) => (
+        <div key={i} className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: p.color }} />
+            <span className="text-gray-500">{p.name}</span>
           </div>
-          <div className="flex-1 bg-gray-100 dark:bg-gray-800 rounded-full h-5 overflow-hidden">
-            <div
-              className="h-full rounded-full flex items-center px-2 transition-all"
-              style={{ width: `${Math.max((d[valueKey] / max) * 100, 4)}%`, background: color }}
-            >
-              <span className="text-xs text-white font-semibold whitespace-nowrap">{d[valueKey]}</span>
-            </div>
-          </div>
+          <span className="font-semibold text-gray-800 dark:text-gray-200">{p.value}</span>
         </div>
       ))}
     </div>
   );
-}
+};
 
-
-const CustomTooltip = ({ active, payload, label }: any) => {
+const PieTooltip = ({ active, payload }: any) => {
   if (!active || !payload?.length) return null;
+  const p = payload[0];
   return (
-    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-3 shadow-lg text-xs">
-      <p className="font-semibold text-gray-700 dark:text-gray-300 mb-1.5">{label}</p>
-      {payload.map((p: any, i: number) => (
-        <div key={i} className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full" style={{ background: p.color }} />
-          <span className="text-gray-500">{p.name}:</span>
-          <span className="font-semibold text-gray-800 dark:text-gray-200">{p.value}</span>
-        </div>
-      ))}
+    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 shadow-lg text-xs">
+      <span className="font-semibold" style={{ color: p.payload.fill }}>{p.name}: </span>
+      <span className="font-bold text-gray-800">{p.value}</span>
     </div>
   );
 };
@@ -214,11 +194,23 @@ function StatPill({ label, value, icon: Icon, color }: { label: string; value: s
   );
 }
 
+const RADIAN = Math.PI / 180;
+const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+  if (percent < 0.05) return null;
+  const r = innerRadius + (outerRadius - innerRadius) * 0.5;
+  const x = cx + r * Math.cos(-midAngle * RADIAN);
+  const y = cy + r * Math.sin(-midAngle * RADIAN);
+  return (
+    <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" fontSize={11} fontWeight={700}>
+      {`${(percent * 100).toFixed(0)}%`}
+    </text>
+  );
+};
+
 export default function PortalAnalytics() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [period, setPeriod] = useState<Period>("month");
-  const [trendMetric, setTrendMetric] = useState<"activities" | "messages" | "cases">("activities");
 
   const { data, isLoading } = useQuery<AnalyticsData>({
     queryKey: ["/api/admin/portal-analytics", period],
@@ -254,8 +246,6 @@ export default function PortalAnalytics() {
   })() : "";
 
   const trendData = data?.trend ?? [];
-  const curKey  = trendMetric === "activities" ? "curActivities" : trendMetric === "messages" ? "curMessages" : "curCases";
-  const prevKey = trendMetric === "activities" ? "prevActivities" : trendMetric === "messages" ? "prevMessages" : "prevCases";
 
   const kpis = m ? [
     { icon: Users,         label: "Total Users",         total: m.users.total,       current: m.users.current,       previous: m.users.previous,       accent: TEAL,      sub: undefined },
@@ -267,6 +257,18 @@ export default function PortalAnalytics() {
     { icon: FileText,      label: "Documents Uploaded",  total: m.documents.total,   current: m.documents.current,  previous: m.documents.previous,   accent: "#f97316", sub: undefined },
     { icon: CreditCard,    label: "Payments Recorded",   total: m.payments.total,    current: m.payments.current,    previous: m.payments.previous,    accent: "#6366f1", sub: `${fmtCurrency(m.payments.totalValue)} total value` },
   ] : [];
+
+  // Horizontal bar chart data for case types
+  const caseTypeData = (data?.breakdowns.casesByType ?? [])
+    .sort((a, b) => b.count - a.count)
+    .map(r => ({ name: r.type, value: r.count }));
+
+  const topOrgsData = (data?.breakdowns.topOrgs ?? [])
+    .map(r => ({ name: r.name.length > 18 ? r.name.slice(0, 16) + "…" : r.name, value: r.cases }));
+
+  const statusData = (data?.breakdowns.casesByStatus ?? [])
+    .sort((a, b) => b.count - a.count)
+    .map(r => ({ name: r.status, value: r.count }));
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-background">
@@ -297,17 +299,11 @@ export default function PortalAnalytics() {
                 </div>
               )}
             </div>
-
-            {/* Period selector */}
             <div className="flex gap-1 bg-white/10 rounded-xl p-1 flex-wrap">
               {PERIODS.map(p => (
-                <button
-                  key={p.value}
-                  onClick={() => setPeriod(p.value)}
+                <button key={p.value} onClick={() => setPeriod(p.value)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
-                    period === p.value
-                      ? "bg-white text-gray-900 shadow"
-                      : "text-white/80 hover:text-white hover:bg-white/10"
+                    period === p.value ? "bg-white text-gray-900 shadow" : "text-white/80 hover:text-white hover:bg-white/10"
                   }`}
                   data-testid={`button-period-${p.value}`}
                 >
@@ -321,15 +317,15 @@ export default function PortalAnalytics() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
 
-        {/* KPI Grid */}
+        {/* ── KPI Grid ── */}
         {isLoading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="h-40 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {kpis.map(k => (
               <KpiCard key={k.label} icon={k.icon} label={k.label} total={k.total}
                 current={k.current} previous={k.previous} isAllTime={isAllTime}
@@ -338,29 +334,17 @@ export default function PortalAnalytics() {
           </div>
         )}
 
-        {/* Trend Chart */}
+        {/* ── Combined Activity Trend ── */}
         {!isAllTime && (
           <Card className="border-0 ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm overflow-hidden">
             <CardHeader className="border-b py-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <CardTitle className="text-base flex items-center gap-2" style={{ color: NAVY }}>
-                  <Activity className="h-4 w-4" />
-                  Activity Trend
-                  <span className="text-xs font-normal text-gray-400 ml-1">— this period vs previous</span>
-                </CardTitle>
-                <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-                  {(["activities", "messages", "cases"] as const).map(m => (
-                    <button key={m} onClick={() => setTrendMetric(m)}
-                      className={`px-3 py-1 rounded-md text-xs font-medium capitalize transition-all ${
-                        trendMetric === m ? "bg-white dark:bg-gray-900 shadow text-gray-900 dark:text-gray-100" : "text-gray-500 hover:text-gray-700"
-                      }`}
-                      data-testid={`button-trend-${m}`}
-                    >
-                      {m}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <CardTitle className="text-base flex items-center gap-2" style={{ color: NAVY }}>
+                <Activity className="h-4 w-4" />
+                Activity Trend
+                <span className="text-xs font-normal text-gray-400 ml-1">
+                  — interactions, messages &amp; new cases · solid = {periodLabel[period].cur.toLowerCase()} · dashed = {periodLabel[period].prev.toLowerCase()}
+                </span>
+              </CardTitle>
             </CardHeader>
             <CardContent className="pt-6 pb-4">
               {isLoading || !trendData.length ? (
@@ -368,34 +352,130 @@ export default function PortalAnalytics() {
                   {isLoading ? "Loading…" : "No data for this period yet."}
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={240}>
-                  <BarChart data={trendData} barGap={2} barCategoryGap="25%">
+                <ResponsiveContainer width="100%" height={280}>
+                  <LineChart data={trendData} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
                     <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} allowDecimals={false} width={28} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12 }}
-                      formatter={(value) => value === "Current" ? periodLabel[period].cur : periodLabel[period].prev}
-                    />
-                    <Bar dataKey={curKey}  name="Current"  fill={TEAL}  radius={[3,3,0,0]} />
-                    <Bar dataKey={prevKey} name="Previous" fill={SLATE} radius={[3,3,0,0]} />
-                  </BarChart>
+                    <Tooltip content={<ChartTooltip />} />
+                    <Legend wrapperStyle={{ fontSize: 11, paddingTop: 14 }} />
+                    <Line dataKey="curActivities"  name="Interactions (current)"  stroke={METRIC_COLORS.activities} strokeWidth={2.5} dot={false} />
+                    <Line dataKey="curMessages"    name="Messages (current)"      stroke={METRIC_COLORS.messages}   strokeWidth={2.5} dot={false} />
+                    <Line dataKey="curCases"       name="New Cases (current)"     stroke={METRIC_COLORS.cases}      strokeWidth={2.5} dot={false} />
+                    <Line dataKey="prevActivities" name="Interactions (prev)"     stroke={METRIC_COLORS.activities} strokeWidth={1.5} dot={false} strokeDasharray="5 4" strokeOpacity={0.45} />
+                    <Line dataKey="prevMessages"   name="Messages (prev)"         stroke={METRIC_COLORS.messages}   strokeWidth={1.5} dot={false} strokeDasharray="5 4" strokeOpacity={0.45} />
+                    <Line dataKey="prevCases"      name="New Cases (prev)"        stroke={METRIC_COLORS.cases}      strokeWidth={1.5} dot={false} strokeDasharray="5 4" strokeOpacity={0.45} />
+                  </LineChart>
                 </ResponsiveContainer>
               )}
             </CardContent>
           </Card>
         )}
 
-        {/* Engagement & Adoption */}
-        {data && eng && (
+        {/* ── Case Breakdowns: Donut + Horizontal Bars ── */}
+        {data && (
+          <div>
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-slate-400" />
+              Case Breakdowns
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+              {/* Cases by Status — Donut */}
+              <Card className="border-0 ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm">
+                <CardHeader className="border-b py-3">
+                  <CardTitle className="text-sm font-semibold" style={{ color: NAVY }}>Cases by Status</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-2 pb-4">
+                  {statusData.length === 0 ? (
+                    <p className="text-sm text-gray-400 p-4">No case data.</p>
+                  ) : (
+                    <>
+                      <ResponsiveContainer width="100%" height={200}>
+                        <PieChart>
+                          <Pie data={statusData} dataKey="value" nameKey="name" cx="50%" cy="50%"
+                            innerRadius={55} outerRadius={85} labelLine={false} label={renderCustomLabel}>
+                            {statusData.map((_, i) => (
+                              <Cell key={i} fill={PIE_PALETTE[i % PIE_PALETTE.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip content={<PieTooltip />} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-1">
+                        {statusData.map((d, i) => (
+                          <div key={i} className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+                            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: PIE_PALETTE[i % PIE_PALETTE.length] }} />
+                            {d.name} ({d.value})
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Cases by Debtor Type — Horizontal Bar */}
+              <Card className="border-0 ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm">
+                <CardHeader className="border-b py-3">
+                  <CardTitle className="text-sm font-semibold" style={{ color: NAVY }}>Cases by Debtor Type</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-4 pb-4">
+                  {caseTypeData.length === 0 ? (
+                    <p className="text-sm text-gray-400">No case data.</p>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={200}>
+                      <BarChart data={caseTypeData} layout="vertical" margin={{ left: 0, right: 12 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
+                        <XAxis type="number" tick={{ fontSize: 10, fill: "#6b7280" }} axisLine={false} tickLine={false} allowDecimals={false} />
+                        <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} width={80} />
+                        <Tooltip content={<ChartTooltip />} />
+                        <Bar dataKey="value" name="Cases" fill="#7c3aed" radius={[0,4,4,0]}>
+                          {caseTypeData.map((_, i) => (
+                            <Cell key={i} fill={PIE_PALETTE[i % PIE_PALETTE.length]} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Top Organisations — Horizontal Bar */}
+              <Card className="border-0 ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm">
+                <CardHeader className="border-b py-3">
+                  <CardTitle className="text-sm font-semibold" style={{ color: NAVY }}>Top Organisations by Cases</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-4 pb-4">
+                  {topOrgsData.length === 0 ? (
+                    <p className="text-sm text-gray-400">No data.</p>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={200}>
+                      <BarChart data={topOrgsData} layout="vertical" margin={{ left: 0, right: 12 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
+                        <XAxis type="number" tick={{ fontSize: 10, fill: "#6b7280" }} axisLine={false} tickLine={false} allowDecimals={false} />
+                        <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} width={80} />
+                        <Tooltip content={<ChartTooltip />} />
+                        <Bar dataKey="value" name="Cases" fill={NAVY} radius={[0,4,4,0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+
+        {/* ── Engagement & Adoption ── */}
+        {data && eng && m && (
           <div>
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
               <Zap className="h-4 w-4 text-amber-500" />
-              User Engagement & Adoption
+              User Engagement &amp; Adoption
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-              {/* Login activity */}
+              {/* Login Activity */}
               <Card className="border-0 ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm">
                 <CardHeader className="border-b py-3">
                   <CardTitle className="text-sm font-semibold flex items-center gap-2" style={{ color: "#10b981" }}>
@@ -404,9 +484,9 @@ export default function PortalAnalytics() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-4 grid grid-cols-2 gap-3">
-                  <StatPill label="Total login sessions" value={fmt(m!.logins.total)} icon={LogIn} color="#10b981" />
+                  <StatPill label="Total login sessions" value={fmt(m.logins.total)} icon={LogIn} color="#10b981" />
                   {!isAllTime && (
-                    <StatPill label={`Sessions ${periodLabel[period].cur.toLowerCase()}`} value={fmt(m!.logins.current)} icon={LogIn} color="#10b981" />
+                    <StatPill label={`Sessions ${periodLabel[period].cur.toLowerCase()}`} value={fmt(m.logins.current)} icon={LogIn} color="#10b981" />
                   )}
                   {!isAllTime && (
                     <StatPill label="Unique users logged in" value={fmt(eng.curUniqueLoginUsers)} icon={Users} color="#0ea5e9" />
@@ -414,13 +494,13 @@ export default function PortalAnalytics() {
                   <StatPill label="Cases active last 30 days" value={fmt(eng.casesActive30d)} icon={Clock} color="#f59e0b" />
                   {!isAllTime && (
                     <div className="col-span-2 pt-1">
-                      <Delta current={m!.logins.current} previous={m!.logins.previous} isAllTime={isAllTime} />
+                      <Delta current={m.logins.current} previous={m.logins.previous} isAllTime={isAllTime} />
                     </div>
                   )}
                 </CardContent>
               </Card>
 
-              {/* Messaging activity */}
+              {/* Messaging Activity */}
               <Card className="border-0 ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm">
                 <CardHeader className="border-b py-3">
                   <CardTitle className="text-sm font-semibold flex items-center gap-2" style={{ color: "#0ea5e9" }}>
@@ -429,19 +509,19 @@ export default function PortalAnalytics() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-4 grid grid-cols-2 gap-3">
-                  <StatPill label="Total messages sent" value={fmt(m!.messages.total)} icon={MessageSquare} color="#0ea5e9" />
+                  <StatPill label="Total messages sent" value={fmt(m.messages.total)} icon={MessageSquare} color="#0ea5e9" />
                   {!isAllTime && (
-                    <StatPill label={`Messages ${periodLabel[period].cur.toLowerCase()}`} value={fmt(m!.messages.current)} icon={MessageSquare} color="#0ea5e9" />
+                    <StatPill label={`Messages ${periodLabel[period].cur.toLowerCase()}`} value={fmt(m.messages.current)} icon={MessageSquare} color="#0ea5e9" />
                   )}
                   <StatPill label="Messages with attachments" value={fmt(eng.msgsWithAttachments)} icon={Paperclip} color="#6366f1" />
-                  <StatPill label="Cases active last 30 days" value={fmt(eng.casesActive30d)} icon={Clock} color="#f59e0b" />
+                  <StatPill label="Case submissions" value={fmt(m.submissions.total)} icon={ClipboardList} color="#ec4899" />
                 </CardContent>
               </Card>
             </div>
           </div>
         )}
 
-        {/* Value Indicators */}
+        {/* ── Value Indicators ── */}
         {data && vi && (
           <div>
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -452,37 +532,13 @@ export default function PortalAnalytics() {
               <CardContent className="p-0">
                 <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-gray-100 dark:divide-gray-800">
                   {[
-                    {
-                      value: vi.avgMsgsPerCase,
-                      label: "Avg messages per case",
-                      sub: "Shows ongoing dialogue depth",
-                      color: "#0ea5e9",
-                    },
-                    {
-                      value: vi.avgActivitiesPerCase,
-                      label: "Avg interactions per case",
-                      sub: "Touchpoints per matter",
-                      color: "#f59e0b",
-                    },
-                    {
-                      value: `${vi.submissionConversionRate}%`,
-                      label: "Submission conversion",
-                      sub: "Submissions becoming cases",
-                      color: "#7c3aed",
-                      isStr: true,
-                    },
-                    {
-                      value: `${vi.attachmentRate}%`,
-                      label: "Messages with files",
-                      sub: "Digital document exchange",
-                      color: "#6366f1",
-                      isStr: true,
-                    },
+                    { value: vi.avgMsgsPerCase,          label: "Avg messages per case",   sub: "Ongoing dialogue depth",       color: "#0ea5e9" },
+                    { value: vi.avgActivitiesPerCase,     label: "Avg interactions per case", sub: "Touchpoints per matter",     color: "#f59e0b" },
+                    { value: `${vi.submissionConversionRate}%`, label: "Submission conversion", sub: "Submissions becoming cases", color: "#7c3aed" },
+                    { value: `${vi.attachmentRate}%`,    label: "Messages with files",     sub: "Digital document exchange",    color: "#6366f1" },
                   ].map((item, i) => (
                     <div key={i} className="p-5 text-center">
-                      <div className="text-2xl font-bold tabular-nums mb-1" style={{ color: item.color }}>
-                        {(item as any).isStr ? item.value : item.value}
-                      </div>
+                      <div className="text-2xl font-bold tabular-nums mb-1" style={{ color: item.color }}>{item.value}</div>
                       <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{item.label}</div>
                       <div className="text-xs text-gray-400 leading-tight">{item.sub}</div>
                     </div>
@@ -493,57 +549,7 @@ export default function PortalAnalytics() {
           </div>
         )}
 
-        {/* Breakdowns */}
-        {data && (
-          <div>
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-slate-400" />
-              Case Breakdowns
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="border-0 ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm">
-                <CardHeader className="border-b py-4">
-                  <CardTitle className="text-sm font-semibold" style={{ color: NAVY }}>Cases by Status</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  {data.breakdowns.casesByStatus.length === 0 ? (
-                    <p className="text-sm text-gray-400">No case data.</p>
-                  ) : (
-                    <SimpleBar data={data.breakdowns.casesByStatus.sort((a,b) => b.count - a.count)}
-                      labelKey="status" valueKey="count" color={TEAL} />
-                  )}
-                </CardContent>
-              </Card>
-              <Card className="border-0 ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm">
-                <CardHeader className="border-b py-4">
-                  <CardTitle className="text-sm font-semibold" style={{ color: NAVY }}>Cases by Debtor Type</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  {data.breakdowns.casesByType.length === 0 ? (
-                    <p className="text-sm text-gray-400">No case data.</p>
-                  ) : (
-                    <SimpleBar data={data.breakdowns.casesByType.sort((a,b) => b.count - a.count)}
-                      labelKey="type" valueKey="count" color="#7c3aed" />
-                  )}
-                </CardContent>
-              </Card>
-              <Card className="border-0 ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm">
-                <CardHeader className="border-b py-4">
-                  <CardTitle className="text-sm font-semibold" style={{ color: NAVY }}>Top Organisations by Cases</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  {data.breakdowns.topOrgs.length === 0 ? (
-                    <p className="text-sm text-gray-400">No data.</p>
-                  ) : (
-                    <SimpleBar data={data.breakdowns.topOrgs} labelKey="name" valueKey="cases" color={NAVY} />
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        )}
-
-        {/* Summary */}
+        {/* ── At a Glance ── */}
         {data && !isLoading && m && (
           <div>
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -553,10 +559,10 @@ export default function PortalAnalytics() {
             <div className="rounded-xl border-0 ring-1 ring-gray-200 dark:ring-gray-700 bg-white dark:bg-card shadow-sm p-6">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
                 {[
-                  { label: "Active Cases",             value: m.cases.active,                    color: "#7c3aed" },
-                  { label: "Cases Active (Last 30d)",  value: eng?.casesActive30d ?? 0,          color: "#f59e0b" },
-                  { label: "Total Portal Interactions", value: m.activities.total,               color: TEAL },
-                  { label: "Total Payments Value",     value: fmtCurrency(m.payments.totalValue), color: "#6366f1", isText: true },
+                  { label: "Active Cases",              value: m.cases.active,                   color: "#7c3aed" },
+                  { label: "Cases Active (Last 30d)",   value: eng?.casesActive30d ?? 0,          color: "#f59e0b" },
+                  { label: "Total Portal Interactions", value: m.activities.total,                color: TEAL },
+                  { label: "Total Payments Value",      value: fmtCurrency(m.payments.totalValue), color: "#6366f1", isText: true },
                 ].map(s => (
                   <div key={s.label} className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
                     <div className="text-2xl font-bold tabular-nums" style={{ color: s.color }}>
