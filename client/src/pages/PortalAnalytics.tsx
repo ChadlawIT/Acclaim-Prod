@@ -7,6 +7,7 @@ import {
   Activity, ClipboardList, CreditCard, ArrowLeft,
   TrendingUp, TrendingDown, Minus, BarChart3, LogIn,
   Clock, Paperclip, Star, Zap, Telescope, FileOutput,
+  AlertTriangle, CheckCircle2, Timer,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -53,6 +54,13 @@ interface AnalyticsData {
     casesByStatus: { status: string; count: number }[];
     casesByType:   { type: string; count: number }[];
     topOrgs:       { name: string; cases: number }[];
+  };
+  messageResponseHealth: {
+    periodUserMessages: number;
+    unansweredTotal: number;
+    unansweredOver7Days: number;
+    unanswered2to7Days: number;
+    unansweredUnder2Days: number;
   };
   trend: {
     label: string;
@@ -578,6 +586,44 @@ function openHtmlReport(data: AnalyticsData, period: Period, dateRangeLabel: str
 
     ${projectionSection}
 
+    <div class="section">
+      <h2>&#128233; Message Response Health</h2>
+      <p class="desc">
+        Tracks whether client messages are being replied to. A message is considered unanswered when it is the most recent message on an active case and no reply from the recovery team has followed.
+        ${!isAllTime ? `During this period, <strong>${data.messageResponseHealth.periodUserMessages.toLocaleString()}</strong> messages were sent by clients.` : ""}
+      </p>
+      ${data.messageResponseHealth.unansweredTotal === 0
+        ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px 20px;color:#166534;font-size:13px">
+            ✅ &nbsp;<strong>All client messages have been replied to.</strong> No unanswered messages were found on any active case.
+           </div>`
+        : `<table>
+            <thead><tr><th>Category</th><th style="text-align:right">Count</th><th>What this means</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><strong>Total unanswered messages</strong></td>
+                <td style="text-align:right;font-weight:700;color:#dc2626">${data.messageResponseHealth.unansweredTotal}</td>
+                <td style="color:#6b7280;font-size:12px">Active cases where the last message is from a client with no reply yet</td>
+              </tr>
+              <tr>
+                <td style="padding-left:24px">⟶ Waiting over 7 days</td>
+                <td style="text-align:right;font-weight:600;color:#b91c1c">${data.messageResponseHealth.unansweredOver7Days}</td>
+                <td style="color:#6b7280;font-size:12px">Longest outstanding — these require urgent attention</td>
+              </tr>
+              <tr>
+                <td style="padding-left:24px">⟶ Waiting 2 – 7 days</td>
+                <td style="text-align:right;font-weight:600;color:#f59e0b">${data.messageResponseHealth.unanswered2to7Days}</td>
+                <td style="color:#6b7280;font-size:12px">Approaching escalation threshold</td>
+              </tr>
+              <tr>
+                <td style="padding-left:24px">⟶ Waiting under 2 days</td>
+                <td style="text-align:right;font-weight:600;color:#10b981">${data.messageResponseHealth.unansweredUnder2Days}</td>
+                <td style="color:#6b7280;font-size:12px">Within normal response window</td>
+              </tr>
+            </tbody>
+           </table>`
+      }
+    </div>
+
     <div class="highlight-box">
       &#9432; &nbsp;<strong>About these figures:</strong> All data is drawn directly from live portal records.
       Projections are estimates based on observed activity rates and period-on-period trends — they are intended as a planning guide only.
@@ -958,6 +1004,114 @@ export default function PortalAnalytics() {
                 </CardContent>
               </Card>
             </div>
+          </div>
+        )}
+
+        {/* ── Message Response Health ── */}
+        {data && data.messageResponseHealth && (
+          <div>
+            <SectionHeader
+              icon={MessageSquare} iconColor="#0ea5e9"
+              title="Message Response Health"
+              description="Shows whether client messages on active cases have been replied to. An unanswered message is one where a client sent the last message with no follow-up reply from the team."
+            />
+            <Card className="border-0 ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm overflow-hidden">
+              <CardContent className="p-6">
+                {(() => {
+                  const mrh = data.messageResponseHealth;
+                  const answered = mrh.periodUserMessages > 0 ? mrh.periodUserMessages - mrh.unansweredTotal : 0;
+                  const answeredPct = mrh.periodUserMessages > 0 ? Math.round((answered / mrh.periodUserMessages) * 100) : 100;
+                  const allGood = mrh.unansweredTotal === 0;
+
+                  return (
+                    <div className="space-y-5">
+                      {/* Top-line overview */}
+                      {!isAllTime && mrh.periodUserMessages > 0 && (
+                        <div className="flex flex-wrap gap-3">
+                          <div className="flex-1 min-w-[200px] bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 flex items-center gap-3">
+                            <div className="rounded-lg p-2" style={{ background: "#0ea5e915" }}>
+                              <MessageSquare className="h-5 w-5" style={{ color: "#0ea5e9" }} />
+                            </div>
+                            <div>
+                              <div className="text-2xl font-bold tabular-nums text-gray-900 dark:text-gray-100">{mrh.periodUserMessages.toLocaleString()}</div>
+                              <div className="text-xs text-gray-500">Client messages received this period</div>
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-[200px] bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 flex items-center gap-3">
+                            <div className="rounded-lg p-2" style={{ background: allGood ? "#10b98115" : "#dc262615" }}>
+                              {allGood
+                                ? <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                                : <AlertTriangle className="h-5 w-5 text-red-500" />}
+                            </div>
+                            <div>
+                              <div className="text-2xl font-bold tabular-nums" style={{ color: allGood ? "#10b981" : "#dc2626" }}>
+                                {mrh.unansweredTotal}
+                              </div>
+                              <div className="text-xs text-gray-500">Currently unanswered{!allGood && ` (${100 - answeredPct}% of period messages)`}</div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* All-good banner */}
+                      {allGood ? (
+                        <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
+                          <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">All client messages have been replied to</p>
+                            <p className="text-xs text-emerald-600/70 dark:text-emerald-500/70 mt-0.5">No active cases have an unanswered client message outstanding.</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Unanswered messages by age</p>
+
+                          {/* Over 7 days */}
+                          <div className="flex items-center gap-4 p-4 rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900">
+                            <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-baseline justify-between">
+                                <span className="text-sm font-semibold text-red-700 dark:text-red-400">Waiting over 7 days</span>
+                                <span className="text-2xl font-bold tabular-nums text-red-600 dark:text-red-400">{mrh.unansweredOver7Days}</span>
+                              </div>
+                              <p className="text-xs text-red-500/80 mt-0.5">These have exceeded the escalation threshold and require urgent attention.</p>
+                            </div>
+                          </div>
+
+                          {/* 2–7 days */}
+                          <div className="flex items-center gap-4 p-4 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900">
+                            <Timer className="h-5 w-5 text-amber-500 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-baseline justify-between">
+                                <span className="text-sm font-semibold text-amber-700 dark:text-amber-400">Waiting 2 – 7 days</span>
+                                <span className="text-2xl font-bold tabular-nums text-amber-600 dark:text-amber-400">{mrh.unanswered2to7Days}</span>
+                              </div>
+                              <p className="text-xs text-amber-500/80 mt-0.5">Approaching the escalation window — a response should be prioritised.</p>
+                            </div>
+                          </div>
+
+                          {/* Under 2 days */}
+                          <div className="flex items-center gap-4 p-4 rounded-xl bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900">
+                            <Clock className="h-5 w-5 text-blue-400 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-baseline justify-between">
+                                <span className="text-sm font-semibold text-blue-700 dark:text-blue-400">Waiting under 2 days</span>
+                                <span className="text-2xl font-bold tabular-nums text-blue-600 dark:text-blue-400">{mrh.unansweredUnder2Days}</span>
+                              </div>
+                              <p className="text-xs text-blue-500/80 mt-0.5">Within the normal response window — no action required yet.</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      <p className="text-xs text-gray-400 border-t pt-3">
+                        "Unanswered" means the most recent message on an active case was sent by a client, with no subsequent reply from the recovery team. Archived cases and cases with no messages are excluded.
+                      </p>
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
           </div>
         )}
 

@@ -9264,6 +9264,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
         cnt(messages, undefined, undefined, undefined, sql`${messages.attachmentFilePath} IS NOT NULL`),
       ]);
 
+      // Message response health (unanswered user messages — same logic as escalation report)
+      const [msgHealthRow, periodUserMsgRow] = await Promise.all([
+        db.execute(sql`
+          WITH last_msg_per_case AS (
+            SELECT DISTINCT ON (m.case_id)
+              m.id, m.case_id, m.created_at, u.is_admin, u.email, c.status, c.is_archived
+            FROM messages m
+            JOIN users u ON u.id = m.sender_id
+            JOIN cases c ON c.id = m.case_id
+            WHERE m.case_id IS NOT NULL
+            ORDER BY m.case_id, m.created_at DESC
+          ),
+          filtered AS (
+            SELECT * FROM last_msg_per_case
+            WHERE LOWER(status) = 'active'
+              AND is_archived != true
+              AND is_admin = false
+              AND LOWER(email) NOT LIKE '%@acclaim.law'
+              AND LOWER(email) NOT LIKE '%@chadlaw.co.uk'
+          )
+          SELECT
+            COUNT(*) AS unanswered_total,
+            COUNT(*) FILTER (WHERE EXTRACT(EPOCH FROM (NOW() - created_at))/86400 > 7)            AS over_7_days,
+            COUNT(*) FILTER (WHERE EXTRACT(EPOCH FROM (NOW() - created_at))/86400 BETWEEN 2 AND 7) AS between_2_7_days,
+            COUNT(*) FILTER (WHERE EXTRACT(EPOCH FROM (NOW() - created_at))/86400 < 2)            AS under_2_days
+          FROM filtered
+        `),
+        isAllTime
+          ? Promise.resolve(null)
+          : db.execute(sql`
+              SELECT COUNT(*) AS n
+              FROM messages m
+              JOIN users u ON u.id = m.sender_id
+              WHERE m.created_at >= ${startCurrent}
+                AND m.created_at < ${endCurrent}
+                AND u.is_admin = false
+                AND LOWER(u.email) NOT LIKE '%@acclaim.law'
+                AND LOWER(u.email) NOT LIKE '%@chadlaw.co.uk'
+            `),
+      ]);
+
+      const mhRow: any = msgHealthRow.rows[0] ?? {};
+      const unansweredTotal     = Number(mhRow.unanswered_total   ?? 0);
+      const unansweredOver7Days = Number(mhRow.over_7_days        ?? 0);
+      const unanswered2to7Days  = Number(mhRow.between_2_7_days   ?? 0);
+      const unansweredUnder2Days = Number(mhRow.under_2_days      ?? 0);
+      const periodUserMessages  = periodUserMsgRow ? Number((periodUserMsgRow.rows[0] as any)?.n ?? 0) : 0;
+
       // Breakdowns
       const [casesByStatusRaw, casesByTypeRaw, topOrgsRaw, allOrgsRaw] = await Promise.all([
         db.select({ status: cases.status, n: count() }).from(cases).groupBy(cases.status),
@@ -9401,6 +9449,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           casesByStatus: casesByStatusRaw.map(r => ({ status: r.status || 'Unknown', count: Number(r.n) })),
           casesByType:   casesByTypeRaw.map(r => ({ type: r.type || 'Unknown', count: Number(r.n) })),
           topOrgs: topOrgsRaw.map(r => ({ name: r.orgId ? (orgNameMap[r.orgId] || 'Unknown') : 'Unknown', cases: Number(r.n) })),
+        },
+        messageResponseHealth: {
+          periodUserMessages,
+          unansweredTotal,
+          unansweredOver7Days,
+          unanswered2to7Days,
+          unansweredUnder2Days,
         },
         trend,
       });
