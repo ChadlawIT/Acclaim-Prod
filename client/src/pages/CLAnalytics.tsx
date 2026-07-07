@@ -75,6 +75,14 @@ export default function CLAnalytics() {
 
   const { data: linkClickers, isLoading: linkClickersLoading } = useQuery<any[]>({
     queryKey: ["/api/admin/cl-analytics/link", selectedLink?.href],
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/cl-analytics/link?href=${encodeURIComponent(selectedLink!.href)}`, {
+        credentials: "include",
+        cache: "no-store",
+      });
+      if (!res.ok) throw new Error(`${res.status}: ${res.statusText}`);
+      return res.json();
+    },
     enabled: !!selectedLink,
   });
 
