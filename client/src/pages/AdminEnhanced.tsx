@@ -3977,6 +3977,12 @@ export default function AdminEnhanced() {
               Messages Report
             </Button>
           </Link>
+          <Link href="/portal-analytics">
+            <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs h-7">
+              <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
+              Portal Analytics
+            </Button>
+          </Link>
           <Link href="/cl-analytics">
             <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs h-7">
               <Scale className="h-3.5 w-3.5 mr-1.5" />

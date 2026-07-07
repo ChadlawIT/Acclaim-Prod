@@ -20,10 +20,16 @@ import {
   auditLog,
   userActivityLogs,
   messages,
-  users
+  users,
+  organisations,
+  cases,
+  documents,
+  caseActivities,
+  caseSubmissions,
+  payments,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, sql, count } from "drizzle-orm";
+import { eq, desc, and, sql, count, sum } from "drizzle-orm";
 import { z } from "zod";
 
 // Validates one or more email addresses separated by semicolons (or commas)
@@ -9114,6 +9120,227 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching CL analytics:', error);
       res.status(500).json({ message: 'Failed to fetch analytics' });
+    }
+  });
+
+  // ─── Portal Analytics (board-level dashboard) ──────────────────────────────
+  app.get('/api/admin/portal-analytics', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const period = (req.query.period as string) || 'month';
+      const now = new Date();
+
+      let startCurrent: Date, endCurrent: Date, startPrevious: Date, endPrevious: Date;
+
+      if (period === 'week') {
+        const dow = now.getDay();
+        const diff = dow === 0 ? 6 : dow - 1;
+        startCurrent = new Date(now); startCurrent.setDate(now.getDate() - diff); startCurrent.setHours(0,0,0,0);
+        endCurrent = now;
+        startPrevious = new Date(startCurrent); startPrevious.setDate(startPrevious.getDate() - 7);
+        endPrevious = new Date(startCurrent);
+      } else if (period === 'month') {
+        startCurrent = new Date(now.getFullYear(), now.getMonth(), 1);
+        endCurrent = now;
+        startPrevious = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        endPrevious = new Date(now.getFullYear(), now.getMonth(), 1);
+      } else if (period === 'quarter') {
+        const q = Math.floor(now.getMonth() / 3);
+        startCurrent = new Date(now.getFullYear(), q * 3, 1);
+        endCurrent = now;
+        const prevQ = q === 0 ? 3 : q - 1;
+        const prevYear = q === 0 ? now.getFullYear() - 1 : now.getFullYear();
+        startPrevious = new Date(prevYear, prevQ * 3, 1);
+        endPrevious = new Date(startCurrent);
+      } else if (period === 'year') {
+        startCurrent = new Date(now.getFullYear(), 0, 1);
+        endCurrent = now;
+        startPrevious = new Date(now.getFullYear() - 1, 0, 1);
+        endPrevious = new Date(now.getFullYear(), 0, 1);
+      } else {
+        startCurrent = new Date(0); endCurrent = now;
+        startPrevious = new Date(0); endPrevious = new Date(0);
+      }
+
+      const isAllTime = period === 'all';
+
+      const cnt = async (table: any, dateCol?: any, start?: Date, end?: Date, extra?: any) => {
+        const conditions: any[] = [];
+        if (dateCol && start && end) {
+          conditions.push(sql`${dateCol} >= ${start}`, sql`${dateCol} < ${end}`);
+        }
+        if (extra) conditions.push(extra);
+        const [row] = conditions.length
+          ? await db.select({ n: count() }).from(table).where(and(...conditions))
+          : await db.select({ n: count() }).from(table);
+        return Number(row?.n ?? 0);
+      };
+
+      const [
+        totalUsers, curUsers, prevUsers,
+        totalOrgs, curOrgs, prevOrgs,
+        totalCases, curCases, prevCases,
+        totalActive, totalClosed,
+        totalMessages, curMessages, prevMessages,
+        totalDocuments, curDocuments, prevDocuments,
+        totalActivities, curActivities, prevActivities,
+        totalSubmissions, curSubmissions, prevSubmissions,
+        paymentCountRow, paymentValueRow,
+        curPayments, prevPayments,
+      ] = await Promise.all([
+        cnt(users),
+        isAllTime ? Promise.resolve(0) : cnt(users, users.createdAt, startCurrent, endCurrent),
+        isAllTime ? Promise.resolve(0) : cnt(users, users.createdAt, startPrevious, endPrevious),
+
+        cnt(organisations),
+        isAllTime ? Promise.resolve(0) : cnt(organisations, organisations.createdAt, startCurrent, endCurrent),
+        isAllTime ? Promise.resolve(0) : cnt(organisations, organisations.createdAt, startPrevious, endPrevious),
+
+        cnt(cases),
+        isAllTime ? Promise.resolve(0) : cnt(cases, cases.createdAt, startCurrent, endCurrent),
+        isAllTime ? Promise.resolve(0) : cnt(cases, cases.createdAt, startPrevious, endPrevious),
+
+        cnt(cases, undefined, undefined, undefined, sql`LOWER(${cases.status}) = 'active'`),
+        cnt(cases, undefined, undefined, undefined, sql`LOWER(${cases.status}) = 'closed'`),
+
+        cnt(messages),
+        isAllTime ? Promise.resolve(0) : cnt(messages, messages.createdAt, startCurrent, endCurrent),
+        isAllTime ? Promise.resolve(0) : cnt(messages, messages.createdAt, startPrevious, endPrevious),
+
+        cnt(documents),
+        isAllTime ? Promise.resolve(0) : cnt(documents, documents.createdAt, startCurrent, endCurrent),
+        isAllTime ? Promise.resolve(0) : cnt(documents, documents.createdAt, startPrevious, endPrevious),
+
+        cnt(caseActivities),
+        isAllTime ? Promise.resolve(0) : cnt(caseActivities, caseActivities.createdAt, startCurrent, endCurrent),
+        isAllTime ? Promise.resolve(0) : cnt(caseActivities, caseActivities.createdAt, startPrevious, endPrevious),
+
+        cnt(caseSubmissions),
+        isAllTime ? Promise.resolve(0) : cnt(caseSubmissions, caseSubmissions.createdAt, startCurrent, endCurrent),
+        isAllTime ? Promise.resolve(0) : cnt(caseSubmissions, caseSubmissions.createdAt, startPrevious, endPrevious),
+
+        db.select({ n: count() }).from(payments),
+        db.select({ v: sum(payments.amount) }).from(payments),
+        isAllTime ? Promise.resolve(0) : cnt(payments, payments.paymentDate, startCurrent, endCurrent),
+        isAllTime ? Promise.resolve(0) : cnt(payments, payments.paymentDate, startPrevious, endPrevious),
+      ]);
+
+      // Breakdowns
+      const [casesByStatusRaw, casesByTypeRaw, topOrgsRaw, allOrgsRaw] = await Promise.all([
+        db.select({ status: cases.status, n: count() }).from(cases).groupBy(cases.status),
+        db.select({ type: cases.debtorType, n: count() }).from(cases).groupBy(cases.debtorType),
+        db.select({ orgId: cases.organisationId, n: count() }).from(cases)
+          .groupBy(cases.organisationId).orderBy(desc(count())).limit(8),
+        db.select({ id: organisations.id, name: organisations.name }).from(organisations),
+      ]);
+
+      const orgNameMap: Record<number, string> = {};
+      for (const o of allOrgsRaw) orgNameMap[o.id] = o.name;
+
+      // Trend data
+      let trend: any[] = [];
+      if (!isAllTime) {
+        const truncUnit = (period === 'week' || period === 'month') ? 'day'
+          : period === 'quarter' ? 'week' : 'month';
+
+        const trendQuery = async (table: any, dateCol: any, start: Date, end: Date) =>
+          db.select({
+            bucket: sql<string>`date_trunc(${truncUnit}, ${dateCol})`,
+            n: count(),
+          }).from(table)
+            .where(and(sql`${dateCol} >= ${start}`, sql`${dateCol} < ${end}`))
+            .groupBy(sql`date_trunc(${truncUnit}, ${dateCol})`)
+            .orderBy(sql`date_trunc(${truncUnit}, ${dateCol})`);
+
+        const [actCur, actPrev, msgCur, msgPrev, casesCur, casesPrev] = await Promise.all([
+          trendQuery(caseActivities, caseActivities.createdAt, startCurrent, endCurrent),
+          trendQuery(caseActivities, caseActivities.createdAt, startPrevious, endPrevious),
+          trendQuery(messages, messages.createdAt, startCurrent, endCurrent),
+          trendQuery(messages, messages.createdAt, startPrevious, endPrevious),
+          trendQuery(cases, cases.createdAt, startCurrent, endCurrent),
+          trendQuery(cases, cases.createdAt, startPrevious, endPrevious),
+        ]);
+
+        const toMap = (rows: any[]) => {
+          const m: Record<string, number> = {};
+          for (const r of rows) m[new Date(r.bucket).toISOString().split('T')[0]] = Number(r.n);
+          return m;
+        };
+
+        const actCurM = toMap(actCur), actPrevM = toMap(actPrev);
+        const msgCurM = toMap(msgCur), msgPrevM = toMap(msgPrev);
+        const casesCurM = toMap(casesCur), casesPrevM = toMap(casesPrev);
+
+        const advance = (d: Date) => {
+          const n = new Date(d);
+          if (truncUnit === 'day') n.setDate(n.getDate() + 1);
+          else if (truncUnit === 'week') n.setDate(n.getDate() + 7);
+          else n.setMonth(n.getMonth() + 1);
+          return n;
+        };
+        const snapToUnit = (d: Date) => {
+          const n = new Date(d);
+          if (truncUnit === 'day') { n.setHours(0,0,0,0); return n; }
+          if (truncUnit === 'week') {
+            const dow = n.getDay(); n.setDate(n.getDate() - (dow === 0 ? 6 : dow - 1)); n.setHours(0,0,0,0); return n;
+          }
+          return new Date(n.getFullYear(), n.getMonth(), 1);
+        };
+        const label = (d: Date, i: number) => {
+          if (truncUnit === 'day' && period === 'week') return ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][d.getDay() === 0 ? 6 : d.getDay() - 1];
+          if (truncUnit === 'day') return String(d.getDate());
+          if (truncUnit === 'week') return `Wk ${i + 1}`;
+          return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
+        };
+
+        let cur = snapToUnit(new Date(startCurrent));
+        let prev = snapToUnit(new Date(startPrevious));
+        let i = 0;
+        while (cur <= endCurrent) {
+          const ck = cur.toISOString().split('T')[0];
+          const pk = prev.toISOString().split('T')[0];
+          trend.push({
+            label: label(cur, i),
+            curActivities: actCurM[ck] ?? 0,
+            prevActivities: actPrevM[pk] ?? 0,
+            curMessages: msgCurM[ck] ?? 0,
+            prevMessages: msgPrevM[pk] ?? 0,
+            curCases: casesCurM[ck] ?? 0,
+            prevCases: casesPrevM[pk] ?? 0,
+          });
+          cur = advance(cur);
+          prev = advance(prev);
+          i++;
+        }
+      }
+
+      res.json({
+        period,
+        dateRange: {
+          startCurrent: startCurrent.toISOString(),
+          endCurrent: endCurrent.toISOString(),
+          startPrevious: isAllTime ? null : startPrevious.toISOString(),
+          endPrevious: isAllTime ? null : endPrevious.toISOString(),
+        },
+        metrics: {
+          users:       { total: totalUsers,       current: curUsers,       previous: prevUsers },
+          orgs:        { total: totalOrgs,         current: curOrgs,        previous: prevOrgs },
+          cases:       { total: totalCases,        current: curCases,       previous: prevCases, active: totalActive, closed: totalClosed },
+          messages:    { total: totalMessages,     current: curMessages,    previous: prevMessages },
+          documents:   { total: totalDocuments,    current: curDocuments,   previous: prevDocuments },
+          activities:  { total: totalActivities,   current: curActivities,  previous: prevActivities },
+          submissions: { total: totalSubmissions,  current: curSubmissions, previous: prevSubmissions },
+          payments:    { total: Number(paymentCountRow[0]?.n ?? 0), totalValue: Number(paymentValueRow[0]?.v ?? 0), current: curPayments, previous: prevPayments },
+        },
+        breakdowns: {
+          casesByStatus: casesByStatusRaw.map(r => ({ status: r.status || 'Unknown', count: Number(r.n) })),
+          casesByType:   casesByTypeRaw.map(r => ({ type: r.type || 'Unknown', count: Number(r.n) })),
+          topOrgs: topOrgsRaw.map(r => ({ name: r.orgId ? (orgNameMap[r.orgId] || 'Unknown') : 'Unknown', cases: Number(r.n) })),
+        },
+        trend,
+      });
+    } catch (error) {
+      console.error('Error fetching portal analytics:', error);
+      res.status(500).json({ message: 'Failed to fetch portal analytics' });
     }
   });
 

@@ -24,6 +24,7 @@ import SimpleReports from "@/pages/SimpleReports";
 import MessagesReport from "@/pages/MessagesReport";
 import AuditManagement from "@/pages/AuditManagement";
 import CLAnalytics from "@/pages/CLAnalytics";
+import PortalAnalytics from "@/pages/PortalAnalytics";
 import OrgSettings from "@/pages/OrgSettings";
 import PrivacyNotice from "@/pages/PrivacyNotice";
 import TermsOfUse from "@/pages/TermsOfUse";
@@ -42,6 +43,7 @@ function Router() {
       <ProtectedRoute path="/reports" component={SimpleReports} />
       <ProtectedRoute path="/audit-management" component={AuditManagement} />
       <ProtectedRoute path="/cl-analytics" component={CLAnalytics} />
+      <ProtectedRoute path="/portal-analytics" component={PortalAnalytics} />
       <ProtectedRoute path="/case-summary-report" component={CaseSummaryReport} />
       <ProtectedRoute path="/recovery-analysis-report" component={RecoveryAnalysisReport} />
       <ProtectedRoute path="/monthly-statement-report" component={MonthlyStatementReport} />
