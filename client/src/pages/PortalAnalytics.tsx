@@ -6,12 +6,12 @@ import {
   Users, Building2, FolderOpen, MessageSquare, FileText,
   Activity, ClipboardList, CreditCard, ArrowLeft,
   TrendingUp, TrendingDown, Minus, BarChart3, LogIn,
-  CheckCircle2, Clock, Paperclip, Star, Zap,
+  Clock, Paperclip, Star, Zap,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend, RadialBarChart, RadialBar,
+  ResponsiveContainer, Legend,
 } from "recharts";
 import { formatUKDateLong } from "@/lib/dateUtils";
 
@@ -183,23 +183,6 @@ function SimpleBar({ data, labelKey, valueKey, color }: { data: any[]; labelKey:
   );
 }
 
-function RateGauge({ value, label, color }: { value: number; label: string; color: string }) {
-  const data = [{ name: label, value, fill: color }];
-  return (
-    <div className="flex flex-col items-center">
-      <div className="relative">
-        <RadialBarChart width={100} height={100} cx={50} cy={50} innerRadius={32} outerRadius={46}
-          barSize={12} data={data} startAngle={90} endAngle={90 - (value / 100) * 360}>
-          <RadialBar dataKey="value" cornerRadius={6} background={{ fill: "#f1f5f9" }} />
-        </RadialBarChart>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-lg font-bold" style={{ color }}>{value}%</span>
-        </div>
-      </div>
-      <span className="text-xs text-gray-500 text-center mt-1 leading-tight">{label}</span>
-    </div>
-  );
-}
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -437,26 +420,21 @@ export default function PortalAnalytics() {
                 </CardContent>
               </Card>
 
-              {/* Messaging health */}
+              {/* Messaging activity */}
               <Card className="border-0 ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm">
                 <CardHeader className="border-b py-3">
                   <CardTitle className="text-sm font-semibold flex items-center gap-2" style={{ color: "#0ea5e9" }}>
                     <MessageSquare className="h-4 w-4" />
-                    Messaging Health
+                    Messaging Activity
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="pt-4">
-                  <div className="flex items-start gap-6">
-                    <div className="flex flex-col gap-3 flex-1">
-                      <StatPill label="Read messages" value={fmt(eng.totalReadMsgs)} icon={CheckCircle2} color="#10b981" />
-                      <StatPill label="Awaiting attention" value={fmt(eng.totalUnreadMsgs)} icon={MessageSquare} color={eng.totalUnreadMsgs > 0 ? "#f59e0b" : "#94a3b8"} />
-                      <StatPill label="Messages with attachments" value={fmt(eng.msgsWithAttachments)} icon={Paperclip} color="#6366f1" />
-                    </div>
-                    <div className="flex flex-col items-center gap-4 flex-shrink-0 pt-1">
-                      <RateGauge value={eng.readRate} label="Read rate" color="#10b981" />
-                      <RateGauge value={vi?.attachmentRate ?? 0} label="With attachments" color="#6366f1" />
-                    </div>
-                  </div>
+                <CardContent className="pt-4 grid grid-cols-2 gap-3">
+                  <StatPill label="Total messages sent" value={fmt(m!.messages.total)} icon={MessageSquare} color="#0ea5e9" />
+                  {!isAllTime && (
+                    <StatPill label={`Messages ${periodLabel[period].cur.toLowerCase()}`} value={fmt(m!.messages.current)} icon={MessageSquare} color="#0ea5e9" />
+                  )}
+                  <StatPill label="Messages with attachments" value={fmt(eng.msgsWithAttachments)} icon={Paperclip} color="#6366f1" />
+                  <StatPill label="Cases active last 30 days" value={fmt(eng.casesActive30d)} icon={Clock} color="#f59e0b" />
                 </CardContent>
               </Card>
             </div>
@@ -472,43 +450,25 @@ export default function PortalAnalytics() {
             </h2>
             <Card className="border-0 ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm overflow-hidden">
               <CardContent className="p-0">
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 divide-x divide-y sm:divide-y-0 divide-gray-100 dark:divide-gray-800">
+                <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-gray-100 dark:divide-gray-800">
                   {[
                     {
                       value: vi.avgMsgsPerCase,
                       label: "Avg messages per case",
                       sub: "Shows ongoing dialogue depth",
                       color: "#0ea5e9",
-                      suffix: "",
-                    },
-                    {
-                      value: vi.avgDocsPerCase,
-                      label: "Avg documents per case",
-                      sub: "Evidence managed digitally",
-                      color: "#f97316",
-                      suffix: "",
                     },
                     {
                       value: vi.avgActivitiesPerCase,
                       label: "Avg interactions per case",
                       sub: "Touchpoints per matter",
                       color: "#f59e0b",
-                      suffix: "",
-                    },
-                    {
-                      value: `${vi.readRate}%`,
-                      label: "Message read rate",
-                      sub: "Users actively reading comms",
-                      color: "#10b981",
-                      suffix: "",
-                      isStr: true,
                     },
                     {
                       value: `${vi.submissionConversionRate}%`,
                       label: "Submission conversion",
                       sub: "Submissions becoming cases",
                       color: "#7c3aed",
-                      suffix: "",
                       isStr: true,
                     },
                     {
@@ -516,7 +476,6 @@ export default function PortalAnalytics() {
                       label: "Messages with files",
                       sub: "Digital document exchange",
                       color: "#6366f1",
-                      suffix: "",
                       isStr: true,
                     },
                   ].map((item, i) => (
