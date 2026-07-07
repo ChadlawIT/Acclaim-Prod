@@ -5,12 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Users, Building2, FolderOpen, MessageSquare, FileText,
   Activity, ClipboardList, CreditCard, ArrowLeft,
-  TrendingUp, TrendingDown, Minus, BarChart3,
+  TrendingUp, TrendingDown, Minus, BarChart3, LogIn,
+  CheckCircle2, Clock, Paperclip, Star, Zap,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend,
+  ResponsiveContainer, Legend, RadialBarChart, RadialBar,
 } from "recharts";
 import { formatUKDateLong } from "@/lib/dateUtils";
 
@@ -29,6 +30,24 @@ interface AnalyticsData {
     activities:  MetricStat;
     submissions: MetricStat;
     payments:    MetricStat & { totalValue: number };
+    logins:      MetricStat;
+  };
+  engagement: {
+    curUniqueLoginUsers: number;
+    prevUniqueLoginUsers: number;
+    totalReadMsgs: number;
+    totalUnreadMsgs: number;
+    readRate: number;
+    casesActive30d: number;
+    msgsWithAttachments: number;
+  };
+  valueIndicators: {
+    avgMsgsPerCase: number;
+    avgDocsPerCase: number;
+    avgActivitiesPerCase: number;
+    submissionConversionRate: number;
+    attachmentRate: number;
+    readRate: number;
   };
   breakdowns: {
     casesByStatus: { status: string; count: number }[];
@@ -46,7 +65,6 @@ interface AnalyticsData {
 const TEAL   = "#0d9488";
 const NAVY   = "#1e3a5f";
 const SLATE  = "#94a3b8";
-const ACCENT = "#f59e0b";
 
 const PERIODS: { value: Period; label: string }[] = [
   { value: "week",    label: "This Week" },
@@ -85,12 +103,12 @@ function Delta({ current, previous, isAllTime }: { current: number; previous: nu
   );
   if (delta > 0) return (
     <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600">
-      <TrendingUp className="h-3 w-3" /> +{delta} ({pct}%)
+      <TrendingUp className="h-3 w-3" /> +{fmt(delta)} ({pct}%)
     </span>
   );
   if (delta < 0) return (
     <span className="flex items-center gap-1 text-xs font-semibold text-rose-500">
-      <TrendingDown className="h-3 w-3" /> {delta} ({pct}%)
+      <TrendingDown className="h-3 w-3" /> {fmt(delta)} ({pct}%)
     </span>
   );
   return (
@@ -106,7 +124,6 @@ function KpiCard({
   icon: any; label: string; total: number; current: number; previous: number;
   isAllTime: boolean; accent: string; sub?: string;
 }) {
-  const labels = periodLabel[isAllTime ? "all" : "month"];
   return (
     <Card className="border-0 ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm overflow-hidden">
       <CardContent className="p-5">
@@ -166,6 +183,24 @@ function SimpleBar({ data, labelKey, valueKey, color }: { data: any[]; labelKey:
   );
 }
 
+function RateGauge({ value, label, color }: { value: number; label: string; color: string }) {
+  const data = [{ name: label, value, fill: color }];
+  return (
+    <div className="flex flex-col items-center">
+      <div className="relative">
+        <RadialBarChart width={100} height={100} cx={50} cy={50} innerRadius={32} outerRadius={46}
+          barSize={12} data={data} startAngle={90} endAngle={90 - (value / 100) * 360}>
+          <RadialBar dataKey="value" cornerRadius={6} background={{ fill: "#f1f5f9" }} />
+        </RadialBarChart>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-lg font-bold" style={{ color }}>{value}%</span>
+        </div>
+      </div>
+      <span className="text-xs text-gray-500 text-center mt-1 leading-tight">{label}</span>
+    </div>
+  );
+}
+
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
@@ -181,6 +216,20 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     </div>
   );
 };
+
+function StatPill({ label, value, icon: Icon, color }: { label: string; value: string | number; icon: any; color: string }) {
+  return (
+    <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60">
+      <div className="rounded-lg p-1.5 flex-shrink-0" style={{ background: `${color}18` }}>
+        <Icon className="h-4 w-4" style={{ color }} />
+      </div>
+      <div className="min-w-0">
+        <div className="text-lg font-bold text-gray-900 dark:text-gray-100 leading-tight tabular-nums">{value}</div>
+        <div className="text-xs text-gray-500 leading-tight">{label}</div>
+      </div>
+    </div>
+  );
+}
 
 export default function PortalAnalytics() {
   const { user } = useAuth();
@@ -204,6 +253,8 @@ export default function PortalAnalytics() {
   }
 
   const m = data?.metrics;
+  const eng = data?.engagement;
+  const vi = data?.valueIndicators;
   const isAllTime = period === "all";
 
   const dateRangeLabel = data ? (() => {
@@ -220,18 +271,18 @@ export default function PortalAnalytics() {
   })() : "";
 
   const trendData = data?.trend ?? [];
-  const curKey    = trendMetric === "activities" ? "curActivities" : trendMetric === "messages" ? "curMessages" : "curCases";
-  const prevKey   = trendMetric === "activities" ? "prevActivities" : trendMetric === "messages" ? "prevMessages" : "prevCases";
+  const curKey  = trendMetric === "activities" ? "curActivities" : trendMetric === "messages" ? "curMessages" : "curCases";
+  const prevKey = trendMetric === "activities" ? "prevActivities" : trendMetric === "messages" ? "prevMessages" : "prevCases";
 
   const kpis = m ? [
-    { icon: Users,       label: "Total Users",        total: m.users.total,       current: m.users.current,       previous: m.users.previous,       accent: TEAL,   sub: undefined },
-    { icon: Building2,   label: "Organisations",      total: m.orgs.total,        current: m.orgs.current,        previous: m.orgs.previous,        accent: NAVY,   sub: undefined },
-    { icon: FolderOpen,  label: "Total Cases",        total: m.cases.total,       current: m.cases.current,       previous: m.cases.previous,       accent: "#7c3aed", sub: `${m.cases.active} active · ${m.cases.closed} closed` },
-    { icon: MessageSquare, label: "Messages Sent",   total: m.messages.total,    current: m.messages.current,    previous: m.messages.previous,    accent: "#0ea5e9", sub: undefined },
-    { icon: Activity,    label: "Case Interactions", total: m.activities.total,  current: m.activities.current,  previous: m.activities.previous,  accent: "#f59e0b", sub: "Activities logged on cases" },
-    { icon: FileText,    label: "Documents Uploaded", total: m.documents.total,  current: m.documents.current,  previous: m.documents.previous,   accent: "#10b981", sub: undefined },
-    { icon: ClipboardList, label: "Case Submissions", total: m.submissions.total, current: m.submissions.current, previous: m.submissions.previous, accent: "#ec4899", sub: "New cases submitted via portal" },
-    { icon: CreditCard,  label: "Payments Recorded", total: m.payments.total,    current: m.payments.current,    previous: m.payments.previous,    accent: "#6366f1", sub: `${fmtCurrency(m.payments.totalValue)} total value` },
+    { icon: Users,         label: "Total Users",         total: m.users.total,       current: m.users.current,       previous: m.users.previous,       accent: TEAL,      sub: undefined },
+    { icon: Building2,     label: "Organisations",       total: m.orgs.total,        current: m.orgs.current,        previous: m.orgs.previous,        accent: NAVY,      sub: undefined },
+    { icon: FolderOpen,    label: "Total Cases",         total: m.cases.total,       current: m.cases.current,       previous: m.cases.previous,       accent: "#7c3aed", sub: `${m.cases.active} active · ${m.cases.closed} closed` },
+    { icon: MessageSquare, label: "Messages Sent",       total: m.messages.total,    current: m.messages.current,    previous: m.messages.previous,    accent: "#0ea5e9", sub: undefined },
+    { icon: Activity,      label: "Case Interactions",   total: m.activities.total,  current: m.activities.current,  previous: m.activities.previous,  accent: "#f59e0b", sub: "Activities logged on cases" },
+    { icon: LogIn,         label: "Login Sessions",      total: m.logins.total,      current: m.logins.current,      previous: m.logins.previous,      accent: "#10b981", sub: undefined },
+    { icon: FileText,      label: "Documents Uploaded",  total: m.documents.total,   current: m.documents.current,  previous: m.documents.previous,   accent: "#f97316", sub: undefined },
+    { icon: CreditCard,    label: "Payments Recorded",   total: m.payments.total,    current: m.payments.current,    previous: m.payments.previous,    accent: "#6366f1", sub: `${fmtCurrency(m.payments.totalValue)} total value` },
   ] : [];
 
   return (
@@ -255,7 +306,7 @@ export default function PortalAnalytics() {
                 <BarChart3 className="h-6 w-6 text-white/80" />
                 <h1 className="text-2xl font-bold tracking-tight">Portal Analytics</h1>
               </div>
-              <p className="text-white/70 text-sm">Board-level overview of portal usage and engagement</p>
+              <p className="text-white/70 text-sm">Board-level overview of portal usage, engagement, and value</p>
               {data && (
                 <div className="mt-2 flex flex-wrap gap-2 text-xs text-white/60">
                   <span>{dateRangeLabel}</span>
@@ -297,17 +348,9 @@ export default function PortalAnalytics() {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {kpis.map(k => (
-              <KpiCard
-                key={k.label}
-                icon={k.icon}
-                label={k.label}
-                total={k.total}
-                current={k.current}
-                previous={k.previous}
-                isAllTime={isAllTime}
-                accent={k.accent}
-                sub={k.sub}
-              />
+              <KpiCard key={k.label} icon={k.icon} label={k.label} total={k.total}
+                current={k.current} previous={k.previous} isAllTime={isAllTime}
+                accent={k.accent} sub={k.sub} />
             ))}
           </div>
         )}
@@ -320,17 +363,11 @@ export default function PortalAnalytics() {
                 <CardTitle className="text-base flex items-center gap-2" style={{ color: NAVY }}>
                   <Activity className="h-4 w-4" />
                   Activity Trend
-                  {!isAllTime && (
-                    <span className="text-xs font-normal text-gray-400 ml-1">
-                      — this period vs previous
-                    </span>
-                  )}
+                  <span className="text-xs font-normal text-gray-400 ml-1">— this period vs previous</span>
                 </CardTitle>
                 <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
                   {(["activities", "messages", "cases"] as const).map(m => (
-                    <button
-                      key={m}
-                      onClick={() => setTrendMetric(m)}
+                    <button key={m} onClick={() => setTrendMetric(m)}
                       className={`px-3 py-1 rounded-md text-xs font-medium capitalize transition-all ${
                         trendMetric === m ? "bg-white dark:bg-gray-900 shadow text-gray-900 dark:text-gray-100" : "text-gray-500 hover:text-gray-700"
                       }`}
@@ -354,8 +391,7 @@ export default function PortalAnalytics() {
                     <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} allowDecimals={false} width={28} />
                     <Tooltip content={<CustomTooltip />} />
-                    <Legend
-                      wrapperStyle={{ fontSize: 12, paddingTop: 12 }}
+                    <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12 }}
                       formatter={(value) => value === "Current" ? periodLabel[period].cur : periodLabel[period].prev}
                     />
                     <Bar dataKey={curKey}  name="Current"  fill={TEAL}  radius={[3,3,0,0]} />
@@ -367,90 +403,210 @@ export default function PortalAnalytics() {
           </Card>
         )}
 
-        {/* Breakdowns */}
-        {data && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Engagement & Adoption */}
+        {data && eng && (
+          <div>
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <Zap className="h-4 w-4 text-amber-500" />
+              User Engagement & Adoption
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-            {/* Cases by Status */}
-            <Card className="border-0 ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm">
-              <CardHeader className="border-b py-4">
-                <CardTitle className="text-sm font-semibold" style={{ color: NAVY }}>Cases by Status</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-4">
-                {data.breakdowns.casesByStatus.length === 0 ? (
-                  <p className="text-sm text-gray-400">No case data.</p>
-                ) : (
-                  <SimpleBar
-                    data={data.breakdowns.casesByStatus.sort((a,b) => b.count - a.count)}
-                    labelKey="status"
-                    valueKey="count"
-                    color={TEAL}
-                  />
-                )}
-              </CardContent>
-            </Card>
+              {/* Login activity */}
+              <Card className="border-0 ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm">
+                <CardHeader className="border-b py-3">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2" style={{ color: "#10b981" }}>
+                    <LogIn className="h-4 w-4" />
+                    Login Activity
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-4 grid grid-cols-2 gap-3">
+                  <StatPill label="Total login sessions" value={fmt(m!.logins.total)} icon={LogIn} color="#10b981" />
+                  {!isAllTime && (
+                    <StatPill label={`Sessions ${periodLabel[period].cur.toLowerCase()}`} value={fmt(m!.logins.current)} icon={LogIn} color="#10b981" />
+                  )}
+                  {!isAllTime && (
+                    <StatPill label="Unique users logged in" value={fmt(eng.curUniqueLoginUsers)} icon={Users} color="#0ea5e9" />
+                  )}
+                  <StatPill label="Cases active last 30 days" value={fmt(eng.casesActive30d)} icon={Clock} color="#f59e0b" />
+                  {!isAllTime && (
+                    <div className="col-span-2 pt-1">
+                      <Delta current={m!.logins.current} previous={m!.logins.previous} isAllTime={isAllTime} />
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
-            {/* Cases by Type */}
-            <Card className="border-0 ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm">
-              <CardHeader className="border-b py-4">
-                <CardTitle className="text-sm font-semibold" style={{ color: NAVY }}>Cases by Debtor Type</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-4">
-                {data.breakdowns.casesByType.length === 0 ? (
-                  <p className="text-sm text-gray-400">No case data.</p>
-                ) : (
-                  <SimpleBar
-                    data={data.breakdowns.casesByType.sort((a,b) => b.count - a.count)}
-                    labelKey="type"
-                    valueKey="count"
-                    color="#7c3aed"
-                  />
-                )}
-              </CardContent>
-            </Card>
+              {/* Messaging health */}
+              <Card className="border-0 ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm">
+                <CardHeader className="border-b py-3">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2" style={{ color: "#0ea5e9" }}>
+                    <MessageSquare className="h-4 w-4" />
+                    Messaging Health
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <div className="flex items-start gap-6">
+                    <div className="flex flex-col gap-3 flex-1">
+                      <StatPill label="Read messages" value={fmt(eng.totalReadMsgs)} icon={CheckCircle2} color="#10b981" />
+                      <StatPill label="Awaiting attention" value={fmt(eng.totalUnreadMsgs)} icon={MessageSquare} color={eng.totalUnreadMsgs > 0 ? "#f59e0b" : "#94a3b8"} />
+                      <StatPill label="Messages with attachments" value={fmt(eng.msgsWithAttachments)} icon={Paperclip} color="#6366f1" />
+                    </div>
+                    <div className="flex flex-col items-center gap-4 flex-shrink-0 pt-1">
+                      <RateGauge value={eng.readRate} label="Read rate" color="#10b981" />
+                      <RateGauge value={vi?.attachmentRate ?? 0} label="With attachments" color="#6366f1" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
 
-            {/* Top Organisations */}
-            <Card className="border-0 ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm">
-              <CardHeader className="border-b py-4">
-                <CardTitle className="text-sm font-semibold" style={{ color: NAVY }}>Top Organisations by Cases</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-4">
-                {data.breakdowns.topOrgs.length === 0 ? (
-                  <p className="text-sm text-gray-400">No data.</p>
-                ) : (
-                  <SimpleBar
-                    data={data.breakdowns.topOrgs}
-                    labelKey="name"
-                    valueKey="cases"
-                    color={NAVY}
-                  />
-                )}
+        {/* Value Indicators */}
+        {data && vi && (
+          <div>
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <Star className="h-4 w-4 text-amber-400" />
+              Portal Value Indicators
+            </h2>
+            <Card className="border-0 ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm overflow-hidden">
+              <CardContent className="p-0">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 divide-x divide-y sm:divide-y-0 divide-gray-100 dark:divide-gray-800">
+                  {[
+                    {
+                      value: vi.avgMsgsPerCase,
+                      label: "Avg messages per case",
+                      sub: "Shows ongoing dialogue depth",
+                      color: "#0ea5e9",
+                      suffix: "",
+                    },
+                    {
+                      value: vi.avgDocsPerCase,
+                      label: "Avg documents per case",
+                      sub: "Evidence managed digitally",
+                      color: "#f97316",
+                      suffix: "",
+                    },
+                    {
+                      value: vi.avgActivitiesPerCase,
+                      label: "Avg interactions per case",
+                      sub: "Touchpoints per matter",
+                      color: "#f59e0b",
+                      suffix: "",
+                    },
+                    {
+                      value: `${vi.readRate}%`,
+                      label: "Message read rate",
+                      sub: "Users actively reading comms",
+                      color: "#10b981",
+                      suffix: "",
+                      isStr: true,
+                    },
+                    {
+                      value: `${vi.submissionConversionRate}%`,
+                      label: "Submission conversion",
+                      sub: "Submissions becoming cases",
+                      color: "#7c3aed",
+                      suffix: "",
+                      isStr: true,
+                    },
+                    {
+                      value: `${vi.attachmentRate}%`,
+                      label: "Messages with files",
+                      sub: "Digital document exchange",
+                      color: "#6366f1",
+                      suffix: "",
+                      isStr: true,
+                    },
+                  ].map((item, i) => (
+                    <div key={i} className="p-5 text-center">
+                      <div className="text-2xl font-bold tabular-nums mb-1" style={{ color: item.color }}>
+                        {(item as any).isStr ? item.value : item.value}
+                      </div>
+                      <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{item.label}</div>
+                      <div className="text-xs text-gray-400 leading-tight">{item.sub}</div>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           </div>
         )}
 
-        {/* Summary callout */}
-        {data && !isLoading && (
-          <div className="rounded-xl border-0 ring-1 ring-gray-200 dark:ring-gray-700 bg-white dark:bg-card shadow-sm p-6">
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-teal-600" />
-              Quick Summary
-            </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-              {[
-                { label: "Active Cases", value: m?.cases.active ?? 0, color: "#7c3aed" },
-                { label: "Closed Cases", value: m?.cases.closed ?? 0, color: TEAL },
-                { label: "Total Interactions", value: m?.activities.total ?? 0, color: ACCENT },
-                { label: "Total Payments Value", value: fmtCurrency(m?.payments.totalValue ?? 0), color: "#6366f1", isText: true },
-              ].map(s => (
-                <div key={s.label} className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
-                  <div className="text-2xl font-bold tabular-nums" style={{ color: s.color }}>
-                    {(s as any).isText ? s.value : fmt(s.value as number)}
+        {/* Breakdowns */}
+        {data && (
+          <div>
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-slate-400" />
+              Case Breakdowns
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card className="border-0 ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm">
+                <CardHeader className="border-b py-4">
+                  <CardTitle className="text-sm font-semibold" style={{ color: NAVY }}>Cases by Status</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  {data.breakdowns.casesByStatus.length === 0 ? (
+                    <p className="text-sm text-gray-400">No case data.</p>
+                  ) : (
+                    <SimpleBar data={data.breakdowns.casesByStatus.sort((a,b) => b.count - a.count)}
+                      labelKey="status" valueKey="count" color={TEAL} />
+                  )}
+                </CardContent>
+              </Card>
+              <Card className="border-0 ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm">
+                <CardHeader className="border-b py-4">
+                  <CardTitle className="text-sm font-semibold" style={{ color: NAVY }}>Cases by Debtor Type</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  {data.breakdowns.casesByType.length === 0 ? (
+                    <p className="text-sm text-gray-400">No case data.</p>
+                  ) : (
+                    <SimpleBar data={data.breakdowns.casesByType.sort((a,b) => b.count - a.count)}
+                      labelKey="type" valueKey="count" color="#7c3aed" />
+                  )}
+                </CardContent>
+              </Card>
+              <Card className="border-0 ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm">
+                <CardHeader className="border-b py-4">
+                  <CardTitle className="text-sm font-semibold" style={{ color: NAVY }}>Top Organisations by Cases</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  {data.breakdowns.topOrgs.length === 0 ? (
+                    <p className="text-sm text-gray-400">No data.</p>
+                  ) : (
+                    <SimpleBar data={data.breakdowns.topOrgs} labelKey="name" valueKey="cases" color={NAVY} />
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+
+        {/* Summary */}
+        {data && !isLoading && m && (
+          <div>
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <ClipboardList className="h-4 w-4 text-slate-400" />
+              At a Glance
+            </h2>
+            <div className="rounded-xl border-0 ring-1 ring-gray-200 dark:ring-gray-700 bg-white dark:bg-card shadow-sm p-6">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                {[
+                  { label: "Active Cases",             value: m.cases.active,                    color: "#7c3aed" },
+                  { label: "Cases Active (Last 30d)",  value: eng?.casesActive30d ?? 0,          color: "#f59e0b" },
+                  { label: "Total Portal Interactions", value: m.activities.total,               color: TEAL },
+                  { label: "Total Payments Value",     value: fmtCurrency(m.payments.totalValue), color: "#6366f1", isText: true },
+                ].map(s => (
+                  <div key={s.label} className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                    <div className="text-2xl font-bold tabular-nums" style={{ color: s.color }}>
+                      {(s as any).isText ? s.value : fmt(s.value as number)}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-0.5">{s.label}</div>
                   </div>
-                  <div className="text-xs text-gray-500 mt-0.5">{s.label}</div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         )}

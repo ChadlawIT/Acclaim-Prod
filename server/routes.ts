@@ -9175,6 +9175,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return Number(row?.n ?? 0);
       };
 
+      const loginCondition = sql`${userActivityLogs.action} IN ('LOGIN', 'sso_login')`;
+
+      const countDistinctUsers = async (start: Date, end: Date) => {
+        const [row] = await db.select({ n: sql<number>`COUNT(DISTINCT ${userActivityLogs.userId})` })
+          .from(userActivityLogs)
+          .where(and(loginCondition, sql`${userActivityLogs.createdAt} >= ${start}`, sql`${userActivityLogs.createdAt} < ${end}`));
+        return Number(row?.n ?? 0);
+      };
+
+      const thirtyDaysAgo = new Date(now); thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
       const [
         totalUsers, curUsers, prevUsers,
         totalOrgs, curOrgs, prevOrgs,
@@ -9186,6 +9197,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalSubmissions, curSubmissions, prevSubmissions,
         paymentCountRow, paymentValueRow,
         curPayments, prevPayments,
+        totalLogins, curLogins, prevLogins,
+        curUniqueLoginUsers, prevUniqueLoginUsers,
+        totalReadMsgs, totalUnreadMsgs,
+        casesActive30d,
+        msgsWithAttachments,
       ] = await Promise.all([
         cnt(users),
         isAllTime ? Promise.resolve(0) : cnt(users, users.createdAt, startCurrent, endCurrent),
@@ -9222,6 +9238,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         db.select({ v: sum(payments.amount) }).from(payments),
         isAllTime ? Promise.resolve(0) : cnt(payments, payments.paymentDate, startCurrent, endCurrent),
         isAllTime ? Promise.resolve(0) : cnt(payments, payments.paymentDate, startPrevious, endPrevious),
+
+        // Login session metrics
+        cnt(userActivityLogs, undefined, undefined, undefined, loginCondition),
+        isAllTime ? Promise.resolve(0) : cnt(userActivityLogs, userActivityLogs.createdAt, startCurrent, endCurrent, loginCondition),
+        isAllTime ? Promise.resolve(0) : cnt(userActivityLogs, userActivityLogs.createdAt, startPrevious, endPrevious, loginCondition),
+
+        // Unique users who logged in (period)
+        isAllTime ? Promise.resolve(0) : countDistinctUsers(startCurrent, endCurrent),
+        isAllTime ? Promise.resolve(0) : countDistinctUsers(startPrevious, endPrevious),
+
+        // Message read/unread
+        cnt(messages, undefined, undefined, undefined, sql`${messages.isRead} = true`),
+        cnt(messages, undefined, undefined, undefined, sql`${messages.isRead} = false`),
+
+        // Cases with activity in last 30 days (using distinct caseId from activities)
+        (async () => {
+          const [row] = await db.select({ n: sql<number>`COUNT(DISTINCT ${caseActivities.caseId})` })
+            .from(caseActivities)
+            .where(sql`${caseActivities.createdAt} >= ${thirtyDaysAgo}`);
+          return Number(row?.n ?? 0);
+        })(),
+
+        // Messages with file attachments
+        cnt(messages, undefined, undefined, undefined, sql`${messages.attachmentFilePath} IS NOT NULL`),
       ]);
 
       // Breakdowns
@@ -9313,6 +9353,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Computed value indicators
+      const readRate = totalMessages > 0 ? Math.round((totalReadMsgs / totalMessages) * 100) : 0;
+      const avgMsgsPerCase = totalCases > 0 ? Math.round((totalMessages / totalCases) * 10) / 10 : 0;
+      const avgDocsPerCase = totalCases > 0 ? Math.round((totalDocuments / totalCases) * 10) / 10 : 0;
+      const avgActivitiesPerCase = totalCases > 0 ? Math.round((totalActivities / totalCases) * 10) / 10 : 0;
+      const submissionConversionRate = totalSubmissions > 0 ? Math.round((totalCases / totalSubmissions) * 100) : 0;
+      const attachmentRate = totalMessages > 0 ? Math.round((msgsWithAttachments / totalMessages) * 100) : 0;
+
       res.json({
         period,
         dateRange: {
@@ -9330,6 +9378,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           activities:  { total: totalActivities,   current: curActivities,  previous: prevActivities },
           submissions: { total: totalSubmissions,  current: curSubmissions, previous: prevSubmissions },
           payments:    { total: Number(paymentCountRow[0]?.n ?? 0), totalValue: Number(paymentValueRow[0]?.v ?? 0), current: curPayments, previous: prevPayments },
+          logins:      { total: totalLogins,       current: curLogins,      previous: prevLogins },
+        },
+        engagement: {
+          curUniqueLoginUsers,
+          prevUniqueLoginUsers,
+          totalReadMsgs,
+          totalUnreadMsgs,
+          readRate,
+          casesActive30d,
+          msgsWithAttachments,
+        },
+        valueIndicators: {
+          avgMsgsPerCase,
+          avgDocsPerCase,
+          avgActivitiesPerCase,
+          submissionConversionRate,
+          attachmentRate,
+          readRate,
         },
         breakdowns: {
           casesByStatus: casesByStatusRaw.map(r => ({ status: r.status || 'Unknown', count: Number(r.n) })),
