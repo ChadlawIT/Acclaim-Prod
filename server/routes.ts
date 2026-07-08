@@ -9188,6 +9188,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const thirtyDaysAgo = new Date(now); thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const ninetyOneDaysAgo = new Date(now); ninetyOneDaysAgo.setDate(ninetyOneDaysAgo.getDate() - 91);
 
       const [
         totalUsers, curUsers, prevUsers,
@@ -9206,6 +9207,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         casesActive30d,
         msgsWithAttachments,
         processedSubmissions,
+        trailingQuarterCases, trailingQuarterMessages, trailingQuarterActivities,
       ] = await Promise.all([
         cnt(users),
         isAllTime ? Promise.resolve(0) : cnt(users, users.createdAt, startCurrent, endCurrent),
@@ -9235,8 +9237,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isAllTime ? Promise.resolve(0) : cnt(caseActivities, caseActivities.createdAt, startPrevious, endPrevious),
 
         cnt(caseSubmissions),
-        isAllTime ? Promise.resolve(0) : cnt(caseSubmissions, caseSubmissions.createdAt, startCurrent, endCurrent),
-        isAllTime ? Promise.resolve(0) : cnt(caseSubmissions, caseSubmissions.createdAt, startPrevious, endPrevious),
+        isAllTime ? Promise.resolve(0) : cnt(caseSubmissions, caseSubmissions.submittedAt, startCurrent, endCurrent),
+        isAllTime ? Promise.resolve(0) : cnt(caseSubmissions, caseSubmissions.submittedAt, startPrevious, endPrevious),
 
         db.select({ n: count() }).from(payments),
         db.select({ v: sum(payments.amount) }).from(payments),
@@ -9269,6 +9271,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Case submissions that were converted into an active case
         cnt(caseSubmissions, undefined, undefined, undefined, sql`LOWER(${caseSubmissions.status}) = 'processed'`),
+
+        // Trailing 13-week (one quarter) activity — used as the "run rate" basis for All Time projections
+        cnt(cases, cases.createdAt, ninetyOneDaysAgo, now),
+        cnt(messages, messages.createdAt, ninetyOneDaysAgo, now),
+        cnt(caseActivities, caseActivities.createdAt, ninetyOneDaysAgo, now),
       ]);
 
       // Message response health (unanswered user messages — same logic as escalation report)
@@ -9339,14 +9346,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const truncUnit = (period === 'week' || period === 'month') ? 'day'
           : period === 'quarter' ? 'week' : 'month';
 
-        const trendQuery = async (table: any, dateCol: any, start: Date, end: Date) =>
-          db.select({
-            bucket: sql<string>`date_trunc(${truncUnit}, ${dateCol})`,
+        const trendQuery = async (table: any, dateCol: any, start: Date, end: Date) => {
+          const bucketExpr = sql`date_trunc(${sql.raw(`'${truncUnit}'`)}, ${dateCol})`;
+          return db.select({
+            bucket: sql<string>`${bucketExpr}`,
             n: count(),
           }).from(table)
             .where(and(sql`${dateCol} >= ${start}`, sql`${dateCol} < ${end}`))
-            .groupBy(sql`date_trunc(${truncUnit}, ${dateCol})`)
-            .orderBy(sql`date_trunc(${truncUnit}, ${dateCol})`);
+            .groupBy(bucketExpr)
+            .orderBy(bucketExpr);
+        };
 
         const [actCur, actPrev, msgCur, msgPrev, casesCur, casesPrev] = await Promise.all([
           trendQuery(caseActivities, caseActivities.createdAt, startCurrent, endCurrent),
@@ -9445,6 +9454,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           readRate,
           casesActive30d,
           msgsWithAttachments,
+        },
+        trailingQuarter: {
+          cases: trailingQuarterCases,
+          messages: trailingQuarterMessages,
+          activities: trailingQuarterActivities,
         },
         valueIndicators: {
           avgMsgsPerCase,

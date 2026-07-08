@@ -42,6 +42,11 @@ interface AnalyticsData {
     casesActive30d: number;
     msgsWithAttachments: number;
   };
+  trailingQuarter: {
+    cases: number;
+    messages: number;
+    activities: number;
+  };
   valueIndicators: {
     avgMsgsPerCase: number;
     avgDocsPerCase: number;
@@ -118,6 +123,21 @@ function changeSentence(cur: number, prev: number, noun: string, prevPeriodName:
 }
 
 function buildProjection(data: AnalyticsData, period: Period) {
+  if (period === "all") {
+    // No prior period to compare against for "All Time", so there's no growth trend to apply.
+    // Instead, project forward using the actual run-rate observed over the most recent quarter
+    // (last 13 weeks) rather than the lifetime average — this avoids one-off historical data
+    // imports (e.g. bulk-loading existing cases at rollout) permanently inflating the projection.
+    const tq = data.trailingQuarter;
+    return {
+      projCases: tq.cases,
+      projMessages: tq.messages,
+      projActivities: tq.activities,
+      caseGrowth: 1, msgGrowth: 1, actGrowth: 1,
+      isRunRate: true,
+    };
+  }
+
   const m = data.metrics;
   const weeksIn = PERIOD_WEEKS[period];
   const Q = 13; // next quarter = 13 weeks
@@ -134,6 +154,7 @@ function buildProjection(data: AnalyticsData, period: Period) {
     projMessages:   Math.round(rate(m.messages.current)   * Q * msgGrowth),
     projActivities: Math.round(rate(m.activities.current) * Q * actGrowth),
     caseGrowth, msgGrowth, actGrowth,
+    isRunRate: false,
   };
 }
 
@@ -339,7 +360,7 @@ function openHtmlReport(data: AnalyticsData, period: Period, dateRangeLabel: str
   const isAllTime = period === "all";
   const prev = periodLabel[period].prev;
   const now = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
-  const proj = !isAllTime ? buildProjection(data, period) : null;
+  const proj = buildProjection(data, period);
 
   const pctBadge = (cur: number, pre: number) => {
     if (pre === 0) return "";
@@ -392,15 +413,18 @@ function openHtmlReport(data: AnalyticsData, period: Period, dateRangeLabel: str
     <div class="section">
       <h2>&#128300; Projected Outlook — Next Quarter</h2>
       <p style="color:#6b7280;font-size:13px;margin-bottom:16px">
-        Estimates are based on the current period's activity rate, adjusted for the observed growth or decline trend compared to the previous period.
-        These are indicative projections, not guarantees.
+        ${proj.isRunRate
+          ? `Estimates are based on the actual activity recorded over the most recent 13 weeks (a "run rate"), rather than the lifetime average, since there is no prior all-time period to compare against.
+             These are indicative projections, not guarantees. If a large batch of historical cases was imported recently (e.g. during portal rollout), the run rate — and therefore this projection — may be temporarily overstated until activity settles into a steady pattern.`
+          : `Estimates are based on the current period's activity rate, adjusted for the observed growth or decline trend compared to the previous period.
+             These are indicative projections, not guarantees.`}
       </p>
       <table>
-        <thead><tr><th>Metric</th><th style="text-align:right">Projected (Next Quarter)</th><th style="text-align:right">Trend factor</th></tr></thead>
+        <thead><tr><th>Metric</th><th style="text-align:right">Projected (Next Quarter)</th>${proj.isRunRate ? "" : `<th style="text-align:right">Trend factor</th>`}</tr></thead>
         <tbody>
-          <tr><td>New Cases</td><td style="text-align:right;font-weight:600;color:#7c3aed">${proj.projCases.toLocaleString()}</td><td style="text-align:right">${proj.caseGrowth > 1.05 ? "📈 Growing" : proj.caseGrowth < 0.95 ? "📉 Declining" : "➡ Stable"}</td></tr>
-          <tr><td>Messages Exchanged</td><td style="text-align:right;font-weight:600;color:#0ea5e9">${proj.projMessages.toLocaleString()}</td><td style="text-align:right">${proj.msgGrowth > 1.05 ? "📈 Growing" : proj.msgGrowth < 0.95 ? "📉 Declining" : "➡ Stable"}</td></tr>
-          <tr><td>Case Interactions</td><td style="text-align:right;font-weight:600;color:#f59e0b">${proj.projActivities.toLocaleString()}</td><td style="text-align:right">${proj.actGrowth > 1.05 ? "📈 Growing" : proj.actGrowth < 0.95 ? "📉 Declining" : "➡ Stable"}</td></tr>
+          <tr><td>New Cases</td><td style="text-align:right;font-weight:600;color:#7c3aed">${proj.projCases.toLocaleString()}</td>${proj.isRunRate ? "" : `<td style="text-align:right">${proj.caseGrowth > 1.05 ? "📈 Growing" : proj.caseGrowth < 0.95 ? "📉 Declining" : "➡ Stable"}</td>`}</tr>
+          <tr><td>Messages Exchanged</td><td style="text-align:right;font-weight:600;color:#0ea5e9">${proj.projMessages.toLocaleString()}</td>${proj.isRunRate ? "" : `<td style="text-align:right">${proj.msgGrowth > 1.05 ? "📈 Growing" : proj.msgGrowth < 0.95 ? "📉 Declining" : "➡ Stable"}</td>`}</tr>
+          <tr><td>Case Interactions</td><td style="text-align:right;font-weight:600;color:#f59e0b">${proj.projActivities.toLocaleString()}</td>${proj.isRunRate ? "" : `<td style="text-align:right">${proj.actGrowth > 1.05 ? "📈 Growing" : proj.actGrowth < 0.95 ? "📉 Declining" : "➡ Stable"}</td>`}</tr>
         </tbody>
       </table>
     </div>` : "";
@@ -627,6 +651,7 @@ function openHtmlReport(data: AnalyticsData, period: Period, dateRangeLabel: str
     <div class="highlight-box">
       &#9432; &nbsp;<strong>About these figures:</strong> All data is drawn directly from live portal records.
       Projections are estimates based on observed activity rates and period-on-period trends — they are intended as a planning guide only.
+      ${isAllTime ? "As the portal is newly launched, the All Time projection is based on the most recent 13 weeks of activity rather than the lifetime average; if a batch of historical cases was imported at rollout, this projection may run high until activity settles into a steady pattern." : ""}
       For a full case-by-case breakdown, please refer to the detailed case reports available within the portal.
     </div>
 
@@ -692,7 +717,7 @@ export default function PortalAnalytics() {
   })() : "";
 
   const trendData = data?.trend ?? [];
-  const proj = data && !isAllTime ? buildProjection(data, period) : null;
+  const proj = data ? buildProjection(data, period) : null;
 
   const kpis = m ? [
     { icon: FolderOpen,    label: "Total Cases",        description: "All cases ever opened on the portal, regardless of status.", total: m.cases.total,       current: m.cases.current,      previous: m.cases.previous,      accent: "#7c3aed", sub: `${m.cases.active} active · ${m.cases.closed} concluded` },
@@ -927,20 +952,22 @@ export default function PortalAnalytics() {
         )}
 
         {/* ── Projected Outlook ── */}
-        {!isAllTime && proj && m && (
+        {proj && m && (
           <div>
             <SectionHeader
               icon={Telescope} iconColor="#7c3aed"
               title="Projected Outlook — Next Quarter"
-              description="Estimates for the next 13 weeks based on current activity rates and observed growth or decline trends. These are indicative planning figures."
+              description={proj.isRunRate
+                ? "Estimates for the next 13 weeks based on the actual run rate observed over the most recent quarter, since there's no prior all-time period to compare against."
+                : "Estimates for the next 13 weeks based on current activity rates and observed growth or decline trends. These are indicative planning figures."}
             />
             <Card className="border-0 ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm overflow-hidden">
               <CardContent className="p-0">
                 <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-gray-100 dark:divide-gray-800">
                   {[
-                    { label: "New Cases",          value: proj.projCases,       growth: proj.caseGrowth,  color: "#7c3aed", current: m.cases.current },
-                    { label: "Messages Exchanged", value: proj.projMessages,    growth: proj.msgGrowth,   color: "#0ea5e9", current: m.messages.current },
-                    { label: "Case Interactions",  value: proj.projActivities,  growth: proj.actGrowth,   color: "#f59e0b", current: m.activities.current },
+                    { label: "New Cases",          value: proj.projCases,       growth: proj.caseGrowth,  color: "#7c3aed", current: isAllTime ? data!.trailingQuarter.cases : m.cases.current },
+                    { label: "Messages Exchanged", value: proj.projMessages,    growth: proj.msgGrowth,   color: "#0ea5e9", current: isAllTime ? data!.trailingQuarter.messages : m.messages.current },
+                    { label: "Case Interactions",  value: proj.projActivities,  growth: proj.actGrowth,   color: "#f59e0b", current: isAllTime ? data!.trailingQuarter.activities : m.activities.current },
                   ].map(item => {
                     const up   = item.growth > 1.05;
                     const down = item.growth < 0.95;
@@ -948,17 +975,23 @@ export default function PortalAnalytics() {
                       <div key={item.label} className="p-6">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{item.label}</span>
-                          {up   && <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600"><TrendingUp className="h-3 w-3" /> Growing</span>}
-                          {down && <span className="flex items-center gap-1 text-xs font-semibold text-rose-500"><TrendingDown className="h-3 w-3" /> Declining</span>}
-                          {!up && !down && <span className="flex items-center gap-1 text-xs text-gray-400"><Minus className="h-3 w-3" /> Stable</span>}
+                          {proj.isRunRate && <span className="flex items-center gap-1 text-xs font-semibold text-gray-500">Run rate</span>}
+                          {!proj.isRunRate && up   && <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600"><TrendingUp className="h-3 w-3" /> Growing</span>}
+                          {!proj.isRunRate && down && <span className="flex items-center gap-1 text-xs font-semibold text-rose-500"><TrendingDown className="h-3 w-3" /> Declining</span>}
+                          {!proj.isRunRate && !up && !down && <span className="flex items-center gap-1 text-xs text-gray-400"><Minus className="h-3 w-3" /> Stable</span>}
                         </div>
                         <div className="text-4xl font-bold tabular-nums mb-1" style={{ color: item.color }}>{item.value.toLocaleString()}</div>
                         <div className="text-xs text-gray-400">estimated next quarter</div>
-                        <div className="text-xs text-gray-500 mt-2">Current period: <strong>{item.current.toLocaleString()}</strong></div>
+                        <div className="text-xs text-gray-500 mt-2">{isAllTime ? "Last 13 weeks:" : "Current period:"} <strong>{item.current.toLocaleString()}</strong></div>
                       </div>
                     );
                   })}
                 </div>
+                {proj.isRunRate && (
+                  <div className="px-6 pb-5 pt-1 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-800">
+                    As the portal is newly launched, this figure reflects the last 13 weeks of activity rather than the lifetime average. If a batch of historical cases was imported around rollout, the projection may run high until activity settles into a steady pattern.
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
