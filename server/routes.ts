@@ -9144,12 +9144,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         startPrevious = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         endPrevious = new Date(now.getFullYear(), now.getMonth(), 1);
       } else if (period === 'quarter') {
-        const q = Math.floor(now.getMonth() / 3);
-        startCurrent = new Date(now.getFullYear(), q * 3, 1);
+        // Financial year runs 1 April - 31 March, so Q1 = Apr-Jun, Q2 = Jul-Sep, Q3 = Oct-Dec, Q4 = Jan-Mar
+        const fyStartYear = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+        const fiscalMonthIndex = (now.getMonth() + 9) % 12; // April = 0 ... March = 11
+        const q = Math.floor(fiscalMonthIndex / 3);
+        startCurrent = new Date(fyStartYear, 3 + q * 3, 1);
         endCurrent = now;
         const prevQ = q === 0 ? 3 : q - 1;
-        const prevYear = q === 0 ? now.getFullYear() - 1 : now.getFullYear();
-        startPrevious = new Date(prevYear, prevQ * 3, 1);
+        const prevFyStartYear = q === 0 ? fyStartYear - 1 : fyStartYear;
+        startPrevious = new Date(prevFyStartYear, 3 + prevQ * 3, 1);
         endPrevious = new Date(startCurrent);
       } else if (period === 'year') {
         startCurrent = new Date(now.getFullYear(), 0, 1);
