@@ -114,11 +114,12 @@ function pctChange(cur: number, prev: number): number | null {
 }
 
 function changeSentence(cur: number, prev: number, noun: string, prevPeriodName: string): string {
+  const verb = cur === 1 ? "was" : "were";
   if (prev === 0 && cur === 0) return `No ${noun} were recorded in either period.`;
-  if (prev === 0) return `${cur} ${noun} were recorded — no data from ${prevPeriodName} to compare.`;
+  if (prev === 0) return `${cur} ${noun} ${verb} recorded — no data from ${prevPeriodName} to compare.`;
   const pct = Math.abs(Math.round(((cur - prev) / prev) * 100));
   const dir = cur > prev ? "up" : cur < prev ? "down" : "unchanged";
-  if (dir === "unchanged") return `${cur} ${noun} were recorded, unchanged from ${prevPeriodName}.`;
+  if (dir === "unchanged") return `${cur} ${noun} ${verb} recorded, unchanged from ${prevPeriodName}.`;
   return `${cur.toLocaleString()} ${noun} — ${dir} ${pct}% from ${prev.toLocaleString()} ${prevPeriodName}.`;
 }
 
@@ -461,10 +462,10 @@ function openHtmlReport(data: AnalyticsData, period: Period, dateRangeLabel: str
     and ${m.users.total} registered ${m.users.total === 1 ? "user" : "users"} instruct, monitor, and communicate about debt recovery matters.
     The figures below cover <strong>${periodLabel[period].cur}</strong> (${dateRangeLabel})${prevDateLabel ? `, compared against ${prevDateLabel}.` : "."}
     <br><br>
-    ${changeSentence(m.cases.current, m.cases.previous, m.cases.current === 1 ? "new case was" : "new cases were", prev.toLowerCase())}
-    ${changeSentence(m.messages.current, m.messages.previous, m.messages.current === 1 ? "message was" : "messages were", prev.toLowerCase())}
-    ${changeSentence(m.logins.current, m.logins.previous, m.logins.current === 1 ? "login session was" : "login sessions were", prev.toLowerCase())}
-    ${m.payments.current > 0 ? `${m.payments.current.toLocaleString()} payment${m.payments.current === 1 ? "" : "s"} worth ${fmtCurrency(m.payments.totalValue)} were recorded.` : ""}` : "";
+    ${changeSentence(m.cases.current, m.cases.previous, m.cases.current === 1 ? "new case" : "new cases", prev.toLowerCase())}
+    ${changeSentence(m.messages.current, m.messages.previous, m.messages.current === 1 ? "message" : "messages", prev.toLowerCase())}
+    ${changeSentence(m.logins.current, m.logins.previous, m.logins.current === 1 ? "login session" : "login sessions", prev.toLowerCase())}
+    ${m.payments.current > 0 ? `${m.payments.current.toLocaleString()} payment${m.payments.current === 1 ? "" : "s"} worth ${fmtCurrency(m.payments.totalValue)} ${m.payments.current === 1 ? "was" : "were"} recorded.` : ""}` : "";
 
   const projectionSection = proj ? `
     <div class="section">
