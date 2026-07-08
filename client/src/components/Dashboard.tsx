@@ -82,6 +82,18 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
     },
   });
 
+  const outstandingBreakdown = (() => {
+    if (!stats) return null;
+    const original = parseFloat(stats?.totalOriginal || '0');
+    const costs = parseFloat(stats?.totalCosts || '0');
+    const interest = parseFloat(stats?.totalInterest || '0');
+    const fees = parseFloat(stats?.totalFees || '0');
+    const payments = parseFloat(stats?.totalRecovery || '0');
+    const outstanding = parseFloat(stats?.totalOutstanding || '0');
+    const otherAdjustments = outstanding - (original + costs + interest + fees - payments);
+    return { original, costs, interest, fees, payments, outstanding, otherAdjustments };
+  })();
+
   const { data: cases, isLoading: casesLoading } = useQuery({
     queryKey: ["/api/cases"],
     refetchInterval: 10000, // Refresh every 10 seconds for cases
@@ -410,7 +422,7 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1">
                     <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">Total Outstanding</p>
-                    {!statsLoading && (
+                    {!statsLoading && outstandingBreakdown && (
                       <HoverCard openDelay={100}>
                         <HoverCardTrigger asChild>
                           <button
@@ -426,30 +438,41 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
                           <div className="space-y-1.5 text-sm">
                             <div className="flex justify-between">
                               <span className="text-gray-500 dark:text-gray-400">Original balance</span>
-                              <span data-testid="text-breakdown-original" className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(stats?.totalOriginal || 0)}</span>
+                              <span data-testid="text-breakdown-original" className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(outstandingBreakdown.original)}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-500 dark:text-gray-400">Costs added</span>
-                              <span data-testid="text-breakdown-costs" className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(stats?.totalCosts || 0)}</span>
+                              <span data-testid="text-breakdown-costs" className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(outstandingBreakdown.costs)}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-500 dark:text-gray-400">Interest added</span>
-                              <span data-testid="text-breakdown-interest" className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(stats?.totalInterest || 0)}</span>
+                              <span data-testid="text-breakdown-interest" className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(outstandingBreakdown.interest)}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-500 dark:text-gray-400">Fees added</span>
-                              <span data-testid="text-breakdown-fees" className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(stats?.totalFees || 0)}</span>
+                              <span data-testid="text-breakdown-fees" className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(outstandingBreakdown.fees)}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-500 dark:text-gray-400">Payments received</span>
-                              <span data-testid="text-breakdown-payments" className="font-medium text-gray-900 dark:text-gray-100">-{formatCurrency(stats?.totalRecovery || 0)}</span>
+                              <span data-testid="text-breakdown-payments" className="font-medium text-gray-900 dark:text-gray-100">-{formatCurrency(outstandingBreakdown.payments)}</span>
                             </div>
+                            {Math.abs(outstandingBreakdown.otherAdjustments) > 0.005 && (
+                              <div className="flex justify-between">
+                                <span className="text-gray-500 dark:text-gray-400">Other adjustments</span>
+                                <span data-testid="text-breakdown-other" className="font-medium text-gray-900 dark:text-gray-100">
+                                  {outstandingBreakdown.otherAdjustments >= 0 ? '+' : '-'}{formatCurrency(Math.abs(outstandingBreakdown.otherAdjustments))}
+                                </span>
+                              </div>
+                            )}
                             <div className="flex justify-between pt-1.5 border-t border-gray-200 dark:border-gray-700">
                               <span className="text-gray-700 dark:text-gray-300 font-medium">Total outstanding</span>
-                              <span data-testid="text-breakdown-total" className="font-semibold text-blue-600 dark:text-blue-400">{formatCurrency(stats?.totalOutstanding || 0)}</span>
+                              <span data-testid="text-breakdown-total" className="font-semibold text-blue-600 dark:text-blue-400">{formatCurrency(outstandingBreakdown.outstanding)}</span>
                             </div>
                           </div>
-                          <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-2">Figures reflect active (non-closed) cases only.</p>
+                          <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-2">
+                            Figures reflect active (non-closed) cases only.
+                            {Math.abs(outstandingBreakdown.otherAdjustments) > 0.005 && " \"Other adjustments\" covers balance changes made directly on a case (e.g. via the external case system) that aren't recorded as costs, interest, fees or a payment."}
+                          </p>
                         </HoverCardContent>
                       </HoverCard>
                     )}
