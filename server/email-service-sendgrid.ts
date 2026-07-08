@@ -641,7 +641,7 @@ Portal: https://acclaim-api-prod-uks-001.azurewebsites.net/auth
 
       return await this.sendViaAPIM({
         to: data.userEmail,
-        replyTo: 'noreply@acclaim.law',
+        replyTo: 'email@acclaim.law',
         subject: subject,
         textContent: textContent,
         htmlContent: htmlContent,
@@ -1335,7 +1335,7 @@ Portal: https://acclaim-api-prod-uks-001.azurewebsites.net/auth
 
       return await this.sendViaAPIM({
         to: data.userEmail,
-        replyTo: 'noreply@acclaim.law',
+        replyTo: 'email@acclaim.law',
         subject: subject,
         textContent: textContent,
         htmlContent: htmlContent,
@@ -2778,6 +2778,7 @@ Portal: https://acclaim-api-prod-uks-001.azurewebsites.net/auth
 
       return await this.sendViaAPIM({
         to: userEmail,
+        replyTo: 'email@acclaim.law',
         subject: subject,
         textContent: textContent,
         htmlContent: htmlContent,
