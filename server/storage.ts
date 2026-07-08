@@ -250,6 +250,10 @@ export interface IStorage {
     closedCases: number;
     totalOutstanding: string;
     totalRecovery: string;
+    totalOriginal: string;
+    totalCosts: string;
+    totalInterest: string;
+    totalFees: string;
   }>;
 
   getGlobalCaseStats(): Promise<{
@@ -257,6 +261,10 @@ export interface IStorage {
     closedCases: number;
     totalOutstanding: string;
     totalRecovery: string;
+    totalOriginal: string;
+    totalCosts: string;
+    totalInterest: string;
+    totalFees: string;
   }>; // Admin only - get stats across all organizations
 
   getCombinedCaseStats(organisationIds: number[], excludeCaseIds?: number[]): Promise<{
@@ -264,6 +272,10 @@ export interface IStorage {
     closedCases: number;
     totalOutstanding: string;
     totalRecovery: string;
+    totalOriginal: string;
+    totalCosts: string;
+    totalInterest: string;
+    totalFees: string;
   }>; // Get combined stats from multiple organizations
 
   // Admin operations
@@ -1936,12 +1948,20 @@ export class DatabaseStorage implements IStorage {
     closedCases: number;
     totalOutstanding: string;
     totalRecovery: string;
+    totalOriginal: string;
+    totalCosts: string;
+    totalInterest: string;
+    totalFees: string;
   }> {
     const [stats] = await db
       .select({
         activeCases: sql<number>`COUNT(CASE WHEN LOWER(status) != 'closed' THEN 1 END)`,
         closedCases: sql<number>`COUNT(CASE WHEN LOWER(status) = 'closed' THEN 1 END)`,
         totalOutstanding: sql<string>`COALESCE(SUM(CASE WHEN LOWER(status) != 'closed' THEN outstanding_amount ELSE 0 END), 0)`,
+        totalOriginal: sql<string>`COALESCE(SUM(CASE WHEN LOWER(status) != 'closed' THEN original_amount ELSE 0 END), 0)`,
+        totalCosts: sql<string>`COALESCE(SUM(CASE WHEN LOWER(status) != 'closed' THEN costs_added ELSE 0 END), 0)`,
+        totalInterest: sql<string>`COALESCE(SUM(CASE WHEN LOWER(status) != 'closed' THEN interest_added ELSE 0 END), 0)`,
+        totalFees: sql<string>`COALESCE(SUM(CASE WHEN LOWER(status) != 'closed' THEN fees_added ELSE 0 END), 0)`,
       })
       .from(cases)
       .where(and(eq(cases.organisationId, organisationId), eq(cases.isArchived, false)));
@@ -1964,6 +1984,10 @@ export class DatabaseStorage implements IStorage {
       closedCases: stats.closedCases,
       totalOutstanding: stats.totalOutstanding.toString(),
       totalRecovery: recoveryStats.totalRecovery.toString(),
+      totalOriginal: stats.totalOriginal.toString(),
+      totalCosts: stats.totalCosts.toString(),
+      totalInterest: stats.totalInterest.toString(),
+      totalFees: stats.totalFees.toString(),
     };
   }
 
@@ -1972,6 +1996,10 @@ export class DatabaseStorage implements IStorage {
     closedCases: number;
     totalOutstanding: string;
     totalRecovery: string;
+    totalOriginal: string;
+    totalCosts: string;
+    totalInterest: string;
+    totalFees: string;
   }> {
     // Admin only - get stats across all organizations (excluding archived cases)
     const [stats] = await db
@@ -1979,6 +2007,10 @@ export class DatabaseStorage implements IStorage {
         activeCases: sql<number>`COUNT(CASE WHEN LOWER(status) != 'closed' THEN 1 END)`,
         closedCases: sql<number>`COUNT(CASE WHEN LOWER(status) = 'closed' THEN 1 END)`,
         totalOutstanding: sql<string>`COALESCE(SUM(CASE WHEN LOWER(status) != 'closed' THEN outstanding_amount ELSE 0 END), 0)`,
+        totalOriginal: sql<string>`COALESCE(SUM(CASE WHEN LOWER(status) != 'closed' THEN original_amount ELSE 0 END), 0)`,
+        totalCosts: sql<string>`COALESCE(SUM(CASE WHEN LOWER(status) != 'closed' THEN costs_added ELSE 0 END), 0)`,
+        totalInterest: sql<string>`COALESCE(SUM(CASE WHEN LOWER(status) != 'closed' THEN interest_added ELSE 0 END), 0)`,
+        totalFees: sql<string>`COALESCE(SUM(CASE WHEN LOWER(status) != 'closed' THEN fees_added ELSE 0 END), 0)`,
       })
       .from(cases)
       .where(eq(cases.isArchived, false));
@@ -2000,6 +2032,10 @@ export class DatabaseStorage implements IStorage {
       closedCases: stats.closedCases,
       totalOutstanding: stats.totalOutstanding.toString(),
       totalRecovery: recoveryStats.totalRecovery.toString(),
+      totalOriginal: stats.totalOriginal.toString(),
+      totalCosts: stats.totalCosts.toString(),
+      totalInterest: stats.totalInterest.toString(),
+      totalFees: stats.totalFees.toString(),
     };
   }
 
@@ -2008,6 +2044,10 @@ export class DatabaseStorage implements IStorage {
     closedCases: number;
     totalOutstanding: string;
     totalRecovery: string;
+    totalOriginal: string;
+    totalCosts: string;
+    totalInterest: string;
+    totalFees: string;
   }> {
     // Build conditions for filtering
     const conditions = [
@@ -2026,6 +2066,10 @@ export class DatabaseStorage implements IStorage {
         activeCases: sql<number>`COUNT(CASE WHEN LOWER(status) != 'closed' THEN 1 END)`,
         closedCases: sql<number>`COUNT(CASE WHEN LOWER(status) = 'closed' THEN 1 END)`,
         totalOutstanding: sql<string>`COALESCE(SUM(CASE WHEN LOWER(status) != 'closed' THEN outstanding_amount ELSE 0 END), 0)`,
+        totalOriginal: sql<string>`COALESCE(SUM(CASE WHEN LOWER(status) != 'closed' THEN original_amount ELSE 0 END), 0)`,
+        totalCosts: sql<string>`COALESCE(SUM(CASE WHEN LOWER(status) != 'closed' THEN costs_added ELSE 0 END), 0)`,
+        totalInterest: sql<string>`COALESCE(SUM(CASE WHEN LOWER(status) != 'closed' THEN interest_added ELSE 0 END), 0)`,
+        totalFees: sql<string>`COALESCE(SUM(CASE WHEN LOWER(status) != 'closed' THEN fees_added ELSE 0 END), 0)`,
       })
       .from(cases)
       .where(and(...conditions));
@@ -2055,6 +2099,10 @@ export class DatabaseStorage implements IStorage {
       closedCases: stats.closedCases,
       totalOutstanding: stats.totalOutstanding.toString(),
       totalRecovery: recoveryStats.totalRecovery.toString(),
+      totalOriginal: stats.totalOriginal.toString(),
+      totalCosts: stats.totalCosts.toString(),
+      totalInterest: stats.totalInterest.toString(),
+      totalFees: stats.totalFees.toString(),
     };
   }
 

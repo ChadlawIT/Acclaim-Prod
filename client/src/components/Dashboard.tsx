@@ -6,6 +6,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { FolderOpen, CheckCircle, PoundSterling, TrendingUp, User, Building, Clock, FileText, Check, AlertTriangle, Store, UserCheck, Plus, Info, Send, Paperclip, X } from "lucide-react";
@@ -407,7 +408,48 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
             <CardContent className="p-5">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">Total Outstanding</p>
+                  <div className="flex items-center gap-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">Total Outstanding</p>
+                    {!statsLoading && (
+                      <HoverCard openDelay={100}>
+                        <HoverCardTrigger asChild>
+                          <button
+                            type="button"
+                            data-testid="button-outstanding-breakdown"
+                            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 flex-shrink-0"
+                          >
+                            <Info className="h-3 w-3" />
+                          </button>
+                        </HoverCardTrigger>
+                        <HoverCardContent className="w-64" align="start">
+                          <p className="text-xs font-semibold text-gray-700 dark:text-gray-200 mb-2">Outstanding balance breakdown</p>
+                          <div className="space-y-1.5 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-gray-500 dark:text-gray-400">Original balance</span>
+                              <span data-testid="text-breakdown-original" className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(stats?.totalOriginal || 0)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-500 dark:text-gray-400">Costs added</span>
+                              <span data-testid="text-breakdown-costs" className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(stats?.totalCosts || 0)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-500 dark:text-gray-400">Interest added</span>
+                              <span data-testid="text-breakdown-interest" className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(stats?.totalInterest || 0)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-500 dark:text-gray-400">Fees added</span>
+                              <span data-testid="text-breakdown-fees" className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(stats?.totalFees || 0)}</span>
+                            </div>
+                            <div className="flex justify-between pt-1.5 border-t border-gray-200 dark:border-gray-700">
+                              <span className="text-gray-700 dark:text-gray-300 font-medium">Total outstanding</span>
+                              <span data-testid="text-breakdown-total" className="font-semibold text-blue-600 dark:text-blue-400">{formatCurrency(stats?.totalOutstanding || 0)}</span>
+                            </div>
+                          </div>
+                          <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-2">Figures reflect active (non-closed) cases only.</p>
+                        </HoverCardContent>
+                      </HoverCard>
+                    )}
+                  </div>
                   <p className="text-lg sm:text-xl font-bold text-blue-600 dark:text-blue-400 mt-1 leading-none break-all">
                     {statsLoading ? "—" : formatCurrency(stats?.totalOutstanding || 0)}
                   </p>
