@@ -9205,6 +9205,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalReadMsgs, totalUnreadMsgs,
         casesActive30d,
         msgsWithAttachments,
+        processedSubmissions,
       ] = await Promise.all([
         cnt(users),
         isAllTime ? Promise.resolve(0) : cnt(users, users.createdAt, startCurrent, endCurrent),
@@ -9265,6 +9266,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Messages with file attachments
         cnt(messages, undefined, undefined, undefined, sql`${messages.attachmentFilePath} IS NOT NULL`),
+
+        // Case submissions that were converted into an active case
+        cnt(caseSubmissions, undefined, undefined, undefined, sql`LOWER(${caseSubmissions.status}) = 'processed'`),
       ]);
 
       // Message response health (unanswered user messages — same logic as escalation report)
@@ -9315,14 +9319,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const unansweredUnder2Days = Number(mhRow.under_2_days      ?? 0);
       const periodUserMessages  = periodUserMsgRow ? Number((periodUserMsgRow.rows[0] as any)?.n ?? 0) : 0;
 
-      // Breakdowns
+      // Breakdowns (grouped case-insensitively so e.g. "Active"/"active" aren't split into separate rows)
       const [casesByStatusRaw, casesByTypeRaw, topOrgsRaw, allOrgsRaw] = await Promise.all([
-        db.select({ status: cases.status, n: count() }).from(cases).groupBy(cases.status),
-        db.select({ type: cases.debtorType, n: count() }).from(cases).groupBy(cases.debtorType),
+        db.select({ status: sql<string>`LOWER(${cases.status})`, n: count() }).from(cases).groupBy(sql`LOWER(${cases.status})`),
+        db.select({ type: sql<string>`LOWER(${cases.debtorType})`, n: count() }).from(cases).groupBy(sql`LOWER(${cases.debtorType})`),
         db.select({ orgId: cases.organisationId, n: count() }).from(cases)
           .groupBy(cases.organisationId).orderBy(desc(count())).limit(8),
         db.select({ id: organisations.id, name: organisations.name }).from(organisations),
       ]);
+
+      const titleCase = (s: string) => s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
       const orgNameMap: Record<number, string> = {};
       for (const o of allOrgsRaw) orgNameMap[o.id] = o.name;
@@ -9409,7 +9415,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const avgMsgsPerCase = totalCases > 0 ? Math.round((totalMessages / totalCases) * 10) / 10 : 0;
       const avgDocsPerCase = totalCases > 0 ? Math.round((totalDocuments / totalCases) * 10) / 10 : 0;
       const avgActivitiesPerCase = totalCases > 0 ? Math.round((totalActivities / totalCases) * 10) / 10 : 0;
-      const submissionConversionRate = totalSubmissions > 0 ? Math.round((totalCases / totalSubmissions) * 100) : 0;
+      const submissionConversionRate = totalSubmissions > 0 ? Math.round((processedSubmissions / totalSubmissions) * 100) : 0;
       const attachmentRate = totalMessages > 0 ? Math.round((msgsWithAttachments / totalMessages) * 100) : 0;
 
       res.json({
@@ -9449,8 +9455,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           readRate,
         },
         breakdowns: {
-          casesByStatus: casesByStatusRaw.map(r => ({ status: r.status || 'Unknown', count: Number(r.n) })),
-          casesByType:   casesByTypeRaw.map(r => ({ type: r.type || 'Unknown', count: Number(r.n) })),
+          casesByStatus: casesByStatusRaw.map(r => ({ status: r.status ? titleCase(r.status) : 'Unknown', count: Number(r.n) })),
+          casesByType:   casesByTypeRaw.map(r => ({ type: r.type ? titleCase(r.type) : 'Unknown', count: Number(r.n) })),
           topOrgs: topOrgsRaw.map(r => ({ name: r.orgId ? (orgNameMap[r.orgId] || 'Unknown') : 'Unknown', cases: Number(r.n) })),
         },
         messageResponseHealth: {
