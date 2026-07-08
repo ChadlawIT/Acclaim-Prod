@@ -587,7 +587,7 @@ class SendGridEmailService {
                         <a href="https://acclaim-api-prod-uks-001.azurewebsites.net/auth" style="display: inline-block; background-color: #008b8b; background: linear-gradient(135deg, #008b8b 0%, #006666 100%); color: #ffffff !important; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 12px rgba(0,139,139,0.3);">
                           View in Portal →
                         </a>
-                        <p style="color: #94a3b8; font-size: 12px; margin-top: 16px; margin-bottom: 0;">You can reply directly to this email, or log in to the portal above to view the full case history and respond there.</p>
+                        <p style="color: #94a3b8; font-size: 12px; margin-top: 16px; margin-bottom: 0;">Please do not reply to this email — to respond, log in to the portal using the button above.</p>
                       </div>
                       
                     </td>
@@ -628,7 +628,7 @@ Subject: ${data.messageSubject}
 Message:
 ${data.messageContent}
 
-You can reply directly to this email, or log in to the Acclaim Portal to view and respond to this message.
+Please log in to the Acclaim Portal to view and respond to this message.
 Portal: https://acclaim-api-prod-uks-001.azurewebsites.net/auth
       `;
 
@@ -641,7 +641,7 @@ Portal: https://acclaim-api-prod-uks-001.azurewebsites.net/auth
 
       return await this.sendViaAPIM({
         to: data.userEmail,
-        replyTo: 'email@acclaim.law',
+        replyTo: 'noreply@acclaim.law',
         subject: subject,
         textContent: textContent,
         htmlContent: htmlContent,
@@ -1273,7 +1273,7 @@ Open the portal: https://acclaim-api-prod-uks-001.azurewebsites.net/auth
                         <a href="https://acclaim-api-prod-uks-001.azurewebsites.net/auth" style="display: inline-block; background-color: #008b8b; background: linear-gradient(135deg, #008b8b 0%, #006666 100%); color: #ffffff !important; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 12px rgba(0,139,139,0.3);">
                           View in Portal →
                         </a>
-                        <p style="color: #94a3b8; font-size: 12px; margin-top: 16px; margin-bottom: 0;">You can reply directly to this email, or log in to the portal above to view the full case history and respond there.</p>
+                        <p style="color: #94a3b8; font-size: 12px; margin-top: 16px; margin-bottom: 0;">Please do not reply to this email — to respond, log in to the portal using the button above.</p>
                       </div>
                       
                     </td>
@@ -1302,7 +1302,7 @@ ${data.messageSubject ? `Subject: ${data.messageSubject}` : ''}
 Message:
 ${data.messageContent}
 
-You can reply directly to this email, or log in to the Acclaim Portal to view this message and respond there.
+Please log in to the Acclaim Portal to view this message and respond if needed.
 Portal: https://acclaim-api-prod-uks-001.azurewebsites.net/auth
       `;
 
@@ -1335,7 +1335,7 @@ Portal: https://acclaim-api-prod-uks-001.azurewebsites.net/auth
 
       return await this.sendViaAPIM({
         to: data.userEmail,
-        replyTo: 'email@acclaim.law',
+        replyTo: 'noreply@acclaim.law',
         subject: subject,
         textContent: textContent,
         htmlContent: htmlContent,
@@ -2714,7 +2714,7 @@ Please log in to the Acclaim Portal to view this document.
                         <a href="https://acclaim-api-prod-uks-001.azurewebsites.net/auth" style="display: inline-block; background-color: #008b8b; background: linear-gradient(135deg, #008b8b 0%, #006666 100%); color: #ffffff !important; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 12px rgba(0,139,139,0.3);">
                           View in Portal →
                         </a>
-                        <p style="color: #94a3b8; font-size: 12px; margin-top: 16px; margin-bottom: 0;">You can reply directly to this email, or log in to the portal above to view and download the document.</p>
+                        <p style="color: #94a3b8; font-size: 12px; margin-top: 16px; margin-bottom: 0;">Please do not reply to this email — to respond, log in to the portal using the button above.</p>
                       </div>
                       
                     </td>
@@ -2745,7 +2745,7 @@ File Name: ${data.fileName}
 File Size: ${formatFileSize(data.fileSize)}
 Uploaded: ${data.uploadedAt.toLocaleString('en-GB')}
 
-You can reply directly to this email, or log in to the Acclaim Portal to view and download this document.
+Please log in to the Acclaim Portal to view and download this document.
 Portal: https://acclaim-api-prod-uks-001.azurewebsites.net/auth
       `;
 
@@ -2778,7 +2778,6 @@ Portal: https://acclaim-api-prod-uks-001.azurewebsites.net/auth
 
       return await this.sendViaAPIM({
         to: userEmail,
-        replyTo: 'email@acclaim.law',
         subject: subject,
         textContent: textContent,
         htmlContent: htmlContent,

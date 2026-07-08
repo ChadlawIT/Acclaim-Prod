@@ -472,7 +472,7 @@ Please log in to the Acclaim Portal to respond to this message.
               <p style="color: #64748b; font-size: 14px;">
                 Please log in to the Acclaim Portal to view and respond to this message.
               </p>
-              <p style="color: #94a3b8; font-size: 12px; margin-top: 8px;">You can reply directly to this email, or log in to the portal using the link above to view the full case history and respond there.</p>
+              <p style="color: #94a3b8; font-size: 12px; margin-top: 8px;">Please do not reply to this email — to respond, log in to the portal using the link above.</p>
             </div>
           </div>
           
@@ -503,14 +503,14 @@ Subject: ${data.messageSubject || 'New Message from Admin'}
 Message:
 ${data.messageContent}
 
-You can reply directly to this email, or log in to the Acclaim Portal to view and respond to this message.
+Please log in to the Acclaim Portal to view and respond to this message.
 
 To manage your notification preferences, visit your Profile settings in the portal.
       `;
 
       const info = await this.transporter.sendMail({
         from: '"Acclaim Credit Management & Recovery" <email@acclaim.law>',
-        replyTo: 'email@acclaim.law',
+        replyTo: 'noreply@acclaim.law',
         to: data.userEmail,
         subject: subject,
         text: textContent,
