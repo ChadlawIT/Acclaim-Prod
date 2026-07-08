@@ -6022,10 +6022,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const messageCards = caseMessages.map(m => {
           const date = new Date(m.createdAt).toLocaleDateString('en-GB', {
-            day: '2-digit', month: 'short', year: 'numeric'
+            day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Europe/London'
           });
           const time = new Date(m.createdAt).toLocaleTimeString('en-GB', {
-            hour: '2-digit', minute: '2-digit'
+            hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London'
           });
 
           const displaySender = (m.senderName || '').trim() || m.senderEmail || 'Acclaim';
