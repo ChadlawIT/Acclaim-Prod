@@ -440,6 +440,10 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
                               <span className="text-gray-500 dark:text-gray-400">Fees added</span>
                               <span data-testid="text-breakdown-fees" className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(stats?.totalFees || 0)}</span>
                             </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-500 dark:text-gray-400">Payments received</span>
+                              <span data-testid="text-breakdown-payments" className="font-medium text-gray-900 dark:text-gray-100">-{formatCurrency(stats?.totalRecovery || 0)}</span>
+                            </div>
                             <div className="flex justify-between pt-1.5 border-t border-gray-200 dark:border-gray-700">
                               <span className="text-gray-700 dark:text-gray-300 font-medium">Total outstanding</span>
                               <span data-testid="text-breakdown-total" className="font-semibold text-blue-600 dark:text-blue-400">{formatCurrency(stats?.totalOutstanding || 0)}</span>
