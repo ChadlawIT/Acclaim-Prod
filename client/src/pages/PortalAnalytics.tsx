@@ -480,7 +480,7 @@ function openHtmlReport(data: AnalyticsData, period: Period, dateRangeLabel: str
 
     <div class="section">
       <h2>&#128196; Summary</h2>
-      <p class="desc">A plain-English overview of activity during the selected period.</p>
+      <p class="desc">An overview of what happened during the selected period.</p>
       <div class="narrative">
         ${isAllTime ? narrativeAllTime : narrativePeriod}
       </div>
