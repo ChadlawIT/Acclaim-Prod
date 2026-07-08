@@ -771,7 +771,7 @@ export default function PortalAnalytics() {
             <SectionHeader
               icon={FileOutput} iconColor={TEAL}
               title="Summary"
-              description="A plain-English overview of what happened during the selected period and what it means."
+              description="An overview of what happened during the selected period."
             />
             <Card className="border-0 ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm overflow-hidden">
               <CardContent className="p-6 bg-gradient-to-br from-teal-50/50 to-blue-50/30 dark:from-teal-950/20 dark:to-blue-950/10">
