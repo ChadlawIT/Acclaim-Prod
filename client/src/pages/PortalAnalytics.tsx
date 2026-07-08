@@ -353,6 +353,63 @@ const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent
   );
 };
 
+function buildTrendChartSvg(trendData: AnalyticsData["trend"], period: Period): string {
+  if (!trendData.length) return "";
+
+  const W = 1000, H = 280;
+  const padL = 36, padR = 12, padT = 16, padB = 32;
+  const chartW = W - padL - padR;
+  const chartH = H - padT - padB;
+
+  const series: { key: keyof AnalyticsData["trend"][number]; color: string; label: string; dashed: boolean }[] = [
+    { key: "curActivities",  color: METRIC_COLORS.activities, label: "Interactions (current)", dashed: false },
+    { key: "curMessages",    color: METRIC_COLORS.messages,   label: "Messages (current)",     dashed: false },
+    { key: "curCases",       color: METRIC_COLORS.cases,      label: "New Cases (current)",    dashed: false },
+    { key: "prevActivities", color: METRIC_COLORS.activities, label: "Interactions (previous)", dashed: true },
+    { key: "prevMessages",   color: METRIC_COLORS.messages,   label: "Messages (previous)",     dashed: true },
+    { key: "prevCases",      color: METRIC_COLORS.cases,      label: "New Cases (previous)",    dashed: true },
+  ];
+
+  const allValues = trendData.flatMap(d => series.map(s => Number(d[s.key]) || 0));
+  const maxVal = Math.max(1, ...allValues);
+  const niceMax = Math.ceil(maxVal / 5) * 5 || 5;
+
+  const n = trendData.length;
+  const xFor = (i: number) => padL + (n === 1 ? chartW / 2 : (i / (n - 1)) * chartW);
+  const yFor = (v: number) => padT + chartH - (v / niceMax) * chartH;
+
+  const gridLines = [0, 0.25, 0.5, 0.75, 1].map(f => {
+    const y = padT + chartH - f * chartH;
+    const val = Math.round(niceMax * f);
+    return `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="#e5e7eb" stroke-width="1" />
+            <text x="${padL - 8}" y="${y + 4}" font-size="10" fill="#9ca3af" text-anchor="end">${val}</text>`;
+  }).join("");
+
+  const xLabels = trendData.map((d, i) =>
+    `<text x="${xFor(i)}" y="${H - 8}" font-size="10" fill="#9ca3af" text-anchor="middle">${d.label}</text>`
+  ).join("");
+
+  const linesSvg = series.map(s => {
+    const points = trendData.map((d, i) => `${xFor(i)},${yFor(Number(d[s.key]) || 0)}`).join(" ");
+    return `<polyline points="${points}" fill="none" stroke="${s.color}" stroke-width="${s.dashed ? 1.5 : 2.5}" ${s.dashed ? `stroke-dasharray="5 4" opacity="0.45"` : ""} />`;
+  }).join("");
+
+  const legend = series.map(s =>
+    `<span style="display:inline-flex;align-items:center;gap:5px;margin-right:16px;font-size:11px;color:#6b7280">
+      <span style="width:14px;height:0;border-top:${s.dashed ? "1.5px dashed" : "2.5px solid"} ${s.color};display:inline-block"></span>
+      ${s.label}
+    </span>`
+  ).join("");
+
+  return `
+    <svg viewBox="0 0 ${W} ${H}" width="100%" height="260" style="display:block" preserveAspectRatio="xMidYMid meet">
+      ${gridLines}
+      ${linesSvg}
+      ${xLabels}
+    </svg>
+    <div style="margin-top:8px;display:flex;flex-wrap:wrap">${legend}</div>`;
+}
+
 function openHtmlReport(data: AnalyticsData, period: Period, dateRangeLabel: string, prevDateLabel: string) {
   const m = data.metrics;
   const vi = data.valueIndicators;
@@ -534,6 +591,13 @@ function openHtmlReport(data: AnalyticsData, period: Period, dateRangeLabel: str
         </tbody>
       </table>
     </div>
+
+    ${!isAllTime && data.trend.length ? `
+    <div class="section">
+      <h2>&#128200; Activity Over Time</h2>
+      <p class="desc">How case interactions, messages, and new cases have evolved across ${periodLabel[period].cur.toLowerCase()}. Solid lines = current period, dashed = previous.</p>
+      ${buildTrendChartSvg(data.trend, period)}
+    </div>` : ""}
 
     <div class="section">
       <h2>&#128194; Case Breakdown</h2>
