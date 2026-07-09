@@ -2518,7 +2518,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const orgId = parseInt(req.params.orgId, 10);
       if (isNaN(orgId)) return res.status(400).json({ message: "Invalid organisation ID" });
 
-      const { type, customNote } = req.body;
+      const { type, customNote, selectedUserIds, extraEmail } = req.body;
       if (!type || !['new', 'reminder'].includes(type)) {
         return res.status(400).json({ message: "type must be 'new' or 'reminder'" });
       }
@@ -2537,11 +2537,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const org = await storage.getOrganisation(orgId);
       if (!org) return res.status(404).json({ message: "Organisation not found" });
 
-      // Get all users in this org (non-admin only)
+      // Build recipients: use selectedUserIds if provided, otherwise all non-admin users
       const orgUsers = await storage.getUsersByOrganisationId(orgId);
-      const recipients = orgUsers
-        .filter((u: any) => !u.isAdmin && u.email)
-        .map((u: any) => ({ email: u.email, firstName: u.firstName || 'Client' }));
+      let recipients: Array<{ email: string; firstName: string }> = [];
+
+      if (Array.isArray(selectedUserIds) && selectedUserIds.length > 0) {
+        const selectedSet = new Set(selectedUserIds.map(String));
+        recipients = orgUsers
+          .filter((u: any) => selectedSet.has(String(u.id)) && u.email)
+          .map((u: any) => ({ email: u.email, firstName: u.firstName || 'Client' }));
+      } else if (!extraEmail) {
+        // No users selected, no extra email — fall back to all non-admin users
+        recipients = orgUsers
+          .filter((u: any) => !u.isAdmin && u.email)
+          .map((u: any) => ({ email: u.email, firstName: u.firstName || 'Client' }));
+      }
+
+      // Add extra email if provided
+      if (extraEmail && typeof extraEmail === 'string' && extraEmail.includes('@')) {
+        const alreadyIncluded = recipients.some((r) => r.email.toLowerCase() === extraEmail.toLowerCase());
+        if (!alreadyIncluded) {
+          recipients.push({ email: extraEmail.trim(), firstName: 'Client' });
+        }
+      }
 
       if (recipients.length === 0) {
         return res.json({ sent: 0, failed: 0, message: "No non-admin users found in this organisation" });

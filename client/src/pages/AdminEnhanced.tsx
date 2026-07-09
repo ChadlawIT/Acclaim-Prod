@@ -43,6 +43,8 @@ function StatementUploadButton({ orgId, orgName }: { orgId: number; orgName: str
   const [notifyNote, setNotifyNote] = useState('');
   const [notifySending, setNotifySending] = useState(false);
   const [removing, setRemoving] = useState(false);
+  const [extraEmail, setExtraEmail] = useState('');
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
 
   const { data: stmtData, isLoading: stmtLoading } = useQuery<any>({
@@ -54,6 +56,31 @@ function StatementUploadButton({ orgId, orgName }: { orgId: number; orgName: str
     },
     staleTime: 30000,
   });
+
+  const { data: orgUsersData } = useQuery<any[]>({
+    queryKey: ["/api/admin/organisations", orgId, "users"],
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/organisations/${orgId}/users`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    enabled: viewOpen,
+    staleTime: 60000,
+    select: (data: any) => (Array.isArray(data) ? data : data?.users || []),
+  });
+
+  // When org users load, default-select all non-admin users
+  const orgUsers: any[] = (orgUsersData || []).filter((u: any) => !u.isAdmin && u.email);
+  const [usersInitialised, setUsersInitialised] = useState(false);
+  if (orgUsers.length > 0 && !usersInitialised) {
+    setSelectedUserIds(new Set(orgUsers.map((u: any) => String(u.id))));
+    setUsersInitialised(true);
+  }
+  // Reset when dialog closes
+  const handleViewOpenChange = (open: boolean) => {
+    setViewOpen(open);
+    if (!open) { setUsersInitialised(false); setExtraEmail(''); setSelectedUserIds(new Set()); }
+  };
 
   async function uploadFile(file: File) {
     if (!file.name.match(/\.xlsx?$/i)) {
@@ -93,13 +120,24 @@ function StatementUploadButton({ orgId, orgName }: { orgId: number; orgName: str
   }
 
   async function sendNotification() {
+    const hasExtra = extraEmail.trim().includes('@');
+    const hasUsers = selectedUserIds.size > 0;
+    if (!hasUsers && !hasExtra) {
+      toast({ title: "No recipients", description: "Select at least one user or enter an extra email address.", variant: "destructive" });
+      return;
+    }
     setNotifySending(true);
     try {
       const res = await fetch(`/api/admin/statements/${orgId}/notify`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: notifyType, customNote: notifyNote || undefined }),
+        body: JSON.stringify({
+          type: notifyType,
+          customNote: notifyNote || undefined,
+          selectedUserIds: [...selectedUserIds],
+          extraEmail: extraEmail.trim() || undefined,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to send");
@@ -109,6 +147,14 @@ function StatementUploadButton({ orgId, orgName }: { orgId: number; orgName: str
     } catch (err: any) {
       toast({ title: "Send failed", description: err.message, variant: "destructive" });
     } finally { setNotifySending(false); }
+  }
+
+  function toggleUser(id: string) {
+    setSelectedUserIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
   }
 
   const hasStatement = stmtData?.exists;
@@ -149,7 +195,7 @@ function StatementUploadButton({ orgId, orgName }: { orgId: number; orgName: str
       {/* View / Remove / Notify buttons — only when statement exists */}
       {hasStatement && (
         <div className="flex gap-1 px-0 mt-1">
-          <Dialog open={viewOpen} onOpenChange={setViewOpen}>
+          <Dialog open={viewOpen} onOpenChange={handleViewOpenChange}>
             <DialogTrigger asChild>
               <button className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-md text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-testid={`button-view-statement-admin-${orgId}`}>
                 <Eye className="h-3.5 w-3.5" /> View & Send
@@ -194,11 +240,12 @@ function StatementUploadButton({ orgId, orgName }: { orgId: number; orgName: str
                 </div>
 
                 {/* Send notification section */}
-                <div className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800/40 space-y-3">
+                <div className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800/40 space-y-4">
                   <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2">
                     <Bell className="h-4 w-4 text-teal-600" /> Send email notification
                   </p>
-                  <p className="text-xs text-gray-500">Sends the statement as Excel + HTML attachments to all non-admin users in <strong>{orgName}</strong>.</p>
+
+                  {/* Type selector */}
                   <div className="grid grid-cols-2 gap-2">
                     <button onClick={() => setNotifyType('new')}
                       className={`p-3 rounded-lg border-2 text-left transition-all ${notifyType === 'new' ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 bg-white dark:bg-gray-900'}`}
@@ -213,17 +260,86 @@ function StatementUploadButton({ orgId, orgName }: { orgId: number; orgName: str
                       <p className="text-xs text-gray-500 mt-0.5">Credit control chaser about unpaid invoices.</p>
                     </button>
                   </div>
-                  <div>
-                    <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">Additional note <span className="font-normal text-gray-400">(optional)</span></label>
-                    <textarea
-                      value={notifyNote}
-                      onChange={e => setNotifyNote(e.target.value)}
-                      placeholder="Add a personal note to include in the email…"
-                      rows={2}
-                      className="w-full rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm px-3 py-2 text-gray-800 dark:text-gray-200 resize-none focus:outline-none focus:ring-2 focus:ring-teal-500"
-                    />
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Users in org */}
+                    <div>
+                      <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">
+                        Users to notify <span className="font-normal text-gray-400">({selectedUserIds.size} selected)</span>
+                      </p>
+                      {orgUsers.length === 0 ? (
+                        <p className="text-xs text-gray-400 italic py-2">No non-admin users in this organisation.</p>
+                      ) : (
+                        <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
+                          {orgUsers.map((u: any) => {
+                            const uid = String(u.id);
+                            const checked = selectedUserIds.has(uid);
+                            return (
+                              <label key={uid} className="flex items-center gap-2 cursor-pointer group">
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={() => toggleUser(uid)}
+                                  className="rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+                                  data-testid={`checkbox-notify-user-${uid}`}
+                                />
+                                <span className={`text-xs ${checked ? 'text-gray-800 dark:text-gray-200' : 'text-gray-400'}`}>
+                                  {u.firstName} {u.lastName}
+                                  <span className="text-gray-400 ml-1">({u.email})</span>
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      )}
+                      <button
+                        onClick={() => {
+                          if (selectedUserIds.size === orgUsers.length) {
+                            setSelectedUserIds(new Set());
+                          } else {
+                            setSelectedUserIds(new Set(orgUsers.map((u: any) => String(u.id))));
+                          }
+                        }}
+                        className="mt-1.5 text-xs text-teal-600 hover:underline"
+                      >
+                        {selectedUserIds.size === orgUsers.length ? 'Deselect all' : 'Select all'}
+                      </button>
+                    </div>
+
+                    {/* Extra email + note */}
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">
+                          Additional recipient <span className="font-normal text-gray-400">(optional — e.g. purchase ledger)</span>
+                        </label>
+                        <input
+                          type="email"
+                          value={extraEmail}
+                          onChange={e => setExtraEmail(e.target.value)}
+                          placeholder="purchaseledger@example.com"
+                          className="w-full rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm px-3 py-2 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                          data-testid="input-notify-extra-email"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">
+                          Additional note <span className="font-normal text-gray-400">(optional)</span>
+                        </label>
+                        <textarea
+                          value={notifyNote}
+                          onChange={e => setNotifyNote(e.target.value)}
+                          placeholder="Add a personal note to include in the email…"
+                          rows={3}
+                          className="w-full rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm px-3 py-2 text-gray-800 dark:text-gray-200 resize-none focus:outline-none focus:ring-2 focus:ring-teal-500"
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex justify-end">
+
+                  <div className="flex items-center justify-between pt-1 border-t border-gray-200 dark:border-gray-700">
+                    <p className="text-xs text-gray-400">
+                      {selectedUserIds.size} user{selectedUserIds.size !== 1 ? 's' : ''}{extraEmail.includes('@') ? ' + 1 extra address' : ''} will receive this email.
+                    </p>
                     <Button onClick={sendNotification} disabled={notifySending} size="sm"
                       className={notifyType === 'reminder' ? 'bg-amber-600 hover:bg-amber-700 text-white' : 'bg-teal-600 hover:bg-teal-700 text-white'}>
                       {notifySending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Sending…</> : <><Send className="h-4 w-4 mr-2" />Send {notifyType === 'reminder' ? 'reminder' : 'new statement'}</>}
