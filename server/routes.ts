@@ -2458,7 +2458,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const meta = fs.existsSync(metaPath) ? JSON.parse(fs.readFileSync(metaPath, "utf8")) : {};
 
       // Parse with xlsx
-      const XLSX = await import("xlsx");
+      const XLSX = (await import("xlsx")).default;
       const workbook = XLSX.readFile(filePath);
       const sheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[sheetName];
@@ -2533,7 +2533,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Parse statement to generate Excel + HTML attachments
-      const XLSX = await import("xlsx");
+      const XLSX = (await import("xlsx")).default;
       const workbook = XLSX.readFile(filePath);
       const sheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[sheetName];
