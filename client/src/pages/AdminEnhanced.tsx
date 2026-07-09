@@ -438,11 +438,13 @@ function StatementsTab() {
       if (!res.ok) throw new Error('Failed');
       return res.json();
     },
+    staleTime: 0,
   });
 
   const orgs: any[] = orgsData || [];
   const statements: any[] = stmtsData?.statements || [];
-  const stmtMap = new Map(statements.map((s: any) => [s.orgId, s]));
+  // Use Number() coercion on both sides to avoid type-mismatch misses (string vs number org IDs)
+  const stmtMap = new Map(statements.map((s: any) => [Number(s.orgId), s]));
 
   async function uploadFile(file: File, orgId: number) {
     if (!file.name.match(/\.xlsx?$/i)) {
@@ -471,8 +473,8 @@ function StatementsTab() {
   const uploadOrgIdNum = uploadOrgId ? parseInt(uploadOrgId, 10) : null;
 
   // Orgs sorted: those with statements first, then alphabetically
-  const orgsWithStmt = orgs.filter((o: any) => stmtMap.has(o.id)).sort((a: any, b: any) => a.name.localeCompare(b.name));
-  const orgsWithout = orgs.filter((o: any) => !stmtMap.has(o.id)).sort((a: any, b: any) => a.name.localeCompare(b.name));
+  const orgsWithStmt = orgs.filter((o: any) => stmtMap.has(Number(o.id))).sort((a: any, b: any) => a.name.localeCompare(b.name));
+  const orgsWithout = orgs.filter((o: any) => !stmtMap.has(Number(o.id))).sort((a: any, b: any) => a.name.localeCompare(b.name));
 
   return (
     <div className="space-y-6">
