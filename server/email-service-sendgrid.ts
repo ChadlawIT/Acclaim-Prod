@@ -1,7 +1,9 @@
 import path from 'path';
 import os from 'os';
 import { fileURLToPath } from 'url';
-import ExcelJS from 'exceljs';
+import ExcelJSModule from 'exceljs';
+// CJS/ESM interop: in some bundling contexts the default export wraps the module
+const ExcelJS: typeof ExcelJSModule = (ExcelJSModule as any).default ?? ExcelJSModule;
 import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
