@@ -1592,7 +1592,7 @@ export default function UserProfile() {
             )}
 
             {/* Organisation Info - only show for non-admin users */}
-            {!userProfile?.isAdmin && (
+            {(
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
