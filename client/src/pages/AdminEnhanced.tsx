@@ -420,6 +420,7 @@ function StatementsTab() {
   const [uploadOrgId, setUploadOrgId] = useState<string>('');
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [orgSearch, setOrgSearch] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
   const { data: orgsData } = useQuery<any[]>({
@@ -472,9 +473,14 @@ function StatementsTab() {
 
   const uploadOrgIdNum = uploadOrgId ? parseInt(uploadOrgId, 10) : null;
 
+  const orgSearchLower = orgSearch.trim().toLowerCase();
+  const filteredOrgs = orgSearchLower
+    ? orgs.filter((o: any) => o.name.toLowerCase().includes(orgSearchLower))
+    : orgs;
+
   // Orgs sorted: those with statements first, then alphabetically
-  const orgsWithStmt = orgs.filter((o: any) => stmtMap.has(Number(o.id))).sort((a: any, b: any) => a.name.localeCompare(b.name));
-  const orgsWithout = orgs.filter((o: any) => !stmtMap.has(Number(o.id))).sort((a: any, b: any) => a.name.localeCompare(b.name));
+  const orgsWithStmt = filteredOrgs.filter((o: any) => stmtMap.has(Number(o.id))).sort((a: any, b: any) => a.name.localeCompare(b.name));
+  const orgsWithout = filteredOrgs.filter((o: any) => !stmtMap.has(Number(o.id))).sort((a: any, b: any) => a.name.localeCompare(b.name));
 
   return (
     <div className="space-y-6">
@@ -540,6 +546,26 @@ function StatementsTab() {
             <Button variant="outline" size="sm" onClick={() => refetchStmts()} data-testid="button-refresh-statements">
               <RefreshCw className="h-3.5 w-3.5 mr-1" /> Refresh
             </Button>
+          </div>
+          <div className="relative mt-2">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+            <input
+              type="text"
+              value={orgSearch}
+              onChange={e => setOrgSearch(e.target.value)}
+              placeholder="Search organisations…"
+              className="w-full pl-9 pr-3 py-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-teal-500"
+              data-testid="input-org-search"
+            />
+            {orgSearch && (
+              <button
+                onClick={() => setOrgSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                aria-label="Clear search"
+              >
+                ✕
+              </button>
+            )}
           </div>
         </CardHeader>
         <CardContent className="space-y-2 p-0">
