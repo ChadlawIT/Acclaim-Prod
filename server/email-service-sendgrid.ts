@@ -3377,6 +3377,117 @@ You can disable these login notifications in your Profile Settings.
       return false;
     }
   }
+
+  async sendStatementNotification(data: {
+    type: 'new' | 'reminder';
+    orgName: string;
+    recipients: Array<{ email: string; firstName: string }>;
+    customNote?: string;
+    excelBase64: string;
+    htmlBase64: string;
+    orgId: number;
+    uploadedAt?: string;
+  }): Promise<{ sent: number; failed: number }> {
+    let sent = 0;
+    let failed = 0;
+
+    const isNew = data.type === 'new';
+    const subject = isNew
+      ? `Statement of Account Available — ${data.orgName}`
+      : `Overdue Invoice Reminder — ${data.orgName}`;
+
+    const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    const uploadedAtStr = data.uploadedAt
+      ? new Date(data.uploadedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+      : today;
+
+    const attachments: Array<{ content: string; filename: string; type: string; disposition?: string }> = [];
+    const safeOrgName = data.orgName.replace(/[^a-zA-Z0-9]/g, '_');
+
+    attachments.push({
+      content: data.excelBase64,
+      filename: `${safeOrgName}_Statement.xlsx`,
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      disposition: 'attachment',
+    });
+    attachments.push({
+      content: data.htmlBase64,
+      filename: `${safeOrgName}_Statement.html`,
+      type: 'text/html',
+      disposition: 'attachment',
+    });
+
+    const logoBase64 = getLogoBase64();
+    if (logoBase64) attachments.push(logoBase64);
+
+    for (const recipient of data.recipients) {
+      if (!recipient.email || !recipient.email.includes('@')) continue;
+
+      const greeting = `Dear ${recipient.firstName || 'Client'},`;
+
+      const mainPara = isNew
+        ? `We are pleased to inform you that an updated Statement of Account is now available for <strong>${escapeHtml(data.orgName)}</strong>. The statement was prepared on <strong>${uploadedAtStr}</strong> and is attached to this email for your reference.`
+        : `We are writing regarding outstanding invoices on your account with <strong>${escapeHtml(data.orgName)}</strong>. Please find your current Statement of Account attached, which details the invoices that remain unpaid as of <strong>${today}</strong>.`;
+
+      const actionPara = isNew
+        ? `You can also view your statement online at any time by logging in to the Acclaim portal and navigating to your Profile &gt; Organisation tab.`
+        : `We kindly request that you review the attached statement and arrange payment for any overdue invoices at your earliest convenience. If you believe any of these invoices have already been settled, or if you have any queries, please do not hesitate to contact us.`;
+
+      const customNoteHtml = data.customNote
+        ? `<tr><td style="padding: 0 40px 24px;"><div style="background:#f0fdf4;border-left:4px solid #16a34a;padding:14px 18px;border-radius:6px;"><p style="margin:0;color:#15803d;font-size:14px;line-height:1.6;">${escapeHtml(data.customNote)}</p></div></td></tr>`
+        : '';
+
+      const htmlContent = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f0f4f8;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f0f4f8;">
+  <tr><td align="center" style="padding:40px 20px;">
+    <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+      <tr><td style="padding:28px 40px 24px;text-align:center;border-bottom:4px solid #0d9488;">
+        <img src="cid:logo" alt="Acclaim" width="240" height="82" style="display:block;margin:0 auto 20px;" />
+        <h1 style="margin:0;color:#1a2e44;font-size:22px;font-weight:600;">${isNew ? 'Statement of Account' : 'Overdue Invoice Reminder'}</h1>
+      </td></tr>
+      <tr><td style="padding:32px 40px 24px;">
+        <p style="margin:0 0 16px;color:#374151;font-size:15px;">${greeting}</p>
+        <p style="margin:0 0 16px;color:#374151;font-size:15px;line-height:1.7;">${mainPara}</p>
+        <p style="margin:0 0 16px;color:#374151;font-size:15px;line-height:1.7;">${actionPara}</p>
+        ${isNew ? `<p style="margin:0;color:#374151;font-size:15px;line-height:1.7;">The statement is also attached to this email as both an Excel spreadsheet and an HTML file for your convenience.</p>` : ''}
+      </td></tr>
+      ${customNoteHtml}
+      <tr><td style="padding:0 40px 32px;">
+        <p style="margin:0;color:#374151;font-size:15px;">Kind regards,<br/><strong>Acclaim Credit Management &amp; Recovery</strong><br/><a href="mailto:email@acclaim.law" style="color:#0d9488;">email@acclaim.law</a></p>
+      </td></tr>
+      <tr><td style="background:#1f2937;padding:20px;text-align:center;">
+        <p style="margin:0;color:#9ca3af;font-size:12px;">Chadwick Lawrence LLP &nbsp;|&nbsp; &copy; ${new Date().getFullYear()}</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`;
+
+      const textContent = `${greeting}\n\n${isNew
+        ? `An updated Statement of Account is now available for ${data.orgName}. The statement was prepared on ${uploadedAtStr} and is attached to this email.\n\nYou can also view your statement online at any time by logging in to the Acclaim portal and navigating to your Profile > Organisation tab.`
+        : `We are writing regarding outstanding invoices on your account with ${data.orgName}. Please find your current Statement of Account attached, which details the invoices that remain unpaid as of ${today}.\n\nWe kindly request that you review the attached statement and arrange payment for any overdue invoices at your earliest convenience.`
+      }${data.customNote ? `\n\n${data.customNote}` : ''}\n\nKind regards,\nAcclaim Credit Management & Recovery\nemail@acclaim.law`;
+
+      try {
+        const ok = await this.sendViaAPIM({
+          to: recipient.email,
+          subject,
+          htmlContent,
+          textContent,
+          attachLogo: false, // already added to attachments
+          attachments,
+        });
+        if (ok) sent++; else failed++;
+      } catch (e) {
+        console.error(`[Statement] Failed to send to ${recipient.email}:`, e);
+        failed++;
+      }
+    }
+
+    return { sent, failed };
+  }
 }
 
 // Export singleton instance

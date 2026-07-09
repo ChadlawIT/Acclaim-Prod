@@ -2497,6 +2497,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin: send statement notification email to all org users
+  app.post('/api/admin/statements/:orgId/notify', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const orgId = parseInt(req.params.orgId, 10);
+      if (isNaN(orgId)) return res.status(400).json({ message: "Invalid organisation ID" });
+
+      const { type, customNote } = req.body;
+      if (!type || !['new', 'reminder'].includes(type)) {
+        return res.status(400).json({ message: "type must be 'new' or 'reminder'" });
+      }
+
+      const fs = await import("fs");
+      const filePath = path.join("uploads", "statements", `org-${orgId}.xlsx`);
+      const metaPath = path.join("uploads", "statements", `org-${orgId}.meta.json`);
+
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ message: "No statement uploaded for this organisation" });
+      }
+
+      const meta = fs.existsSync(metaPath) ? JSON.parse(fs.readFileSync(metaPath, "utf8")) : {};
+
+      // Get organisation details
+      const org = await storage.getOrganisation(orgId);
+      if (!org) return res.status(404).json({ message: "Organisation not found" });
+
+      // Get all users in this org (non-admin only)
+      const orgUsers = await storage.getUsersByOrganisationId(orgId);
+      const recipients = orgUsers
+        .filter((u: any) => !u.isAdmin && u.email)
+        .map((u: any) => ({ email: u.email, firstName: u.firstName || 'Client' }));
+
+      if (recipients.length === 0) {
+        return res.json({ sent: 0, failed: 0, message: "No non-admin users found in this organisation" });
+      }
+
+      // Parse statement to generate Excel + HTML attachments
+      const XLSX = await import("xlsx");
+      const workbook = XLSX.readFile(filePath);
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const rawRows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+      const rows = rawRows.filter((row: any[]) => row.some((c: any) => c !== "" && c !== null && c !== undefined));
+
+      const headers: any[] = rows[0] || [];
+      const bodyRows: any[][] = rows.slice(1);
+      const safeOrgName = org.name.replace(/[^a-zA-Z0-9]/g, '_');
+
+      // Build Excel attachment
+      const ExcelJS = await import("exceljs");
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet("Statement of Account");
+      const headerRow = ws.addRow(headers.map((h: any) => String(h ?? "")));
+      headerRow.eachCell((cell: any) => {
+        cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0D9488' } };
+        cell.alignment = { horizontal: 'left' };
+      });
+      bodyRows.forEach((row: any[], i: number) => {
+        const r = ws.addRow(headers.map((_: any, ci: number) => {
+          const v = row[ci];
+          return v === "" || v === null || v === undefined ? "" : v;
+        }));
+        if (i % 2 === 1) {
+          r.eachCell((cell: any) => {
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF9FAFB' } };
+          });
+        }
+      });
+      // Auto-width
+      headers.forEach((_: any, ci: number) => {
+        const col = ws.getColumn(ci + 1);
+        let max = String(headers[ci] ?? "").length + 4;
+        bodyRows.forEach((r: any[]) => { max = Math.max(max, String(r[ci] ?? "").length + 2); });
+        col.width = Math.min(max, 40);
+      });
+      const excelBuffer = await wb.xlsx.writeBuffer();
+      const excelBase64 = Buffer.from(excelBuffer as any).toString('base64');
+
+      // Build HTML attachment
+      const uploadedAtStr = meta.uploadedAt
+        ? new Date(meta.uploadedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+        : new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+
+      const headerHtml = headers.map((h: any) => `<th>${String(h ?? "").replace(/</g, "&lt;")}</th>`).join("");
+      const bodyHtml = bodyRows.map((row: any[]) =>
+        `<tr>${headers.map((_: any, i: number) => `<td>${String(row[i] ?? "").replace(/</g, "&lt;")}</td>`).join("")}</tr>`
+      ).join("\n");
+      const htmlContent = `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><title>Statement of Account — ${org.name}</title>
+<style>body{font-family:Arial,sans-serif;margin:40px;color:#111;}h1{font-size:20px;margin-bottom:4px;color:#0d9488;}p.meta{font-size:12px;color:#666;margin-bottom:24px;}table{border-collapse:collapse;width:100%;font-size:13px;}th{background:#0d9488;color:#fff;text-align:left;padding:8px 10px;}td{padding:6px 10px;border-bottom:1px solid #e5e7eb;}tr:nth-child(even) td{background:#f9fafb;}@media print{body{margin:20px;}}</style>
+</head><body>
+<h1>Statement of Account</h1>
+<p class="meta">${org.name} &nbsp;·&nbsp; As at ${uploadedAtStr}</p>
+<table><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table>
+</body></html>`;
+      const htmlBase64 = Buffer.from(htmlContent).toString('base64');
+
+      // Send emails
+      const { sendGridEmailService } = await import('./email-service-sendgrid.js');
+      const result = await sendGridEmailService.sendStatementNotification({
+        type,
+        orgName: org.name,
+        recipients,
+        customNote: customNote || undefined,
+        excelBase64,
+        htmlBase64,
+        orgId,
+        uploadedAt: meta.uploadedAt,
+      });
+
+      return res.json({ ...result, message: `Notification sent to ${result.sent} recipient(s)` });
+    } catch (error: any) {
+      console.error("Error sending statement notification:", error);
+      return res.status(500).json({ message: error.message || "Failed to send notification" });
+    }
+  });
+
   // ── End statement of account routes ────────────────────────────────────────
 
   app.post('/api/organisation/documents/upload', isAuthenticated, upload.single('file'), async (req: any, res) => {
