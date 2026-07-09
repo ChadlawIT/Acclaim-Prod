@@ -13,7 +13,7 @@ import { useTheme } from "@/hooks/use-theme";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest } from "@/lib/queryClient";
 import { useQueryClient } from "@tanstack/react-query";
-import { User, Settings, Phone, Mail, Calendar, Shield, ArrowLeft, Bell, BellOff, Building2, FileText, Download, Trash2, Upload, Search, Sun, Moon, HelpCircle, Briefcase, MessageSquare, BarChart3, Crown, ShieldCheck, ShieldOff, Loader2, Users, ChevronDown, ChevronUp, UserPlus, UserMinus, Send, Eye, X } from "lucide-react";
+import { User, Settings, Phone, Mail, Calendar, Shield, ArrowLeft, Bell, BellOff, Building2, FileText, Download, Trash2, Upload, Search, Sun, Moon, HelpCircle, Briefcase, MessageSquare, BarChart3, Crown, ShieldCheck, ShieldOff, Loader2, Users, ChevronDown, ChevronUp, UserPlus, UserMinus, Send, Eye, X, Info } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -158,10 +158,13 @@ function StatementPanel({ orgId, orgName, data, isLoading }: {
               Last updated: <span className="text-teal-600 dark:text-teal-400">{uploadedAt}</span>
             </p>
           )}
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed max-w-lg">
-            If you have made payment on an invoice since{uploadedAt ? <> <strong className="text-gray-700 dark:text-gray-300">{uploadedAt}</strong></> : " this date"}, no further action is required at this time.
-            If payment was made before this date, please <a href="mailto:email@acclaim.law" className="text-teal-600 hover:underline">contact us</a> with the payment details so we can update your account.
-          </p>
+          <div className="mt-2 flex gap-2.5 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg px-3 py-2.5 max-w-lg">
+            <Info className="h-4 w-4 text-blue-500 dark:text-blue-400 shrink-0 mt-0.5" />
+            <p className="text-xs text-blue-800 dark:text-blue-200 leading-relaxed">
+              If you have made payment on an invoice since{uploadedAt ? <> <strong>{uploadedAt}</strong></> : " this date"}, no further action is required at this time.
+              {" "}If payment was made before this date, please <a href="mailto:email@acclaim.law" className="underline hover:text-blue-600">contact us</a> with the payment details so we can update your account.
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" onClick={downloadExcel} data-testid="button-download-statement-excel">
