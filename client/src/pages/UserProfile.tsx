@@ -156,6 +156,10 @@ function StatementPanel({ orgId, orgName, data, isLoading }: {
           {uploadedAt && (
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Last updated: {uploadedAt}</p>
           )}
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed max-w-lg">
+            If you have made payment on an invoice <strong>since</strong> this date, no further action is required at this time.
+            If payment was made <strong>before</strong> this date, please <a href="mailto:email@acclaim.law" className="text-teal-600 hover:underline">contact us</a> with the payment details so we can update your account.
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" onClick={downloadExcel} data-testid="button-download-statement-excel">
