@@ -139,11 +139,8 @@ function StatementPanel({ orgId, orgName, data, isLoading }: {
 </html>`;
     const blob = new Blob([html], { type: "text/html" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${orgName.replace(/[^a-zA-Z0-9]/g, "_")}_Statement.html`;
-    a.click();
-    URL.revokeObjectURL(url);
+    window.open(url, "_blank");
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
   }
 
   return (
