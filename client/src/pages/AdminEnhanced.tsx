@@ -39,7 +39,6 @@ function StatementUploadButton({ orgId, orgName }: { orgId: number; orgName: str
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [viewOpen, setViewOpen] = useState(false);
-  const [notifyOpen, setNotifyOpen] = useState(false);
   const [notifyType, setNotifyType] = useState<'new' | 'reminder'>('new');
   const [notifyNote, setNotifyNote] = useState('');
   const [notifySending, setNotifySending] = useState(false);
@@ -105,8 +104,8 @@ function StatementUploadButton({ orgId, orgName }: { orgId: number; orgName: str
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to send");
       toast({ title: "Notification sent", description: data.message || `Sent to ${data.sent} recipient(s).` });
-      setNotifyOpen(false);
       setNotifyNote('');
+      qc.invalidateQueries({ queryKey: ["/api/statements", orgId] });
     } catch (err: any) {
       toast({ title: "Send failed", description: err.message, variant: "destructive" });
     } finally { setNotifySending(false); }
@@ -153,10 +152,10 @@ function StatementUploadButton({ orgId, orgName }: { orgId: number; orgName: str
           <Dialog open={viewOpen} onOpenChange={setViewOpen}>
             <DialogTrigger asChild>
               <button className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-md text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-testid={`button-view-statement-admin-${orgId}`}>
-                <Eye className="h-3.5 w-3.5" /> View
+                <Eye className="h-3.5 w-3.5" /> View & Send
               </button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col">
+            <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col">
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   <FileSpreadsheet className="h-5 w-5 text-green-600" />
@@ -164,30 +163,120 @@ function StatementUploadButton({ orgId, orgName }: { orgId: number; orgName: str
                 </DialogTitle>
                 <DialogDescription>{uploadedAt ? `Uploaded ${uploadedAt}` : "Current statement"}</DialogDescription>
               </DialogHeader>
-              <div className="flex-1 overflow-auto min-h-0">
-                {stmtLoading ? (
-                  <div className="flex items-center justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
-                ) : rows.length === 0 ? (
-                  <p className="text-center text-gray-500 py-8 text-sm">No data in statement.</p>
-                ) : (
-                  <table className="w-full text-sm border-collapse">
-                    <thead className="sticky top-0">
-                      <tr>{headers.map((h: any, i: number) => (
-                        <th key={i} className="text-left px-3 py-2 bg-teal-700 text-white font-medium text-xs whitespace-nowrap">{String(h ?? "")}</th>
-                      ))}</tr>
-                    </thead>
-                    <tbody>
-                      {bodyRows.map((row: any[], ri: number) => (
-                        <tr key={ri} className={ri % 2 === 0 ? "" : "bg-gray-50 dark:bg-gray-800/30"}>
-                          {headers.map((_: any, ci: number) => (
-                            <td key={ci} className="px-3 py-1.5 border-b border-gray-100 dark:border-gray-800 whitespace-nowrap text-gray-800 dark:text-gray-200">{String(row[ci] ?? "")}</td>
+
+              {/* Scrollable body: table + send + audit */}
+              <div className="flex-1 overflow-auto min-h-0 space-y-4">
+
+                {/* Statement table */}
+                <div>
+                  {stmtLoading ? (
+                    <div className="flex items-center justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
+                  ) : rows.length === 0 ? (
+                    <p className="text-center text-gray-500 py-8 text-sm">No data in statement.</p>
+                  ) : (
+                    <table className="w-full text-sm border-collapse">
+                      <thead className="sticky top-0 z-10">
+                        <tr>{headers.map((h: any, i: number) => (
+                          <th key={i} className="text-left px-3 py-2 bg-teal-700 text-white font-medium text-xs whitespace-nowrap">{String(h ?? "")}</th>
+                        ))}</tr>
+                      </thead>
+                      <tbody>
+                        {bodyRows.map((row: any[], ri: number) => (
+                          <tr key={ri} className={ri % 2 === 0 ? "" : "bg-gray-50 dark:bg-gray-800/30"}>
+                            {headers.map((_: any, ci: number) => (
+                              <td key={ci} className="px-3 py-1.5 border-b border-gray-100 dark:border-gray-800 whitespace-nowrap text-gray-800 dark:text-gray-200">{String(row[ci] ?? "")}</td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+
+                {/* Send notification section */}
+                <div className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800/40 space-y-3">
+                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2">
+                    <Bell className="h-4 w-4 text-teal-600" /> Send email notification
+                  </p>
+                  <p className="text-xs text-gray-500">Sends the statement as Excel + HTML attachments to all non-admin users in <strong>{orgName}</strong>.</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button onClick={() => setNotifyType('new')}
+                      className={`p-3 rounded-lg border-2 text-left transition-all ${notifyType === 'new' ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 bg-white dark:bg-gray-900'}`}
+                      data-testid="button-notify-type-new">
+                      <p className="text-sm font-medium text-gray-800 dark:text-gray-200">New statement</p>
+                      <p className="text-xs text-gray-500 mt-0.5">Tell clients a new statement is available.</p>
+                    </button>
+                    <button onClick={() => setNotifyType('reminder')}
+                      className={`p-3 rounded-lg border-2 text-left transition-all ${notifyType === 'reminder' ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 bg-white dark:bg-gray-900'}`}
+                      data-testid="button-notify-type-reminder">
+                      <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Overdue reminder</p>
+                      <p className="text-xs text-gray-500 mt-0.5">Credit control chaser about unpaid invoices.</p>
+                    </button>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">Additional note <span className="font-normal text-gray-400">(optional)</span></label>
+                    <textarea
+                      value={notifyNote}
+                      onChange={e => setNotifyNote(e.target.value)}
+                      placeholder="Add a personal note to include in the email…"
+                      rows={2}
+                      className="w-full rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm px-3 py-2 text-gray-800 dark:text-gray-200 resize-none focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    />
+                  </div>
+                  <div className="flex justify-end">
+                    <Button onClick={sendNotification} disabled={notifySending} size="sm"
+                      className={notifyType === 'reminder' ? 'bg-amber-600 hover:bg-amber-700 text-white' : 'bg-teal-600 hover:bg-teal-700 text-white'}>
+                      {notifySending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Sending…</> : <><Send className="h-4 w-4 mr-2" />Send {notifyType === 'reminder' ? 'reminder' : 'new statement'}</>}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Email send audit trail */}
+                {(() => {
+                  const log: any[] = stmtData?.meta?.notifyLog || [];
+                  return (
+                    <div className="border rounded-lg overflow-hidden">
+                      <div className="px-4 py-2.5 bg-gray-100 dark:bg-gray-800 border-b flex items-center gap-2">
+                        <History className="h-4 w-4 text-gray-500" />
+                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">Email send history</p>
+                        {log.length > 0 && <span className="ml-auto text-xs text-gray-400">{log.length} send{log.length !== 1 ? 's' : ''}</span>}
+                      </div>
+                      {log.length === 0 ? (
+                        <p className="px-4 py-4 text-sm text-gray-400 italic">No emails sent yet for this statement.</p>
+                      ) : (
+                        <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                          {[...log].reverse().map((entry: any, i: number) => (
+                            <div key={i} className="px-4 py-3 flex items-start gap-3">
+                              <div className={`mt-0.5 flex-shrink-0 rounded-full p-1 ${entry.type === 'reminder' ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-teal-100 dark:bg-teal-900/30'}`}>
+                                {entry.type === 'reminder'
+                                  ? <BellOff className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                                  : <Bell className="h-3.5 w-3.5 text-teal-600 dark:text-teal-400" />}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${entry.type === 'reminder' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' : 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300'}`}>
+                                    {entry.type === 'reminder' ? 'Overdue reminder' : 'New statement'}
+                                  </span>
+                                  <span className="text-xs text-gray-500">·</span>
+                                  <span className="text-xs text-gray-500">{new Date(entry.sentAt).toLocaleString('en-GB')}</span>
+                                  <span className="text-xs text-gray-500">·</span>
+                                  <span className="text-xs text-gray-500">by {entry.sentBy}</span>
+                                </div>
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                  {entry.sent} sent{entry.failed > 0 ? `, ${entry.failed} failed` : ''}
+                                  {entry.customNote ? ` · Note: "${entry.customNote}"` : ''}
+                                </p>
+                              </div>
+                            </div>
                           ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
               </div>
+
               <div className="flex justify-between items-center pt-3 border-t mt-auto">
                 <button onClick={removeStatement} disabled={removing}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
@@ -196,59 +285,6 @@ function StatementUploadButton({ orgId, orgName }: { orgId: number; orgName: str
                 </button>
                 <Button variant="outline" size="sm" onClick={() => setViewOpen(false)}>Close</Button>
               </div>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog open={notifyOpen} onOpenChange={setNotifyOpen}>
-            <DialogTrigger asChild>
-              <button className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-md text-xs text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-900/20 hover:bg-teal-100 dark:hover:bg-teal-900/40 transition-colors" data-testid={`button-notify-statement-${orgId}`}>
-                <Bell className="h-3.5 w-3.5" /> Notify
-              </button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <Bell className="h-5 w-5 text-teal-600" /> Send Statement Notification
-                </DialogTitle>
-                <DialogDescription>Send an email to all users in <strong>{orgName}</strong> with the statement attached.</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-2">
-                <div>
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Notification type</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button onClick={() => setNotifyType('new')}
-                      className={`p-3 rounded-lg border-2 text-left transition-all ${notifyType === 'new' ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'}`}
-                      data-testid="button-notify-type-new">
-                      <p className="text-sm font-medium text-gray-800 dark:text-gray-200">New statement</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Tell clients a new statement is available and where to find it.</p>
-                    </button>
-                    <button onClick={() => setNotifyType('reminder')}
-                      className={`p-3 rounded-lg border-2 text-left transition-all ${notifyType === 'reminder' ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'}`}
-                      data-testid="button-notify-type-reminder">
-                      <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Overdue reminder</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Credit control chaser email about unpaid invoices.</p>
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">Additional note <span className="text-gray-400 font-normal">(optional)</span></label>
-                  <textarea
-                    value={notifyNote}
-                    onChange={e => setNotifyNote(e.target.value)}
-                    placeholder="Add a personal note to include in the email…"
-                    rows={3}
-                    className="w-full rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm px-3 py-2 text-gray-800 dark:text-gray-200 resize-none focus:outline-none focus:ring-2 focus:ring-teal-500"
-                  />
-                </div>
-                <p className="text-xs text-gray-400">Both an Excel and HTML version of the statement will be attached to the email.</p>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setNotifyOpen(false)}>Cancel</Button>
-                <Button onClick={sendNotification} disabled={notifySending}
-                  className={notifyType === 'reminder' ? 'bg-amber-600 hover:bg-amber-700 text-white' : 'bg-teal-600 hover:bg-teal-700 text-white'}>
-                  {notifySending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending…</> : <><Send className="h-4 w-4 mr-2" /> Send notification</>}
-                </Button>
-              </DialogFooter>
             </DialogContent>
           </Dialog>
         </div>

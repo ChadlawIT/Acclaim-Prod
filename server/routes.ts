@@ -2607,6 +2607,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         uploadedAt: meta.uploadedAt,
       });
 
+      // Append to notify log in meta
+      const logEntry = {
+        type,
+        sentAt: new Date().toISOString(),
+        sentBy: (req.user as any)?.firstName && (req.user as any)?.lastName
+          ? `${(req.user as any).firstName} ${(req.user as any).lastName}`
+          : (req.user as any)?.email || 'Admin',
+        sent: result.sent,
+        failed: result.failed,
+        customNote: customNote || null,
+      };
+      meta.notifyLog = Array.isArray(meta.notifyLog) ? [...meta.notifyLog, logEntry] : [logEntry];
+      fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2));
+
       return res.json({ ...result, message: `Notification sent to ${result.sent} recipient(s)` });
     } catch (error: any) {
       console.error("Error sending statement notification:", error);
