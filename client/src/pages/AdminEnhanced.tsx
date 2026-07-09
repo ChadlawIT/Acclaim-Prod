@@ -69,17 +69,20 @@ function StatementUploadButton({ orgId, orgName }: { orgId: number; orgName: str
     select: (data: any) => (Array.isArray(data) ? data : data?.users || []),
   });
 
-  // When org users load, default-select all non-admin users
   const orgUsers: any[] = (orgUsersData || []).filter((u: any) => !u.isAdmin && u.email);
-  const [usersInitialised, setUsersInitialised] = useState(false);
-  if (orgUsers.length > 0 && !usersInitialised) {
-    setSelectedUserIds(new Set(orgUsers.map((u: any) => String(u.id))));
-    setUsersInitialised(true);
-  }
-  // Reset when dialog closes
+
+  // Default-select all non-admin users whenever the org user list first loads
+  useEffect(() => {
+    if (orgUsers.length > 0 && selectedUserIds.size === 0) {
+      setSelectedUserIds(new Set(orgUsers.map((u: any) => String(u.id))));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orgUsersData]);
+
+  // Reset recipient state when dialog closes
   const handleViewOpenChange = (open: boolean) => {
     setViewOpen(open);
-    if (!open) { setUsersInitialised(false); setExtraEmail(''); setSelectedUserIds(new Set()); }
+    if (!open) { setExtraEmail(''); setSelectedUserIds(new Set()); }
   };
 
   async function uploadFile(file: File) {
