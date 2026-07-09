@@ -293,6 +293,214 @@ function StatementUploadButton({ orgId, orgName }: { orgId: number; orgName: str
   );
 }
 
+// Statements Tab — full statement management across all orgs
+function StatementsTab() {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const [selectedOrgId, setSelectedOrgId] = useState<number | null>(null);
+  const [uploadOrgId, setUploadOrgId] = useState<string>('');
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const { data: orgsData } = useQuery<any[]>({
+    queryKey: ['/api/admin/organisations'],
+    queryFn: async () => {
+      const res = await fetch('/api/admin/organisations', { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed');
+      return res.json();
+    },
+  });
+
+  const { data: stmtsData, isLoading: stmtsLoading, refetch: refetchStmts } = useQuery<any>({
+    queryKey: ['/api/admin/statements'],
+    queryFn: async () => {
+      const res = await fetch('/api/admin/statements', { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed');
+      return res.json();
+    },
+  });
+
+  const orgs: any[] = orgsData || [];
+  const statements: any[] = stmtsData?.statements || [];
+  const stmtMap = new Map(statements.map((s: any) => [s.orgId, s]));
+
+  async function uploadFile(file: File, orgId: number) {
+    if (!file.name.match(/\.xlsx?$/i)) {
+      toast({ title: 'Invalid file', description: 'Please upload an Excel file (.xls or .xlsx)', variant: 'destructive' });
+      return;
+    }
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch(`/api/admin/statements/${orgId}`, { method: 'POST', body: fd, credentials: 'include' });
+      if (!res.ok) { const err = await res.json(); throw new Error(err.message || 'Upload failed'); }
+      const org = orgs.find((o: any) => o.id === orgId);
+      toast({ title: 'Statement uploaded', description: `Statement for ${org?.name || 'organisation'} has been updated.` });
+      qc.invalidateQueries({ queryKey: ['/api/admin/statements'] });
+      qc.invalidateQueries({ queryKey: ['/api/statements', orgId] });
+      setUploadOrgId('');
+    } catch (err: any) {
+      toast({ title: 'Upload failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  }
+
+  const uploadOrgIdNum = uploadOrgId ? parseInt(uploadOrgId, 10) : null;
+
+  // Orgs sorted: those with statements first, then alphabetically
+  const orgsWithStmt = orgs.filter((o: any) => stmtMap.has(o.id)).sort((a: any, b: any) => a.name.localeCompare(b.name));
+  const orgsWithout = orgs.filter((o: any) => !stmtMap.has(o.id)).sort((a: any, b: any) => a.name.localeCompare(b.name));
+
+  return (
+    <div className="space-y-6">
+      {/* Upload panel */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <FileSpreadsheet className="h-5 w-5 text-teal-600" /> Upload Statement
+          </CardTitle>
+          <CardDescription>Upload a new statement of account and assign it to an organisation.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1.5">Organisation</label>
+            <select
+              value={uploadOrgId}
+              onChange={e => setUploadOrgId(e.target.value)}
+              className="w-full rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm px-3 py-2 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-teal-500"
+              data-testid="select-upload-org"
+            >
+              <option value="">— Select an organisation —</option>
+              {orgs.sort((a: any, b: any) => a.name.localeCompare(b.name)).map((o: any) => (
+                <option key={o.id} value={o.id}>{o.name}{stmtMap.has(o.id) ? ' (replace existing)' : ''}</option>
+              ))}
+            </select>
+          </div>
+
+          <input ref={fileRef} type="file" accept=".xls,.xlsx" className="hidden"
+            onChange={e => { const f = e.target.files?.[0]; if (f && uploadOrgIdNum) uploadFile(f, uploadOrgIdNum); }} />
+
+          <div
+            onDragOver={e => { e.preventDefault(); if (uploadOrgIdNum) setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={e => { e.preventDefault(); setDragOver(false); if (!uploadOrgIdNum) { toast({ title: 'Select an organisation first', variant: 'destructive' }); return; } const f = e.dataTransfer.files[0]; if (f) uploadFile(f, uploadOrgIdNum); }}
+            onClick={() => { if (!uploadOrgIdNum) { toast({ title: 'Select an organisation first', description: 'Choose which organisation this statement belongs to.' }); return; } fileRef.current?.click(); }}
+            className={`rounded-lg border-2 border-dashed cursor-pointer transition-all select-none
+              ${dragOver ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20' : uploadOrgIdNum ? 'border-gray-300 dark:border-gray-600 hover:border-teal-500 hover:bg-gray-50 dark:hover:bg-gray-800/50' : 'border-gray-200 dark:border-gray-700 opacity-50 cursor-not-allowed'}
+              ${uploading ? 'pointer-events-none opacity-60' : ''}`}
+            data-testid="drop-statement-upload"
+          >
+            <div className="flex flex-col items-center justify-center gap-2 py-8 px-4 text-center">
+              {uploading
+                ? <><Loader2 className="h-8 w-8 animate-spin text-teal-500" /><p className="text-sm text-gray-500">Uploading…</p></>
+                : dragOver
+                  ? <><FileSpreadsheet className="h-8 w-8 text-teal-500" /><p className="text-sm font-medium text-teal-600">Drop to upload</p></>
+                  : <><FileSpreadsheet className="h-8 w-8 text-gray-400" /><p className="text-sm text-gray-500">{uploadOrgIdNum ? 'Drag & drop or click to choose Excel file' : 'Select an organisation above first'}</p><p className="text-xs text-gray-400">.xls or .xlsx</p></>
+              }
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Statements list */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <History className="h-5 w-5 text-gray-500" /> All Statements
+              </CardTitle>
+              <CardDescription>{statements.length} statement{statements.length !== 1 ? 's' : ''} uploaded across {orgs.length} organisation{orgs.length !== 1 ? 's' : ''}</CardDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => refetchStmts()} data-testid="button-refresh-statements">
+              <RefreshCw className="h-3.5 w-3.5 mr-1" /> Refresh
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-2 p-0">
+          {stmtsLoading ? (
+            <div className="flex items-center justify-center py-10 gap-2 text-gray-400">
+              <Loader2 className="h-5 w-5 animate-spin" /> Loading…
+            </div>
+          ) : (
+            <>
+              {/* Orgs with statements */}
+              {orgsWithStmt.length > 0 && orgsWithStmt.map((org: any) => {
+                const stmt = stmtMap.get(org.id)!;
+                const isOpen = selectedOrgId === org.id;
+                const lastSend = stmt.notifyLog?.length > 0 ? stmt.notifyLog[stmt.notifyLog.length - 1] : null;
+                return (
+                  <div key={org.id} className="border-b last:border-b-0">
+                    <button
+                      onClick={() => setSelectedOrgId(isOpen ? null : org.id)}
+                      className="w-full flex items-center gap-4 px-6 py-4 text-left hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
+                      data-testid={`button-stmt-org-${org.id}`}
+                    >
+                      <div className="flex-shrink-0 p-2 rounded-lg bg-teal-100 dark:bg-teal-900/30">
+                        <FileSpreadsheet className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-800 dark:text-gray-200 text-sm truncate">{org.name}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Last updated: {stmt.uploadedAt ? new Date(stmt.uploadedAt).toLocaleString('en-GB') : 'Unknown'}
+                        </p>
+                        {lastSend && (
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            Last emailed: {new Date(lastSend.sentAt).toLocaleString('en-GB')} — <span className={lastSend.type === 'reminder' ? 'text-amber-600' : 'text-teal-600'}>{lastSend.type === 'reminder' ? 'Overdue reminder' : 'New statement'}</span>
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="hidden sm:inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                          <CheckCircle2 className="h-3 w-3" /> Statement uploaded
+                        </span>
+                        {isOpen ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
+                      </div>
+                    </button>
+                    {isOpen && (
+                      <div className="px-6 pb-4 border-t bg-gray-50 dark:bg-gray-800/20">
+                        <div className="pt-4 max-w-xs">
+                          <StatementUploadButton orgId={org.id} orgName={org.name} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Orgs without statements */}
+              {orgsWithout.length > 0 && orgsWithout.map((org: any) => (
+                <div key={org.id} className="border-b last:border-b-0">
+                  <div className="flex items-center gap-4 px-6 py-4">
+                    <div className="flex-shrink-0 p-2 rounded-lg bg-gray-100 dark:bg-gray-800">
+                      <FileSpreadsheet className="h-4 w-4 text-gray-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-600 dark:text-gray-400 text-sm truncate">{org.name}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">No statement uploaded</p>
+                    </div>
+                    <span className="hidden sm:inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                      <XCircle className="h-3 w-3" /> None
+                    </span>
+                  </div>
+                </div>
+              ))}
+
+              {orgs.length === 0 && (
+                <p className="text-center text-gray-400 py-8 text-sm">No organisations found.</p>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 // Documents List Component
 function DocumentsList({ submissionId }: { submissionId: number }) {
   const { data: documents, isLoading, error } = useQuery({
@@ -4718,6 +4926,10 @@ export default function AdminEnhanced() {
                 Broadcast
               </TabsTrigger>
             )}
+            <TabsTrigger value="statements" className="flex items-center gap-1.5 text-xs sm:text-sm px-3 py-2 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:shadow-sm data-[state=active]:text-teal-700 dark:data-[state=active]:text-teal-400 font-medium whitespace-nowrap">
+              <FileSpreadsheet className="h-3.5 w-3.5 flex-none" />
+              Statements
+            </TabsTrigger>
             <TabsTrigger value="reports" className="flex items-center gap-1.5 text-xs sm:text-sm px-3 py-2 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:shadow-sm data-[state=active]:text-teal-700 dark:data-[state=active]:text-teal-400 font-medium whitespace-nowrap">
               <Calendar className="h-3.5 w-3.5 flex-none" />
               Reports
@@ -5822,6 +6034,11 @@ export default function AdminEnhanced() {
             <EmailBroadcast />
           </TabsContent>
         )}
+
+        {/* Statements Tab */}
+        <TabsContent value="statements" className="space-y-4">
+          <StatementsTab />
+        </TabsContent>
 
         {/* Scheduled Reports Overview Tab */}
         <TabsContent value="reports" className="space-y-4">

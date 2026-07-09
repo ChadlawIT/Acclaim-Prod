@@ -2481,17 +2481,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin: check which orgs have statements (returns array of orgIds)
+  // Admin: list all statements with org names and meta
   app.get('/api/admin/statements', isAuthenticated, isAdmin, async (_req, res) => {
     try {
       const fs = await import("fs");
       const dir = path.join("uploads", "statements");
-      if (!fs.existsSync(dir)) return res.json({ orgIds: [] });
+      if (!fs.existsSync(dir)) return res.json({ statements: [], orgIds: [] });
       const files = fs.readdirSync(dir);
       const orgIds = files
         .filter((f: string) => f.match(/^org-(\d+)\.xlsx$/))
         .map((f: string) => parseInt(f.replace(/^org-/, "").replace(/\.xlsx$/, ""), 10));
-      return res.json({ orgIds });
+
+      const statements = await Promise.all(orgIds.map(async (orgId: number) => {
+        const metaPath = path.join("uploads", "statements", `org-${orgId}.meta.json`);
+        const meta = fs.existsSync(metaPath) ? JSON.parse(fs.readFileSync(metaPath, "utf8")) : {};
+        const org = await storage.getOrganisation(orgId).catch(() => null);
+        return {
+          orgId,
+          orgName: org?.name || `Organisation ${orgId}`,
+          uploadedAt: meta.uploadedAt || null,
+          uploadedBy: meta.uploadedBy || null,
+          notifyLog: meta.notifyLog || [],
+        };
+      }));
+
+      statements.sort((a: any, b: any) => a.orgName.localeCompare(b.orgName));
+      return res.json({ statements, orgIds });
     } catch (error) {
       return res.status(500).json({ message: "Failed to list statements" });
     }
