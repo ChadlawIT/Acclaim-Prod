@@ -154,11 +154,13 @@ function StatementPanel({ orgId, orgName, data, isLoading }: {
             <FileText className="h-4 w-4 text-acclaim-teal" /> Statement of Account
           </p>
           {uploadedAt && (
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Last updated: {uploadedAt}</p>
+            <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mt-1">
+              Last updated: <span className="text-teal-600 dark:text-teal-400">{uploadedAt}</span>
+            </p>
           )}
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed max-w-lg">
-            If you have made payment on an invoice <strong>since</strong> this date, no further action is required at this time.
-            If payment was made <strong>before</strong> this date, please <a href="mailto:email@acclaim.law" className="text-teal-600 hover:underline">contact us</a> with the payment details so we can update your account.
+            If you have made payment on an invoice since{uploadedAt ? <> <strong className="text-gray-700 dark:text-gray-300">{uploadedAt}</strong></> : " this date"}, no further action is required at this time.
+            If payment was made before this date, please <a href="mailto:email@acclaim.law" className="text-teal-600 hover:underline">contact us</a> with the payment details so we can update your account.
           </p>
         </div>
         <div className="flex items-center gap-2">
