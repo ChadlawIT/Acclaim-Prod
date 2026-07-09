@@ -2363,6 +2363,142 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ── Statement of Account routes ────────────────────────────────────────────
+
+  // Admin: upload/replace a statement of account for an organisation (Excel only)
+  const statementUpload = multer({
+    dest: "uploads/statements/",
+    limits: { fileSize: 25 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+      const allowed = [
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.ms-excel",
+      ];
+      if (allowed.includes(file.mimetype) || file.originalname.match(/\.xlsx?$/i)) {
+        cb(null, true);
+      } else {
+        cb(new Error("Only Excel files (.xls / .xlsx) are accepted"));
+      }
+    },
+  });
+
+  app.post('/api/admin/statements/:orgId', isAuthenticated, isAdmin, statementUpload.single('file'), async (req: any, res) => {
+    try {
+      const orgId = parseInt(req.params.orgId, 10);
+      if (isNaN(orgId)) return res.status(400).json({ message: "Invalid organisation ID" });
+      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+
+      // Move/rename the temp file to a stable path keyed by orgId
+      const fs = await import("fs");
+      const destPath = path.join("uploads", "statements", `org-${orgId}.xlsx`);
+      // Remove existing statement if present
+      if (fs.existsSync(destPath)) fs.unlinkSync(destPath);
+      fs.renameSync(req.file.path, destPath);
+
+      // Record upload timestamp in a sidecar JSON
+      const metaPath = path.join("uploads", "statements", `org-${orgId}.meta.json`);
+      fs.writeFileSync(metaPath, JSON.stringify({
+        originalName: req.file.originalname,
+        uploadedAt: new Date().toISOString(),
+        uploadedBy: req.user.id,
+        fileSize: req.file.size,
+      }));
+
+      return res.json({ message: "Statement uploaded successfully" });
+    } catch (error: any) {
+      console.error("Error uploading statement:", error);
+      return res.status(500).json({ message: error.message || "Failed to upload statement" });
+    }
+  });
+
+  // Admin: delete a statement for an organisation
+  app.delete('/api/admin/statements/:orgId', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const orgId = parseInt(req.params.orgId, 10);
+      if (isNaN(orgId)) return res.status(400).json({ message: "Invalid organisation ID" });
+      const fs = await import("fs");
+      const destPath = path.join("uploads", "statements", `org-${orgId}.xlsx`);
+      const metaPath = path.join("uploads", "statements", `org-${orgId}.meta.json`);
+      if (fs.existsSync(destPath)) fs.unlinkSync(destPath);
+      if (fs.existsSync(metaPath)) fs.unlinkSync(metaPath);
+      return res.json({ message: "Statement removed" });
+    } catch (error: any) {
+      console.error("Error deleting statement:", error);
+      return res.status(500).json({ message: "Failed to delete statement" });
+    }
+  });
+
+  // Any authenticated user in the org: get statement data as JSON rows/columns
+  app.get('/api/statements/:orgId', isAuthenticated, async (req: any, res) => {
+    try {
+      const orgId = parseInt(req.params.orgId, 10);
+      if (isNaN(orgId)) return res.status(400).json({ message: "Invalid organisation ID" });
+
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      // Access check: must be admin or member of the org
+      if (!user.isAdmin) {
+        const userOrgs = await storage.getUserOrganisations(userId);
+        const orgIds = new Set([user.organisationId, ...userOrgs.map((o: any) => o.id)]);
+        if (!orgIds.has(orgId)) {
+          return res.status(403).json({ message: "Access denied" });
+        }
+      }
+
+      const fs = await import("fs");
+      const filePath = path.join("uploads", "statements", `org-${orgId}.xlsx`);
+      const metaPath = path.join("uploads", "statements", `org-${orgId}.meta.json`);
+
+      if (!fs.existsSync(filePath)) {
+        return res.json({ exists: false });
+      }
+
+      const meta = fs.existsSync(metaPath) ? JSON.parse(fs.readFileSync(metaPath, "utf8")) : {};
+
+      // Parse with xlsx
+      const XLSX = await import("xlsx");
+      const workbook = XLSX.readFile(filePath);
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+
+      // Convert to array-of-arrays to preserve raw layout
+      const rawRows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+
+      // Strip trailing empty rows
+      const rows = rawRows.filter((row: any[]) => row.some((cell: any) => cell !== "" && cell !== null && cell !== undefined));
+
+      return res.json({
+        exists: true,
+        sheetName,
+        rows,
+        meta,
+      });
+    } catch (error: any) {
+      console.error("Error fetching statement:", error);
+      return res.status(500).json({ message: "Failed to read statement" });
+    }
+  });
+
+  // Admin: check which orgs have statements (returns array of orgIds)
+  app.get('/api/admin/statements', isAuthenticated, isAdmin, async (_req, res) => {
+    try {
+      const fs = await import("fs");
+      const dir = path.join("uploads", "statements");
+      if (!fs.existsSync(dir)) return res.json({ orgIds: [] });
+      const files = fs.readdirSync(dir);
+      const orgIds = files
+        .filter((f: string) => f.match(/^org-(\d+)\.xlsx$/))
+        .map((f: string) => parseInt(f.replace(/^org-/, "").replace(/\.xlsx$/, ""), 10));
+      return res.json({ orgIds });
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to list statements" });
+    }
+  });
+
+  // ── End statement of account routes ────────────────────────────────────────
+
   app.post('/api/organisation/documents/upload', isAuthenticated, upload.single('file'), async (req: any, res) => {
     try {
       const userId = req.user.id;

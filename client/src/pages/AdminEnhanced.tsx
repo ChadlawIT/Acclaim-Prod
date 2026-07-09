@@ -18,7 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import ExcelJS from "exceljs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useAuth } from "@/hooks/use-auth";
-import { Users, Building, Plus, Edit, Trash2, Shield, UserPlus, AlertTriangle, ShieldCheck, ShieldAlert, ArrowLeft, Activity, FileText, CreditCard, Archive, ArchiveRestore, Download, Check, Eye, EyeOff, Mail, Bell, BellOff, FilePlus, FileX, BarChart3, Search, Crown, Calendar, CalendarOff, Pencil, LogOut, RefreshCw, ChevronDown, ChevronUp, ChevronRight, Clock, Send, History, KeyRound, Copy, HelpCircle, X, ClipboardList, ClipboardX, MapPin, Phone, Banknote, User, FileImage, FileSpreadsheet, FileVideo, Receipt, Scale, Zap, CheckCircle2, XCircle, Trophy, MessageSquare, LogIn } from "lucide-react";
+import { Users, Building, Plus, Edit, Trash2, Shield, UserPlus, AlertTriangle, ShieldCheck, ShieldAlert, ArrowLeft, Activity, FileText, CreditCard, Archive, ArchiveRestore, Download, Check, Eye, EyeOff, Mail, Bell, BellOff, FilePlus, FileX, BarChart3, Search, Crown, Calendar, CalendarOff, Pencil, LogOut, RefreshCw, ChevronDown, ChevronUp, ChevronRight, Clock, Send, History, KeyRound, Copy, HelpCircle, X, ClipboardList, ClipboardX, MapPin, Phone, Banknote, User, FileImage, FileSpreadsheet, FileVideo, Receipt, Scale, Zap, CheckCircle2, XCircle, Trophy, MessageSquare, LogIn, Loader2 } from "lucide-react";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { createUserSchema, updateUserSchema, createOrganisationSchema, updateOrganisationSchema } from "@shared/schema";
@@ -31,6 +31,56 @@ import CaseManagementGuideDownload from "@/components/CaseManagementGuideDownloa
 import ClosedCaseManagement from "@/components/ClosedCaseManagement";
 import { EmailBroadcast } from "@/components/EmailBroadcast";
 import { EscalationReportsTrigger } from "@/components/EscalationReportsTrigger";
+
+// Statement Upload Button Component (used in org detail panel)
+function StatementUploadButton({ orgId, orgName }: { orgId: number; orgName: string }) {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.name.match(/\.xlsx?$/i)) {
+      toast({ title: "Invalid file", description: "Please upload an Excel file (.xls or .xlsx)", variant: "destructive" });
+      return;
+    }
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/api/admin/statements/${orgId}`, { method: "POST", body: fd, credentials: "include" });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Upload failed");
+      }
+      toast({ title: "Statement uploaded", description: `Statement for ${orgName} has been updated.` });
+      qc.invalidateQueries({ queryKey: ["/api/statements", orgId] });
+      qc.invalidateQueries({ queryKey: ["/api/admin/statements"] });
+    } catch (err: any) {
+      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  return (
+    <>
+      <input ref={fileRef} type="file" accept=".xls,.xlsx" className="hidden" onChange={handleFile} />
+      <button
+        onClick={() => fileRef.current?.click()}
+        disabled={uploading}
+        className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-50"
+        data-testid={`button-upload-statement-${orgId}`}
+      >
+        {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}
+        {uploading ? "Uploading…" : "Upload statement"}
+      </button>
+    </>
+  );
+}
 
 // Documents List Component
 function DocumentsList({ submissionId }: { submissionId: number }) {
@@ -5463,6 +5513,7 @@ export default function AdminEnhanced() {
                         >
                           <Edit className="h-4 w-4" /> Edit details
                         </button>
+                        <StatementUploadButton orgId={org.id} orgName={org.name} />
                         {isSuperAdmin && (
                           <button
                             onClick={() => { setSelectedOrgForSchedule(org); setOrgScheduleForm({ recipientEmail: '', recipientName: '', frequency: 'weekly', dayOfWeek: 1, dayOfMonth: 1, timeOfDay: 9, includeCaseSummary: true, includeActivityReport: true, caseStatusFilter: 'active' }); setShowOrgScheduleDialog(true); }}

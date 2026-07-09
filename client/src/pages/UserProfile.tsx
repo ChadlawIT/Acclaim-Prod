@@ -49,6 +49,158 @@ interface UserData {
   createdAt: string;
 }
 
+// Statement of Account panel — shown inside each org card in the Organisation tab
+function StatementPanel({ orgId, orgName, data, isLoading }: {
+  orgId: number;
+  orgName: string;
+  data: any;
+  isLoading: boolean;
+}) {
+  const { toast } = useToast();
+
+  if (isLoading) {
+    return (
+      <div className="border-t bg-white dark:bg-gray-900 p-6 flex items-center justify-center gap-2 text-gray-500">
+        <Loader2 className="h-5 w-5 animate-spin" />
+        <span>Loading statement…</span>
+      </div>
+    );
+  }
+
+  if (!data || !data.exists) {
+    return (
+      <div className="border-t bg-white dark:bg-gray-900 p-6 text-center">
+        <FileText className="h-8 w-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+        <p className="text-sm text-gray-500 dark:text-gray-400">No statement of account has been uploaded yet.</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Please contact Acclaim if you need your statement.</p>
+      </div>
+    );
+  }
+
+  const rows: any[][] = data.rows || [];
+  if (rows.length === 0) {
+    return (
+      <div className="border-t bg-white dark:bg-gray-900 p-6 text-center text-sm text-gray-500">
+        Statement file is empty.
+      </div>
+    );
+  }
+
+  const headers: any[] = rows[0];
+  const bodyRows: any[][] = rows.slice(1);
+  const uploadedAt = data.meta?.uploadedAt ? new Date(data.meta.uploadedAt).toLocaleString("en-GB") : null;
+
+  function downloadExcel() {
+    import("xlsx").then((XLSX) => {
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+
+      // Style header row bold by setting column widths and header indicator
+      const colWidths = headers.map((h: any) => ({ wch: Math.max(String(h).length + 4, 14) }));
+      ws["!cols"] = colWidths;
+
+      XLSX.utils.book_append_sheet(wb, ws, "Statement of Account");
+      XLSX.writeFile(wb, `${orgName.replace(/[^a-zA-Z0-9]/g, "_")}_Statement.xlsx`);
+    }).catch(() => {
+      toast({ title: "Download failed", description: "Could not generate Excel file.", variant: "destructive" });
+    });
+  }
+
+  function downloadHtml() {
+    const headerHtml = headers.map((h: any) => `<th>${String(h ?? "").replace(/</g, "&lt;")}</th>`).join("");
+    const bodyHtml = bodyRows.map((row: any[]) =>
+      `<tr>${headers.map((_: any, i: number) => `<td>${String(row[i] ?? "").replace(/</g, "&lt;")}</td>`).join("")}</tr>`
+    ).join("\n");
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Statement of Account — ${orgName}</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 40px; color: #111; }
+  h1 { font-size: 20px; margin-bottom: 4px; color: #00677a; }
+  p.meta { font-size: 12px; color: #666; margin-bottom: 24px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th { background: #00677a; color: #fff; text-align: left; padding: 8px 10px; }
+  td { padding: 6px 10px; border-bottom: 1px solid #e5e7eb; }
+  tr:nth-child(even) td { background: #f9fafb; }
+  @media print { body { margin: 20px; } }
+</style>
+</head>
+<body>
+<h1>Statement of Account</h1>
+<p class="meta">${orgName}${uploadedAt ? ` &nbsp;·&nbsp; As at ${uploadedAt}` : ""}</p>
+<table>
+<thead><tr>${headerHtml}</tr></thead>
+<tbody>${bodyHtml}</tbody>
+</table>
+</body>
+</html>`;
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${orgName.replace(/[^a-zA-Z0-9]/g, "_")}_Statement.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <div className="border-t bg-white dark:bg-gray-900">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 pt-4 pb-2">
+        <div>
+          <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+            <FileText className="h-4 w-4 text-acclaim-teal" /> Statement of Account
+          </p>
+          {uploadedAt && (
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Last updated: {uploadedAt}</p>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={downloadExcel} data-testid="button-download-statement-excel">
+            <Download className="h-3.5 w-3.5 mr-1" /> Excel
+          </Button>
+          <Button size="sm" variant="outline" onClick={downloadHtml} data-testid="button-download-statement-html">
+            <Download className="h-3.5 w-3.5 mr-1" /> HTML
+          </Button>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto px-4 pb-4">
+        <table className="w-full text-sm border-collapse">
+          <thead>
+            <tr>
+              {headers.map((h: any, i: number) => (
+                <th
+                  key={i}
+                  className="text-left px-3 py-2 bg-acclaim-teal text-white font-medium text-xs whitespace-nowrap"
+                >
+                  {String(h ?? "")}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {bodyRows.map((row: any[], ri: number) => (
+              <tr key={ri} className={ri % 2 === 0 ? "bg-white dark:bg-gray-900" : "bg-gray-50 dark:bg-gray-800/40"}>
+                {headers.map((_: any, ci: number) => (
+                  <td key={ci} className="px-3 py-2 border-b border-gray-100 dark:border-gray-800 text-gray-800 dark:text-gray-200 whitespace-nowrap">
+                    {String(row[ci] ?? "")}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {bodyRows.length === 0 && (
+          <p className="text-center text-xs text-gray-400 py-4">No data rows found in this statement.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function UserProfile() {
   const { toast } = useToast();
   const { theme, toggleTheme } = useTheme();
@@ -190,6 +342,21 @@ export default function UserProfile() {
   };
 
   const nonAdminOrgUsers = orgSettingsUsers?.filter((u: any) => !u.isAdmin) || [];
+
+  // Statement of account state
+  const [statementOrgId, setStatementOrgId] = useState<number | null>(null);
+
+  const { data: statementData, isLoading: statementLoading } = useQuery<any>({
+    queryKey: ["/api/statements", statementOrgId],
+    queryFn: async () => {
+      if (!statementOrgId) return null;
+      const res = await fetch(`/api/statements/${statementOrgId}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch statement");
+      return res.json();
+    },
+    enabled: statementOrgId !== null,
+    staleTime: 30000,
+  });
 
   // Org settings UI state
   const [expandedOrgSettings, setExpandedOrgSettings] = useState<number | null>(null);
@@ -1440,6 +1607,7 @@ export default function UserProfile() {
                       {userOrganisations.map((org: any) => {
                         const isOwner = orgOwnerships?.includes(org.id);
                         const isExpanded = expandedOrgSettings === org.id;
+                        const isStatementOrg = statementOrgId === org.id;
                         return (
                           <div key={org.id} className="border rounded-lg overflow-hidden">
                             {/* Organisation Header */}
@@ -1457,6 +1625,16 @@ export default function UserProfile() {
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setStatementOrgId(isStatementOrg ? null : org.id)}
+                                    data-testid={`button-view-statement-${org.id}`}
+                                  >
+                                    <FileText className="h-4 w-4 mr-1" />
+                                    Statement
+                                    {isStatementOrg ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
+                                  </Button>
                                   {isOwner && (
                                     <>
                                       <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 rounded-full text-sm font-medium">
@@ -1487,6 +1665,17 @@ export default function UserProfile() {
                                 </div>
                               </div>
                             </div>
+
+                            {/* Statement of Account Panel */}
+                            {isStatementOrg && (
+                              <StatementPanel
+                                orgId={org.id}
+                                orgName={org.name}
+                                data={statementData}
+                                isLoading={statementLoading}
+                              />
+                            )}
+
                             {/* Expanded Settings Panel (for owners only) */}
                             {isOwner && isExpanded && (
                               <div className="p-4 border-t bg-white dark:bg-gray-900 space-y-4">
