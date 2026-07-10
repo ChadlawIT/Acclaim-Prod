@@ -2463,18 +2463,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[sheetName];
 
-      // Convert to array-of-arrays to preserve raw layout
-      const rawRows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
-
-      // Build set of hidden row indices (Excel filter hides rows but keeps them in the file)
-      const hiddenRowIndices = new Set<number>();
-      const sheetRows: any[] = (sheet as any)['!rows'] || [];
-      sheetRows.forEach((r: any, idx: number) => { if (r && r.hidden) hiddenRowIndices.add(idx); });
-
-      // Strip hidden and empty rows
-      const rows = rawRows
-        .filter((_: any, idx: number) => !hiddenRowIndices.has(idx))
-        .filter((row: any[]) => row.some((cell: any) => cell !== "" && cell !== null && cell !== undefined));
+      // Iterate cells directly so !rows[R].hidden aligns with the actual sheet row index
+      const sheetRowMeta: any[] = (sheet as any)['!rows'] || [];
+      const ref = sheet['!ref'];
+      const rows: any[][] = [];
+      if (ref) {
+        const range = XLSX.utils.decode_range(ref);
+        for (let R = range.s.r; R <= range.e.r; R++) {
+          // Skip rows flagged hidden by Excel's AutoFilter
+          if (sheetRowMeta[R] && sheetRowMeta[R].hidden) continue;
+          const row: any[] = [];
+          for (let C = range.s.c; C <= range.e.c; C++) {
+            const cell = sheet[XLSX.utils.encode_cell({ r: R, c: C })];
+            row.push(cell ? (cell.w ?? cell.v ?? "") : "");
+          }
+          // Skip rows where every cell is blank
+          if (row.some((cell: any) => cell !== "" && cell !== null && cell !== undefined)) {
+            rows.push(row);
+          }
+        }
+      }
 
       return res.json({
         exists: true,
@@ -2577,16 +2585,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const workbook = XLSX.readFile(filePath);
       const sheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[sheetName];
-      const rawRows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
-
-      // Skip hidden rows (Excel filter leaves rows in file but marks them hidden)
-      const hiddenRowIdxs = new Set<number>();
-      const sheetRowMeta: any[] = (sheet as any)['!rows'] || [];
-      sheetRowMeta.forEach((r: any, idx: number) => { if (r && r.hidden) hiddenRowIdxs.add(idx); });
-
-      const rows = rawRows
-        .filter((_: any, idx: number) => !hiddenRowIdxs.has(idx))
-        .filter((row: any[]) => row.some((c: any) => c !== "" && c !== null && c !== undefined));
+      // Iterate cells directly so !rows[R].hidden aligns with the actual sheet row index
+      const sheetRowMeta2: any[] = (sheet as any)['!rows'] || [];
+      const ref2 = sheet['!ref'];
+      const rows: any[][] = [];
+      if (ref2) {
+        const range = XLSX.utils.decode_range(ref2);
+        for (let R = range.s.r; R <= range.e.r; R++) {
+          if (sheetRowMeta2[R] && sheetRowMeta2[R].hidden) continue;
+          const row: any[] = [];
+          for (let C = range.s.c; C <= range.e.c; C++) {
+            const cell = sheet[XLSX.utils.encode_cell({ r: R, c: C })];
+            row.push(cell ? (cell.w ?? cell.v ?? "") : "");
+          }
+          if (row.some((c: any) => c !== "" && c !== null && c !== undefined)) {
+            rows.push(row);
+          }
+        }
+      }
 
       const headers: any[] = rows[0] || [];
       const bodyRows: any[][] = rows.slice(1);
