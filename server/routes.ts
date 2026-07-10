@@ -2367,12 +2367,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Helper: find the statement file for an org regardless of extension
   const findStatementFile = (orgId: number): string | null => {
-    const fsSync = require("fs");
     const dir = path.join("uploads", "statements");
-    if (!fsSync.existsSync(dir)) return null;
+    if (!fs.existsSync(dir)) return null;
     for (const ext of [".xlsx", ".xls", ".csv"]) {
       const p = path.join(dir, `org-${orgId}${ext}`);
-      if (fsSync.existsSync(p)) return p;
+      if (fs.existsSync(p)) return p;
     }
     return null;
   };
