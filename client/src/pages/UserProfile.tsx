@@ -89,6 +89,20 @@ function StatementPanel({ orgId, orgName, data, isLoading }: {
   const headers: any[] = rows[0];
   const bodyRows: any[][] = rows.slice(1);
   const uploadedAt = data.meta?.uploadedAt ? new Date(data.meta.uploadedAt).toLocaleString("en-GB") : null;
+  const totalColIdx = headers.findIndex((h: any) =>
+    String(h ?? "").toLowerCase().replace(/\s+/g, " ").trim() === "total outstanding"
+  );
+  const fmtGbp = (raw: any): string => {
+    const n = parseFloat(String(raw ?? "").replace(/[£,]/g, ""));
+    if (isNaN(n)) return String(raw ?? "");
+    return "£" + n.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+  const columnTotal: number | null = totalColIdx >= 0
+    ? bodyRows.reduce((sum, row) => {
+        const n = parseFloat(String(row[totalColIdx] ?? "").replace(/[£,]/g, ""));
+        return sum + (isNaN(n) ? 0 : n);
+      }, 0)
+    : null;
 
   function downloadExcel() {
     import("xlsx").then((XLSX) => {
@@ -180,7 +194,7 @@ function StatementPanel({ orgId, orgName, data, isLoading }: {
               {headers.map((h: any, i: number) => (
                 <th
                   key={i}
-                  className="text-left px-3 py-2 bg-acclaim-teal text-white font-medium text-xs whitespace-nowrap"
+                  className={`px-3 py-2 bg-acclaim-teal text-white font-medium text-xs whitespace-nowrap ${i === totalColIdx ? "text-right" : "text-left"}`}
                 >
                   {String(h ?? "")}
                 </th>
@@ -191,13 +205,24 @@ function StatementPanel({ orgId, orgName, data, isLoading }: {
             {bodyRows.map((row: any[], ri: number) => (
               <tr key={ri} className={ri % 2 === 0 ? "bg-white dark:bg-gray-900" : "bg-gray-50 dark:bg-gray-800/40"}>
                 {headers.map((_: any, ci: number) => (
-                  <td key={ci} className="px-3 py-2 border-b border-gray-100 dark:border-gray-800 text-gray-800 dark:text-gray-200 whitespace-nowrap">
-                    {String(row[ci] ?? "")}
+                  <td key={ci} className={`px-3 py-2 border-b border-gray-100 dark:border-gray-800 text-gray-800 dark:text-gray-200 whitespace-nowrap ${ci === totalColIdx ? "text-right font-medium" : ""}`}>
+                    {ci === totalColIdx ? fmtGbp(row[ci]) : String(row[ci] ?? "")}
                   </td>
                 ))}
               </tr>
             ))}
           </tbody>
+          {columnTotal !== null && (
+            <tfoot>
+              <tr className="bg-teal-50 dark:bg-teal-900/20 border-t-2 border-teal-600">
+                {headers.map((_: any, ci: number) => (
+                  <td key={ci} className={`px-3 py-2 text-xs font-bold whitespace-nowrap ${ci === totalColIdx ? "text-right text-teal-800 dark:text-teal-300" : ci === 0 ? "text-gray-700 dark:text-gray-300" : ""}`}>
+                    {ci === 0 ? "Total" : ci === totalColIdx ? fmtGbp(columnTotal) : ""}
+                  </td>
+                ))}
+              </tr>
+            </tfoot>
+          )}
         </table>
         {bodyRows.length === 0 && (
           <p className="text-center text-xs text-gray-400 py-4">No data rows found in this statement.</p>

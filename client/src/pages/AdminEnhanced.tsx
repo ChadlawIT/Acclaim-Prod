@@ -168,6 +168,20 @@ function StatementUploadButton({ orgId, orgName }: { orgId: number; orgName: str
   const rows: any[][] = stmtData?.rows || [];
   const headers: any[] = rows[0] || [];
   const bodyRows: any[][] = rows.slice(1);
+  const totalColIdx = headers.findIndex((h: any) =>
+    String(h ?? "").toLowerCase().replace(/\s+/g, " ").trim() === "total outstanding"
+  );
+  const fmtGbp = (raw: any): string => {
+    const n = parseFloat(String(raw ?? "").replace(/[£,]/g, ""));
+    if (isNaN(n)) return String(raw ?? "");
+    return "£" + n.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+  const columnTotal: number | null = totalColIdx >= 0
+    ? bodyRows.reduce((sum, row) => {
+        const n = parseFloat(String(row[totalColIdx] ?? "").replace(/[£,]/g, ""));
+        return sum + (isNaN(n) ? 0 : n);
+      }, 0)
+    : null;
 
   return (
     <>
@@ -226,18 +240,31 @@ function StatementUploadButton({ orgId, orgName }: { orgId: number; orgName: str
                     <table className="w-full text-sm border-collapse">
                       <thead className="sticky top-0 z-10">
                         <tr>{headers.map((h: any, i: number) => (
-                          <th key={i} className="text-left px-3 py-2 bg-teal-700 text-white font-medium text-xs whitespace-nowrap">{String(h ?? "")}</th>
+                          <th key={i} className={`px-3 py-2 bg-teal-700 text-white font-medium text-xs whitespace-nowrap ${i === totalColIdx ? "text-right" : "text-left"}`}>{String(h ?? "")}</th>
                         ))}</tr>
                       </thead>
                       <tbody>
                         {bodyRows.map((row: any[], ri: number) => (
                           <tr key={ri} className={ri % 2 === 0 ? "" : "bg-gray-50 dark:bg-gray-800/30"}>
                             {headers.map((_: any, ci: number) => (
-                              <td key={ci} className="px-3 py-1.5 border-b border-gray-100 dark:border-gray-800 whitespace-nowrap text-gray-800 dark:text-gray-200">{String(row[ci] ?? "")}</td>
+                              <td key={ci} className={`px-3 py-1.5 border-b border-gray-100 dark:border-gray-800 whitespace-nowrap text-gray-800 dark:text-gray-200 ${ci === totalColIdx ? "text-right font-medium" : ""}`}>
+                                {ci === totalColIdx ? fmtGbp(row[ci]) : String(row[ci] ?? "")}
+                              </td>
                             ))}
                           </tr>
                         ))}
                       </tbody>
+                      {columnTotal !== null && (
+                        <tfoot>
+                          <tr className="bg-teal-50 dark:bg-teal-900/20 border-t-2 border-teal-600">
+                            {headers.map((_: any, ci: number) => (
+                              <td key={ci} className={`px-3 py-2 text-xs font-bold whitespace-nowrap ${ci === totalColIdx ? "text-right text-teal-800 dark:text-teal-300" : ci === 0 ? "text-gray-700 dark:text-gray-300" : ""}`}>
+                                {ci === 0 ? "Total" : ci === totalColIdx ? fmtGbp(columnTotal) : ""}
+                              </td>
+                            ))}
+                          </tr>
+                        </tfoot>
+                      )}
                     </table>
                   )}
                 </div>
