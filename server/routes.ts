@@ -2484,27 +2484,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const XLSXRead = (XLSXReadMod as any).default ?? XLSXReadMod;
       const fileBuf = fs.readFileSync(filePath);
       const readWb = XLSXRead.read(fileBuf, { type: 'buffer', cellDates: true });
-      const sheetName = readWb.SheetNames[0] || "Sheet";
-      const readWs = readWb.Sheets[sheetName];
-      const rowInfo: any[] = (readWs && readWs['!rows']) ? readWs['!rows'] : [];
 
-      // SheetJS v0.18.5 doesn't populate !rows.hidden on read for xlsx — parse XML directly instead
+      // Determine active sheet and extract hidden rows from its XML
+      let activeSheetIdx = 0;
       const hiddenRowNums = new Set<number>(); // 1-indexed Excel row numbers
       if (filePath.endsWith('.xlsx')) {
         try {
           const fflateMod = await import("fflate");
           const fflate = (fflateMod as any).default ?? fflateMod;
           const unzipped = fflate.unzipSync(new Uint8Array(fileBuf));
-          const sheetKey = Object.keys(unzipped).find((k: string) =>
-            k.startsWith('xl/worksheets/sheet') && k.endsWith('.xml')
-          );
-          if (sheetKey) {
-            const xml = Buffer.from(unzipped[sheetKey]).toString('utf8');
+
+          // 1. Read workbook.xml for activeTab and sheet rId order
+          const wbXml = Buffer.from(unzipped['xl/workbook.xml'] ?? []).toString('utf8');
+          const activeTabM = wbXml.match(/activeTab="(\d+)"/);
+          activeSheetIdx = activeTabM ? parseInt(activeTabM[1], 10) : 0;
+          if (activeSheetIdx >= readWb.SheetNames.length) activeSheetIdx = 0;
+
+          const sheetRids: string[] = [];
+          const sheetTagRe = /<sheet\s[^>]*>/g;
+          let stm: RegExpExecArray | null;
+          while ((stm = sheetTagRe.exec(wbXml)) !== null) {
+            const rid = stm[0].match(/r:id="([^"]+)"/);
+            if (rid) sheetRids.push(rid[1]);
+          }
+
+          // 2. Parse rels to map rId → worksheet file path
+          const relsXml = Buffer.from(unzipped['xl/_rels/workbook.xml.rels'] ?? []).toString('utf8');
+          const ridToPath: Record<string, string> = {};
+          const relRe = /<Relationship\s[^>]*>/g;
+          let rm: RegExpExecArray | null;
+          while ((rm = relRe.exec(relsXml)) !== null) {
+            if (!rm[0].includes('worksheet')) continue;
+            const idM = rm[0].match(/Id="([^"]+)"/);
+            const tgtM = rm[0].match(/Target="([^"]+)"/);
+            if (idM && tgtM) ridToPath[idM[1]] = 'xl/' + tgtM[1];
+          }
+
+          // 3. Resolve and parse the active sheet XML for hidden rows
+          const activeRid = sheetRids[activeSheetIdx] ?? sheetRids[0];
+          const sheetXmlPath = activeRid ? ridToPath[activeRid] : '';
+          if (sheetXmlPath && unzipped[sheetXmlPath]) {
+            const xml = Buffer.from(unzipped[sheetXmlPath]).toString('utf8');
             const rowRe = /<row\s[^>]*>/g;
-            let rm: RegExpExecArray | null;
-            while ((rm = rowRe.exec(xml)) !== null) {
-              if (/hidden="1"/.test(rm[0])) {
-                const rM = rm[0].match(/\br="(\d+)"/);
+            let rw: RegExpExecArray | null;
+            while ((rw = rowRe.exec(xml)) !== null) {
+              if (/hidden="1"/.test(rw[0])) {
+                const rM = rw[0].match(/\br="(\d+)"/);
                 if (rM) hiddenRowNums.add(parseInt(rM[1], 10));
               }
             }
@@ -2512,6 +2537,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } catch (_) { /* not a valid zip/xlsx — silently continue */ }
       }
 
+      const sheetName = readWb.SheetNames[activeSheetIdx] || readWb.SheetNames[0] || "Sheet";
+      const readWs = readWb.Sheets[sheetName];
+      const rowInfo: any[] = (readWs && readWs['!rows']) ? readWs['!rows'] : [];
       const allRows: any[][] = readWs
         ? XLSXRead.utils.sheet_to_json(readWs, { header: 1, raw: false, dateNF: 'dd/mm/yyyy' })
         : [];
@@ -2634,27 +2662,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const XLSXRead2 = (XLSXReadMod2 as any).default ?? XLSXReadMod2;
       const fileBuf2 = fs.readFileSync(filePath);
       const readWb2 = XLSXRead2.read(fileBuf2, { type: 'buffer', cellDates: true });
-      const sheetName2 = readWb2.SheetNames[0] || "Sheet";
-      const readWs2 = readWb2.Sheets[sheetName2];
-      const rowInfo2: any[] = (readWs2 && readWs2['!rows']) ? readWs2['!rows'] : [];
 
-      // SheetJS v0.18.5 doesn't populate !rows.hidden on read — parse xlsx XML directly
+      // Determine active sheet and extract hidden rows from its XML
+      let activeSheetIdx2 = 0;
       const hiddenRowNums2 = new Set<number>();
       if (filePath.endsWith('.xlsx')) {
         try {
           const fflateMod2 = await import("fflate");
           const fflate2 = (fflateMod2 as any).default ?? fflateMod2;
           const unzipped2 = fflate2.unzipSync(new Uint8Array(fileBuf2));
-          const sheetKey2 = Object.keys(unzipped2).find((k: string) =>
-            k.startsWith('xl/worksheets/sheet') && k.endsWith('.xml')
-          );
-          if (sheetKey2) {
-            const xml2 = Buffer.from(unzipped2[sheetKey2]).toString('utf8');
+
+          // 1. Read workbook.xml for activeTab and sheet rId order
+          const wbXml2 = Buffer.from(unzipped2['xl/workbook.xml'] ?? []).toString('utf8');
+          const activeTabM2 = wbXml2.match(/activeTab="(\d+)"/);
+          activeSheetIdx2 = activeTabM2 ? parseInt(activeTabM2[1], 10) : 0;
+          if (activeSheetIdx2 >= readWb2.SheetNames.length) activeSheetIdx2 = 0;
+
+          const sheetRids2: string[] = [];
+          const sheetTagRe2 = /<sheet\s[^>]*>/g;
+          let stm2: RegExpExecArray | null;
+          while ((stm2 = sheetTagRe2.exec(wbXml2)) !== null) {
+            const rid2 = stm2[0].match(/r:id="([^"]+)"/);
+            if (rid2) sheetRids2.push(rid2[1]);
+          }
+
+          // 2. Parse rels to map rId → worksheet file path
+          const relsXml2 = Buffer.from(unzipped2['xl/_rels/workbook.xml.rels'] ?? []).toString('utf8');
+          const ridToPath2: Record<string, string> = {};
+          const relRe2 = /<Relationship\s[^>]*>/g;
+          let rm2: RegExpExecArray | null;
+          while ((rm2 = relRe2.exec(relsXml2)) !== null) {
+            if (!rm2[0].includes('worksheet')) continue;
+            const idM2 = rm2[0].match(/Id="([^"]+)"/);
+            const tgtM2 = rm2[0].match(/Target="([^"]+)"/);
+            if (idM2 && tgtM2) ridToPath2[idM2[1]] = 'xl/' + tgtM2[1];
+          }
+
+          // 3. Resolve and parse active sheet XML for hidden rows
+          const activeRid2 = sheetRids2[activeSheetIdx2] ?? sheetRids2[0];
+          const sheetXmlPath2 = activeRid2 ? ridToPath2[activeRid2] : '';
+          if (sheetXmlPath2 && unzipped2[sheetXmlPath2]) {
+            const xml2 = Buffer.from(unzipped2[sheetXmlPath2]).toString('utf8');
             const rowRe2 = /<row\s[^>]*>/g;
-            let rm2: RegExpExecArray | null;
-            while ((rm2 = rowRe2.exec(xml2)) !== null) {
-              if (/hidden="1"/.test(rm2[0])) {
-                const rM2 = rm2[0].match(/\br="(\d+)"/);
+            let rw2: RegExpExecArray | null;
+            while ((rw2 = rowRe2.exec(xml2)) !== null) {
+              if (/hidden="1"/.test(rw2[0])) {
+                const rM2 = rw2[0].match(/\br="(\d+)"/);
                 if (rM2) hiddenRowNums2.add(parseInt(rM2[1], 10));
               }
             }
@@ -2662,6 +2715,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } catch (_) { /* not a valid zip/xlsx */ }
       }
 
+      const sheetName2 = readWb2.SheetNames[activeSheetIdx2] || readWb2.SheetNames[0] || "Sheet";
+      const readWs2 = readWb2.Sheets[sheetName2];
+      const rowInfo2: any[] = (readWs2 && readWs2['!rows']) ? readWs2['!rows'] : [];
       const allRows2: any[][] = readWs2
         ? XLSXRead2.utils.sheet_to_json(readWs2, { header: 1, raw: false, dateNF: 'dd/mm/yyyy' })
         : [];

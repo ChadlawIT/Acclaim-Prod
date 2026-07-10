@@ -100,26 +100,58 @@ function StatementUploadButton({ orgId, orgName }: { orgId: number; orgName: str
       const XLSX = (XLSXMod as any).default ?? XLSXMod;
       const buffer = await file.arrayBuffer();
       const wb = XLSX.read(buffer, { type: "array", cellDates: true });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rowInfo: any[] = (ws && ws['!rows']) ? ws['!rows'] : [];
 
-      // SheetJS v0.18.5 doesn't read hidden rows from xlsx — parse XML directly via fflate (works in browser too)
-      const hiddenRowNums = new Set<number>(); // 1-indexed
+      // Determine which sheet was active in Excel; default to first sheet
+      let activeSheetIdx = 0;
+      const hiddenRowNums = new Set<number>(); // 1-indexed Excel row numbers
+
       if (file.name.match(/\.xlsx$/i)) {
         try {
           const fflateMod = await import("fflate");
           const fflate = (fflateMod as any).default ?? fflateMod;
           const unzipped = fflate.unzipSync(new Uint8Array(buffer));
-          const sheetKey = Object.keys(unzipped).find((k: string) =>
-            k.startsWith('xl/worksheets/sheet') && k.endsWith('.xml')
-          );
-          if (sheetKey) {
-            const xml = new TextDecoder().decode(unzipped[sheetKey]);
+          const dec = new TextDecoder();
+
+          // 1. Read workbook.xml for activeTab and sheet rId order
+          const wbXml = dec.decode(unzipped['xl/workbook.xml'] ?? new Uint8Array());
+          const activeTabM = wbXml.match(/activeTab="(\d+)"/);
+          activeSheetIdx = activeTabM ? parseInt(activeTabM[1], 10) : 0;
+          // Clamp to valid range
+          if (activeSheetIdx >= wb.SheetNames.length) activeSheetIdx = 0;
+
+          // Extract rIds in sheet order from workbook.xml <sheets> section
+          const sheetRids: string[] = [];
+          const sheetTagRe = /<sheet\s[^>]*>/g;
+          let stm: RegExpExecArray | null;
+          while ((stm = sheetTagRe.exec(wbXml)) !== null) {
+            const rid = stm[0].match(/r:id="([^"]+)"/);
+            if (rid) sheetRids.push(rid[1]);
+          }
+
+          // 2. Parse rels to map rId → worksheet file path
+          const relsXml = dec.decode(unzipped['xl/_rels/workbook.xml.rels'] ?? new Uint8Array());
+          const ridToPath: Record<string, string> = {};
+          const relRe = /<Relationship\s[^>]*>/g;
+          let rm: RegExpExecArray | null;
+          while ((rm = relRe.exec(relsXml)) !== null) {
+            if (!rm[0].includes('worksheet')) continue;
+            const idM = rm[0].match(/Id="([^"]+)"/);
+            const tgtM = rm[0].match(/Target="([^"]+)"/);
+            if (idM && tgtM) ridToPath[idM[1]] = 'xl/' + tgtM[1];
+          }
+
+          // 3. Resolve active sheet XML path
+          const activeRid = sheetRids[activeSheetIdx] ?? sheetRids[0];
+          const sheetXmlPath = activeRid ? ridToPath[activeRid] : '';
+
+          // 4. Extract hidden row numbers from active sheet XML
+          if (sheetXmlPath && unzipped[sheetXmlPath]) {
+            const xml = dec.decode(unzipped[sheetXmlPath]);
             const rowRe = /<row\s[^>]*>/g;
-            let rm: RegExpExecArray | null;
-            while ((rm = rowRe.exec(xml)) !== null) {
-              if (/hidden="1"/.test(rm[0])) {
-                const rM = rm[0].match(/\br="(\d+)"/);
+            let rw: RegExpExecArray | null;
+            while ((rw = rowRe.exec(xml)) !== null) {
+              if (/hidden="1"/.test(rw[0])) {
+                const rM = rw[0].match(/\br="(\d+)"/);
                 if (rM) hiddenRowNums.add(parseInt(rM[1], 10));
               }
             }
@@ -127,6 +159,9 @@ function StatementUploadButton({ orgId, orgName }: { orgId: number; orgName: str
         } catch (_) { /* not a valid zip/xlsx — silently continue */ }
       }
 
+      const sheetName = wb.SheetNames[activeSheetIdx] ?? wb.SheetNames[0];
+      const ws = wb.Sheets[sheetName];
+      const rowInfo: any[] = (ws && ws['!rows']) ? ws['!rows'] : [];
       const data: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, dateNF: "dd/mm/yyyy" });
       const visible = data
         .filter((_: any, i: number) => !hiddenRowNums.has(i + 1) && !rowInfo[i]?.hidden)
