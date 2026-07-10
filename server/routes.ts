@@ -2369,7 +2369,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const findStatementFile = (orgId: number): string | null => {
     const dir = path.join("uploads", "statements");
     if (!fs.existsSync(dir)) return null;
-    for (const ext of [".xlsx", ".xls", ".csv"]) {
+    for (const ext of [".xlsx", ".xls"]) {
       const p = path.join(dir, `org-${orgId}${ext}`);
       if (fs.existsSync(p)) return p;
     }
@@ -2384,15 +2384,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allowedMimes = [
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "application/vnd.ms-excel",
-        "text/csv",
-        "application/csv",
-        "text/plain",
       ];
-      const allowedExts = /\.(xlsx|xls|csv)$/i;
+      const allowedExts = /\.(xlsx|xls)$/i;
       if (allowedMimes.includes(file.mimetype) || allowedExts.test(file.originalname)) {
         cb(null, true);
       } else {
-        cb(new Error("Only spreadsheet files (.xls, .xlsx, .csv) are accepted"));
+        cb(new Error("Only Excel files (.xls or .xlsx) are accepted"));
       }
     },
   });
@@ -2405,9 +2402,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Store with original extension — converting to xlsx drops hidden-row metadata from AutoFilter
       const fs = await import("fs");
-      const origExt = (req.file.originalname.match(/\.(xlsx|xls|csv)$/i) || [".xlsx"])[0].toLowerCase();
+      const origExt = (req.file.originalname.match(/\.(xlsx|xls)$/i) || [".xlsx"])[0].toLowerCase();
       // Remove any pre-existing statement file (any extension)
-      for (const ext of [".xlsx", ".xls", ".csv"]) {
+      for (const ext of [".xlsx", ".xls"]) {
         const old = path.join("uploads", "statements", `org-${orgId}${ext}`);
         if (fs.existsSync(old)) fs.unlinkSync(old);
       }
@@ -2436,7 +2433,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const orgId = parseInt(req.params.orgId, 10);
       if (isNaN(orgId)) return res.status(400).json({ message: "Invalid organisation ID" });
       const fs = await import("fs");
-      for (const ext of [".xlsx", ".xls", ".csv"]) {
+      for (const ext of [".xlsx", ".xls"]) {
         const p = path.join("uploads", "statements", `org-${orgId}${ext}`);
         if (fs.existsSync(p)) fs.unlinkSync(p);
       }
@@ -2579,8 +2576,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!fs.existsSync(dir)) return res.json({ statements: [], orgIds: [] });
       const files = fs.readdirSync(dir);
       const orgIds = [...new Set(files
-        .filter((f: string) => f.match(/^org-(\d+)\.(xlsx|xls|csv)$/i))
-        .map((f: string) => parseInt(f.replace(/^org-/, "").replace(/\.(xlsx|xls|csv)$/i, ""), 10))
+        .filter((f: string) => f.match(/^org-(\d+)\.(xlsx|xls)$/i))
+        .map((f: string) => parseInt(f.replace(/^org-/, "").replace(/\.(xlsx|xls)$/i, ""), 10))
       )];
 
       const statements = await Promise.all(orgIds.map(async (orgId: number) => {

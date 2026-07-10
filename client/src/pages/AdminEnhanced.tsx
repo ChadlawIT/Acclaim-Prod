@@ -90,8 +90,8 @@ function StatementUploadButton({ orgId, orgName }: { orgId: number; orgName: str
   };
 
   async function previewFile(file: File) {
-    if (!file.name.match(/\.(xlsx?|csv)$/i)) {
-      toast({ title: "Invalid file", description: "Please upload a spreadsheet file (.xls, .xlsx, or .csv)", variant: "destructive" });
+    if (!file.name.match(/\.xlsx?$/i)) {
+      toast({ title: "Invalid file", description: "Please upload an Excel file (.xls or .xlsx)", variant: "destructive" });
       return;
     }
     setPreviewParsing(true);
@@ -287,7 +287,7 @@ function StatementUploadButton({ orgId, orgName }: { orgId: number; orgName: str
 
   return (
     <>
-      <input ref={fileRef} type="file" accept=".xls,.xlsx,.csv" className="hidden"
+      <input ref={fileRef} type="file" accept=".xls,.xlsx" className="hidden"
         onChange={e => { const f = e.target.files?.[0]; if (f) previewFile(f); }} />
 
       {/* Drag-drop zone */}
@@ -672,8 +672,8 @@ function StatementsTab() {
   const stmtMap = new Map(statements.map((s: any) => [Number(s.orgId), s]));
 
   async function uploadFile(file: File, orgId: number) {
-    if (!file.name.match(/\.(xlsx?|csv)$/i)) {
-      toast({ title: 'Invalid file', description: 'Please upload a spreadsheet file (.xls, .xlsx, or .csv)', variant: 'destructive' });
+    if (!file.name.match(/\.xlsx?$/i)) {
+      toast({ title: 'Invalid file', description: 'Please upload an Excel file (.xls or .xlsx)', variant: 'destructive' });
       return;
     }
     setUploading(true);
@@ -732,7 +732,7 @@ function StatementsTab() {
             </select>
           </div>
 
-          <input ref={fileRef} type="file" accept=".xls,.xlsx,.csv" className="hidden"
+          <input ref={fileRef} type="file" accept=".xls,.xlsx" className="hidden"
             onChange={e => { const f = e.target.files?.[0]; if (f && uploadOrgIdNum) uploadFile(f, uploadOrgIdNum); }} />
 
           <div
@@ -750,7 +750,7 @@ function StatementsTab() {
                 ? <><Loader2 className="h-8 w-8 animate-spin text-teal-500" /><p className="text-sm text-gray-500">Uploading…</p></>
                 : dragOver
                   ? <><FileSpreadsheet className="h-8 w-8 text-teal-500" /><p className="text-sm font-medium text-teal-600">Drop to upload</p></>
-                  : <><FileSpreadsheet className="h-8 w-8 text-gray-400" /><p className="text-sm text-gray-500">{uploadOrgIdNum ? 'Drag & drop or click to choose a spreadsheet' : 'Select an organisation above first'}</p><p className="text-xs text-gray-400">.xls, .xlsx or .csv</p></>
+                  : <><FileSpreadsheet className="h-8 w-8 text-gray-400" /><p className="text-sm text-gray-500">{uploadOrgIdNum ? 'Drag & drop or click to choose a spreadsheet' : 'Select an organisation above first'}</p><p className="text-xs text-gray-400">.xls or .xlsx only</p></>
               }
             </div>
           </div>
