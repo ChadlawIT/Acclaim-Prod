@@ -39,6 +39,10 @@ function StatementUploadButton({ orgId, orgName }: { orgId: number; orgName: str
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [viewOpen, setViewOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [previewRows, setPreviewRows] = useState<any[][]>([]);
+  const [previewParsing, setPreviewParsing] = useState(false);
   const [notifyType, setNotifyType] = useState<'new' | 'reminder'>('new');
   const [notifyNote, setNotifyNote] = useState('');
   const [notifySending, setNotifySending] = useState(false);
@@ -85,11 +89,34 @@ function StatementUploadButton({ orgId, orgName }: { orgId: number; orgName: str
     if (!open) { setExtraEmail(''); setSelectedUserIds(new Set()); }
   };
 
-  async function uploadFile(file: File) {
+  async function previewFile(file: File) {
     if (!file.name.match(/\.xlsx?$/i)) {
       toast({ title: "Invalid file", description: "Please upload an Excel file (.xls or .xlsx)", variant: "destructive" });
       return;
     }
+    setPreviewParsing(true);
+    try {
+      const XLSXMod = await import("xlsx");
+      const XLSX = (XLSXMod as any).default ?? XLSXMod;
+      const buffer = await file.arrayBuffer();
+      const wb = XLSX.read(buffer, { type: "array", cellDates: true });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const data: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, dateNF: "dd/mm/yyyy" });
+      const nonEmpty = data.filter((r: any[]) =>
+        r.some((v: any) => v !== null && v !== undefined && String(v).trim() !== "")
+      );
+      setPendingFile(file);
+      setPreviewRows(nonEmpty);
+      setReviewOpen(true);
+    } catch {
+      toast({ title: "Could not read file", description: "The file could not be previewed. Please check it is a valid Excel file.", variant: "destructive" });
+    } finally {
+      setPreviewParsing(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  async function uploadFile(file: File) {
     setUploading(true);
     try {
       const fd = new FormData();
@@ -103,8 +130,22 @@ function StatementUploadButton({ orgId, orgName }: { orgId: number; orgName: str
       toast({ title: "Upload failed", description: err.message, variant: "destructive" });
     } finally {
       setUploading(false);
-      if (fileRef.current) fileRef.current.value = "";
     }
+  }
+
+  async function confirmUpload() {
+    if (!pendingFile) return;
+    setReviewOpen(false);
+    const file = pendingFile;
+    setPendingFile(null);
+    setPreviewRows([]);
+    await uploadFile(file);
+  }
+
+  function cancelReview() {
+    setReviewOpen(false);
+    setPendingFile(null);
+    setPreviewRows([]);
   }
 
   async function removeStatement() {
@@ -186,28 +227,123 @@ function StatementUploadButton({ orgId, orgName }: { orgId: number; orgName: str
   return (
     <>
       <input ref={fileRef} type="file" accept=".xls,.xlsx" className="hidden"
-        onChange={e => { const f = e.target.files?.[0]; if (f) uploadFile(f); }} />
+        onChange={e => { const f = e.target.files?.[0]; if (f) previewFile(f); }} />
 
       {/* Drag-drop zone */}
       <div
         onDragOver={e => { e.preventDefault(); setDragOver(true); }}
         onDragLeave={() => setDragOver(false)}
-        onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) uploadFile(f); }}
+        onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) previewFile(f); }}
         onClick={() => fileRef.current?.click()}
         className={`relative mx-0 my-1 rounded-lg border-2 border-dashed cursor-pointer transition-all select-none
           ${dragOver ? 'border-acclaim-teal bg-teal-50 dark:bg-teal-900/20' : 'border-gray-200 dark:border-gray-700 hover:border-acclaim-teal hover:bg-gray-50 dark:hover:bg-gray-800/50'}
-          ${uploading ? 'pointer-events-none opacity-60' : ''}`}
+          ${(uploading || previewParsing) ? 'pointer-events-none opacity-60' : ''}`}
         data-testid={`drop-statement-${orgId}`}
       >
         <div className="flex items-center gap-2 px-3 py-2.5 text-sm text-gray-600 dark:text-gray-300">
-          {uploading ? <Loader2 className="h-4 w-4 animate-spin text-acclaim-teal" /> : <FileSpreadsheet className="h-4 w-4 text-acclaim-teal" />}
-          <span>{uploading ? "Uploading…" : dragOver ? "Drop to upload" : hasStatement ? "Replace statement" : "Upload statement"}</span>
-          {!uploading && <span className="text-xs text-gray-400 ml-auto">drag & drop or click</span>}
+          {(uploading || previewParsing) ? <Loader2 className="h-4 w-4 animate-spin text-acclaim-teal" /> : <FileSpreadsheet className="h-4 w-4 text-acclaim-teal" />}
+          <span>{uploading ? "Uploading…" : previewParsing ? "Reading file…" : dragOver ? "Drop to upload" : hasStatement ? "Replace statement" : "Upload statement"}</span>
+          {!uploading && !previewParsing && <span className="text-xs text-gray-400 ml-auto">drag & drop or click</span>}
         </div>
         {hasStatement && uploadedAt && (
           <p className="px-3 pb-2 text-[11px] text-gray-400">Current: {uploadedAt}</p>
         )}
       </div>
+
+      {/* Review-before-upload dialog */}
+      <Dialog open={reviewOpen} onOpenChange={open => { if (!open) cancelReview(); }}>
+        <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Review statement before publishing
+            </DialogTitle>
+            <DialogDescription>
+              You are about to publish this statement to <strong>{orgName}</strong>. It will become visible to all users in that organisation once you confirm.
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Warning banner */}
+          <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 px-4 py-3">
+            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div className="text-sm text-amber-800 dark:text-amber-200 space-y-1">
+              <p className="font-semibold">Please check the following before confirming:</p>
+              <ul className="list-disc list-inside space-y-0.5 text-xs">
+                <li>The data below belongs to <strong>{orgName}</strong> and not another organisation</li>
+                <li>There is no sensitive or incorrect information included</li>
+                <li>The file is the correct and most up-to-date version</li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Preview table */}
+          <div className="flex-1 overflow-auto min-h-0 border rounded-lg">
+            {previewRows.length === 0 ? (
+              <p className="text-center text-gray-500 py-8 text-sm">No data found in file.</p>
+            ) : (() => {
+              const pvHeaders: any[] = previewRows[0] || [];
+              const pvBody: any[][] = previewRows.slice(1);
+              const pvTotalCol = pvHeaders.findIndex((h: any) =>
+                String(h ?? "").toLowerCase().replace(/\s+/g, " ").trim() === "total outstanding"
+              );
+              const pvFmtGbp = (raw: any): string => {
+                const n = parseFloat(String(raw ?? "").replace(/[£,]/g, ""));
+                if (isNaN(n)) return String(raw ?? "");
+                return "£" + n.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+              };
+              const pvTotal: number | null = pvTotalCol >= 0
+                ? pvBody.reduce((s, r) => { const n = parseFloat(String(r[pvTotalCol] ?? "").replace(/[£,]/g, "")); return s + (isNaN(n) ? 0 : n); }, 0)
+                : null;
+              return (
+                <table className="w-full text-sm border-collapse">
+                  <thead className="sticky top-0 z-10">
+                    <tr>{pvHeaders.map((h: any, i: number) => (
+                      <th key={i} className={`px-3 py-2 bg-teal-700 text-white font-medium text-xs whitespace-nowrap ${i === pvTotalCol ? "text-right" : "text-left"}`}>{String(h ?? "")}</th>
+                    ))}</tr>
+                  </thead>
+                  <tbody>
+                    {pvBody.map((row: any[], ri: number) => (
+                      <tr key={ri} className={ri % 2 === 0 ? "" : "bg-gray-50 dark:bg-gray-800/30"}>
+                        {pvHeaders.map((_: any, ci: number) => (
+                          <td key={ci} className={`px-3 py-1.5 border-b border-gray-100 dark:border-gray-800 whitespace-nowrap text-gray-800 dark:text-gray-200 ${ci === pvTotalCol ? "text-right font-medium" : ""}`}>
+                            {ci === pvTotalCol ? pvFmtGbp(row[ci]) : String(row[ci] ?? "")}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                  {pvTotal !== null && (
+                    <tfoot>
+                      <tr className="bg-teal-50 dark:bg-teal-900/20 border-t-2 border-teal-600">
+                        {pvHeaders.map((_: any, ci: number) => (
+                          <td key={ci} className={`px-3 py-2 text-xs font-bold whitespace-nowrap ${ci === pvTotalCol ? "text-right text-teal-800 dark:text-teal-300" : ci === 0 ? "text-gray-700 dark:text-gray-300" : ""}`}>
+                            {ci === 0 ? "Total" : ci === pvTotalCol ? pvFmtGbp(pvTotal) : ""}
+                          </td>
+                        ))}
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+              );
+            })()}
+          </div>
+
+          <div className="text-xs text-gray-400 pt-1">
+            {previewRows.length > 1 ? `${previewRows.length - 1} row${previewRows.length - 1 !== 1 ? "s" : ""} in file` : ""}
+            {" · "}File: <span className="font-medium text-gray-600 dark:text-gray-300">{pendingFile?.name}</span>
+          </div>
+
+          <DialogFooter className="gap-2 pt-2">
+            <Button variant="outline" onClick={cancelReview} data-testid="button-review-cancel">
+              Cancel — do not upload
+            </Button>
+            <Button onClick={confirmUpload} className="bg-teal-700 hover:bg-teal-800 text-white" data-testid="button-review-confirm">
+              <Check className="h-4 w-4 mr-1.5" />
+              Confirm &amp; publish to {orgName}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* View / Remove / Notify buttons — only when statement exists */}
       {hasStatement && (
