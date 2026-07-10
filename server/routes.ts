@@ -2457,31 +2457,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const meta = fs.existsSync(metaPath) ? JSON.parse(fs.readFileSync(metaPath, "utf8")) : {};
 
-      // Parse with xlsx
-      const XLSX = (await import("xlsx")).default;
-      const workbook = XLSX.readFile(filePath);
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
+      // Use ExcelJS to read — it exposes row.hidden reliably for both manual hide and AutoFilter
+      const ExcelJSReadMod = await import("exceljs");
+      const ExcelJSRead = (ExcelJSReadMod as any).default ?? ExcelJSReadMod;
+      const readWb = new ExcelJSRead.Workbook();
+      await readWb.xlsx.readFile(filePath);
+      const readWs = readWb.worksheets[0];
+      const sheetName = readWs ? readWs.name : "Sheet";
+      const colCount = readWs ? readWs.columnCount : 0;
 
-      // Iterate cells directly so !rows[R].hidden aligns with the actual sheet row index
-      const sheetRowMeta: any[] = (sheet as any)['!rows'] || [];
-      const ref = sheet['!ref'];
       const rows: any[][] = [];
-      if (ref) {
-        const range = XLSX.utils.decode_range(ref);
-        for (let R = range.s.r; R <= range.e.r; R++) {
-          // Skip rows flagged hidden by Excel's AutoFilter
-          if (sheetRowMeta[R] && sheetRowMeta[R].hidden) continue;
-          const row: any[] = [];
-          for (let C = range.s.c; C <= range.e.c; C++) {
-            const cell = sheet[XLSX.utils.encode_cell({ r: R, c: C })];
-            row.push(cell ? (cell.w ?? cell.v ?? "") : "");
+      if (readWs) {
+        readWs.eachRow({ includeEmpty: false }, (row: any) => {
+          if (row.hidden) return;
+          const cells: any[] = [];
+          for (let c = 1; c <= colCount; c++) {
+            const cell = row.getCell(c);
+            const val = cell.text !== undefined && cell.text !== "" ? cell.text : (cell.value ?? "");
+            cells.push(val);
           }
-          // Skip rows where every cell is blank
-          if (row.some((cell: any) => cell !== "" && cell !== null && cell !== undefined)) {
-            rows.push(row);
+          if (cells.some((v: any) => v !== "" && v !== null && v !== undefined)) {
+            rows.push(cells);
           }
-        }
+        });
       }
 
       return res.json({
@@ -2580,28 +2578,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ sent: 0, failed: 0, message: "No non-admin users found in this organisation" });
       }
 
-      // Parse statement to generate Excel + HTML attachments
-      const XLSX = (await import("xlsx")).default;
-      const workbook = XLSX.readFile(filePath);
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
-      // Iterate cells directly so !rows[R].hidden aligns with the actual sheet row index
-      const sheetRowMeta2: any[] = (sheet as any)['!rows'] || [];
-      const ref2 = sheet['!ref'];
+      // Parse statement — use ExcelJS so row.hidden catches AutoFilter-hidden rows reliably
+      const ExcelJSReadMod2 = await import("exceljs");
+      const ExcelJSRead2 = (ExcelJSReadMod2 as any).default ?? ExcelJSReadMod2;
+      const readWb2 = new ExcelJSRead2.Workbook();
+      await readWb2.xlsx.readFile(filePath);
+      const readWs2 = readWb2.worksheets[0];
+      const colCount2 = readWs2 ? readWs2.columnCount : 0;
+
       const rows: any[][] = [];
-      if (ref2) {
-        const range = XLSX.utils.decode_range(ref2);
-        for (let R = range.s.r; R <= range.e.r; R++) {
-          if (sheetRowMeta2[R] && sheetRowMeta2[R].hidden) continue;
-          const row: any[] = [];
-          for (let C = range.s.c; C <= range.e.c; C++) {
-            const cell = sheet[XLSX.utils.encode_cell({ r: R, c: C })];
-            row.push(cell ? (cell.w ?? cell.v ?? "") : "");
+      if (readWs2) {
+        readWs2.eachRow({ includeEmpty: false }, (row: any) => {
+          if (row.hidden) return;
+          const cells: any[] = [];
+          for (let c = 1; c <= colCount2; c++) {
+            const cell = row.getCell(c);
+            const val = cell.text !== undefined && cell.text !== "" ? cell.text : (cell.value ?? "");
+            cells.push(val);
           }
-          if (row.some((c: any) => c !== "" && c !== null && c !== undefined)) {
-            rows.push(row);
+          if (cells.some((v: any) => v !== "" && v !== null && v !== undefined)) {
+            rows.push(cells);
           }
-        }
+        });
       }
 
       const headers: any[] = rows[0] || [];
