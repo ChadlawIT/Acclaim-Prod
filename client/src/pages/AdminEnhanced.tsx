@@ -101,12 +101,38 @@ function StatementUploadButton({ orgId, orgName }: { orgId: number; orgName: str
       const buffer = await file.arrayBuffer();
       const wb = XLSX.read(buffer, { type: "array", cellDates: true });
       const ws = wb.Sheets[wb.SheetNames[0]];
+      const rowInfo: any[] = (ws && ws['!rows']) ? ws['!rows'] : [];
+
+      // SheetJS v0.18.5 doesn't read hidden rows from xlsx — parse XML directly via fflate (works in browser too)
+      const hiddenRowNums = new Set<number>(); // 1-indexed
+      if (file.name.match(/\.xlsx$/i)) {
+        try {
+          const fflateMod = await import("fflate");
+          const fflate = (fflateMod as any).default ?? fflateMod;
+          const unzipped = fflate.unzipSync(new Uint8Array(buffer));
+          const sheetKey = Object.keys(unzipped).find((k: string) =>
+            k.startsWith('xl/worksheets/sheet') && k.endsWith('.xml')
+          );
+          if (sheetKey) {
+            const xml = new TextDecoder().decode(unzipped[sheetKey]);
+            const rowRe = /<row\s[^>]*>/g;
+            let rm: RegExpExecArray | null;
+            while ((rm = rowRe.exec(xml)) !== null) {
+              if (/hidden="1"/.test(rm[0])) {
+                const rM = rm[0].match(/\br="(\d+)"/);
+                if (rM) hiddenRowNums.add(parseInt(rM[1], 10));
+              }
+            }
+          }
+        } catch (_) { /* not a valid zip/xlsx — silently continue */ }
+      }
+
       const data: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, dateNF: "dd/mm/yyyy" });
-      const nonEmpty = data.filter((r: any[]) =>
-        r.some((v: any) => v !== null && v !== undefined && String(v).trim() !== "")
-      );
+      const visible = data
+        .filter((_: any, i: number) => !hiddenRowNums.has(i + 1) && !rowInfo[i]?.hidden)
+        .filter((r: any[]) => r.some((v: any) => v !== null && v !== undefined && String(v).trim() !== ""));
       setPendingFile(file);
-      setPreviewRows(nonEmpty);
+      setPreviewRows(visible);
       setReviewOpen(true);
     } catch {
       toast({ title: "Could not read file", description: "The file could not be previewed. Please check it is a valid Excel file.", variant: "destructive" });
