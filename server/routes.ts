@@ -2404,16 +2404,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(orgId)) return res.status(400).json({ message: "Invalid organisation ID" });
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
-      // Move/rename the temp file to a stable path keyed by orgId, preserving extension
+      // Convert any format (xls, xlsx, csv) to xlsx on the way in — everything stored as xlsx
       const fs = await import("fs");
-      const origExt = (req.file.originalname.match(/\.(xlsx|xls|csv)$/i) || [".xlsx"])[0].toLowerCase();
+      const XLSXConvMod = await import("xlsx");
+      const XLSXConv = (XLSXConvMod as any).default ?? XLSXConvMod;
+      const tempBuf = fs.readFileSync(req.file.path);
+      const convWb = XLSXConv.read(tempBuf, { type: 'buffer', cellDates: true });
+      const destPath = path.join("uploads", "statements", `org-${orgId}.xlsx`);
       // Remove any pre-existing statement file (any extension)
       for (const ext of [".xlsx", ".xls", ".csv"]) {
         const old = path.join("uploads", "statements", `org-${orgId}${ext}`);
         if (fs.existsSync(old)) fs.unlinkSync(old);
       }
-      const destPath = path.join("uploads", "statements", `org-${orgId}${origExt}`);
-      fs.renameSync(req.file.path, destPath);
+      XLSXConv.writeFile(convWb, destPath);
+      fs.unlinkSync(req.file.path); // delete multer temp file
 
       // Record upload timestamp in a sidecar JSON
       const metaPath = path.join("uploads", "statements", `org-${orgId}.meta.json`);
