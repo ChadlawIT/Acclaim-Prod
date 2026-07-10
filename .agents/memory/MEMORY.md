@@ -13,3 +13,4 @@
 - [Legacy primary org required](legacy-primary-org.md) — users need a legacy users.organisationId set (primary); org-scoped endpoints (cases, payments) hard-fail on null; junction-only assignment is unsafe.
 - [Escalation report prod fixes](escalation-report-prod.md) — three bugs found in production: case status stored as 'Active' not 'active' (use LOWER); email@acclaim.law has is_admin=false so domain exclusion needed; admin domain now includes @acclaim.law alongside @chadlaw.co.uk.
 - [Portal Analytics metric definitions](portal-analytics-metric-definitions.md) — status/type breakdowns must group by LOWER(); submission conversion rate = processed caseSubmissions / totalSubmissions, never totalCases.
+- [ExcelJS dynamic import interop](exceljs-dynamic-import.md) — both `await import("exceljs")` and static `import ExcelJS from 'exceljs'` need `.default` fallback in prod; always use `(mod as any).default ?? mod` pattern.

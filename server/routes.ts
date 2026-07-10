@@ -2577,8 +2577,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bodyRows: any[][] = rows.slice(1);
       const safeOrgName = org.name.replace(/[^a-zA-Z0-9]/g, '_');
 
-      // Build Excel attachment
-      const ExcelJS = await import("exceljs");
+      // Build Excel attachment — .default handles CJS/ESM interop in production bundles
+      const ExcelJSMod = await import("exceljs");
+      const ExcelJS = (ExcelJSMod as any).default ?? ExcelJSMod;
       const wb = new ExcelJS.Workbook();
       const ws = wb.addWorksheet("Statement of Account");
       const headerRow = ws.addRow(headers.map((h: any) => String(h ?? "")));
