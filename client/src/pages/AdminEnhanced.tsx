@@ -50,7 +50,7 @@ function StatementUploadButton({ orgId, orgName }: { orgId: number; orgName: str
   const { data: stmtData, isLoading: stmtLoading } = useQuery<any>({
     queryKey: ["/api/statements", orgId],
     queryFn: async () => {
-      const res = await fetch(`/api/statements/${orgId}`, { credentials: "include" });
+      const res = await fetch(`/api/statements/${orgId}?t=${Date.now()}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed");
       return res.json();
     },

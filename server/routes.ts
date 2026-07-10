@@ -2498,6 +2498,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       res.setHeader('Cache-Control', 'no-store');
+      res.removeHeader('ETag');
       return res.json({
         exists: true,
         sheetName,
