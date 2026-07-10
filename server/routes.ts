@@ -2466,25 +2466,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sheetName = readWs ? readWs.name : "Sheet";
       const colCount = readWs ? readWs.columnCount : 0;
 
-      // DEBUG: sample the first 15 rows' hidden state so we can see what ExcelJS reads
-      if (readWs) {
-        const debugSample: string[] = [];
-        readWs.eachRow({ includeEmpty: true }, (row: any, rn: number) => {
-          if (rn <= 15) debugSample.push(`r${rn}:hidden=${row.hidden}`);
-        });
-        console.log("[stmt-debug] colCount:", colCount, "| row hidden sample:", debugSample.join(", "));
-        // Also read raw XML from the zip to check for hidden="1" directly
-        try {
-          const AdmZip = (await import("adm-zip" as any)).default ?? (await import("adm-zip" as any));
-          const zip = new AdmZip(filePath);
-          const sheetEntry = zip.getEntries().find((e: any) => e.entryName.match(/xl\/worksheets\/sheet\d+\.xml/));
-          if (sheetEntry) {
-            const xml = sheetEntry.getData().toString("utf8");
-            const hiddenMatches = xml.match(/<row[^>]*hidden="1"[^>]*>/g) || [];
-            console.log("[stmt-debug] raw XML hidden rows count:", hiddenMatches.length, "| first 3:", hiddenMatches.slice(0,3).join(" | "));
-          }
-        } catch(e: any) { console.log("[stmt-debug] zip read error:", e.message); }
-      }
+      const fmtCell = (cell: any): string => {
+        if (cell.value instanceof Date) {
+          const d: Date = cell.value;
+          const dd = String(d.getDate()).padStart(2, '0');
+          const mm = String(d.getMonth() + 1).padStart(2, '0');
+          return `${dd}/${mm}/${d.getFullYear()}`;
+        }
+        return cell.text !== undefined && cell.text !== "" ? String(cell.text) : String(cell.value ?? "");
+      };
 
       const rows: any[][] = [];
       if (readWs) {
@@ -2492,17 +2482,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (row.hidden) return;
           const cells: any[] = [];
           for (let c = 1; c <= colCount; c++) {
-            const cell = row.getCell(c);
-            const val = cell.text !== undefined && cell.text !== "" ? cell.text : (cell.value ?? "");
-            cells.push(val);
+            cells.push(fmtCell(row.getCell(c)));
           }
-          if (cells.some((v: any) => v !== "" && v !== null && v !== undefined)) {
+          if (cells.some((v: any) => v !== "")) {
             rows.push(cells);
           }
         });
       }
-
-      console.log("[stmt-final] returning", rows.length, "rows for org", req.params.orgId);
       return res.json({
         exists: true,
         sheetName,
@@ -2607,17 +2593,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const readWs2 = readWb2.worksheets[0];
       const colCount2 = readWs2 ? readWs2.columnCount : 0;
 
+      const fmtCell2 = (cell: any): string => {
+        if (cell.value instanceof Date) {
+          const d: Date = cell.value;
+          const dd = String(d.getDate()).padStart(2, '0');
+          const mm = String(d.getMonth() + 1).padStart(2, '0');
+          return `${dd}/${mm}/${d.getFullYear()}`;
+        }
+        return cell.text !== undefined && cell.text !== "" ? String(cell.text) : String(cell.value ?? "");
+      };
+
       const rows: any[][] = [];
       if (readWs2) {
         readWs2.eachRow({ includeEmpty: false }, (row: any) => {
           if (row.hidden) return;
           const cells: any[] = [];
           for (let c = 1; c <= colCount2; c++) {
-            const cell = row.getCell(c);
-            const val = cell.text !== undefined && cell.text !== "" ? cell.text : (cell.value ?? "");
-            cells.push(val);
+            cells.push(fmtCell2(row.getCell(c)));
           }
-          if (cells.some((v: any) => v !== "" && v !== null && v !== undefined)) {
+          if (cells.some((v: any) => v !== "")) {
             rows.push(cells);
           }
         });
