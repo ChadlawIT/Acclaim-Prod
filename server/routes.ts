@@ -2464,7 +2464,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await readWb.xlsx.readFile(filePath);
       const readWs = readWb.worksheets[0];
       const sheetName = readWs ? readWs.name : "Sheet";
-      const colCount = readWs ? readWs.columnCount : 0;
+      const colCount = readWs ? (readWs.actualColumnCount || readWs.columnCount) : 0;
 
       const fmtCell = (cell: any): string => {
         const v = cell.value;
@@ -2601,7 +2601,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const readWb2 = new ExcelJSRead2.Workbook();
       await readWb2.xlsx.readFile(filePath);
       const readWs2 = readWb2.worksheets[0];
-      const colCount2 = readWs2 ? readWs2.columnCount : 0;
+      const colCount2 = readWs2 ? (readWs2.actualColumnCount || readWs2.columnCount) : 0;
 
       const fmtCell2 = (cell: any): string => {
         const v = cell.value;
