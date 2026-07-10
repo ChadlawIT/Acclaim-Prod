@@ -2365,19 +2365,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ── Statement of Account routes ────────────────────────────────────────────
 
-  // Admin: upload/replace a statement of account for an organisation (Excel only)
+  // Helper: find the statement file for an org regardless of extension
+  const findStatementFile = (orgId: number): string | null => {
+    const fsSync = require("fs");
+    const dir = path.join("uploads", "statements");
+    if (!fsSync.existsSync(dir)) return null;
+    for (const ext of [".xlsx", ".xls", ".csv"]) {
+      const p = path.join(dir, `org-${orgId}${ext}`);
+      if (fsSync.existsSync(p)) return p;
+    }
+    return null;
+  };
+
+  // Admin: upload/replace a statement of account for an organisation (Excel or CSV)
   const statementUpload = multer({
     dest: "uploads/statements/",
     limits: { fileSize: 25 * 1024 * 1024 },
     fileFilter: (_req, file, cb) => {
-      const allowed = [
+      const allowedMimes = [
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "application/vnd.ms-excel",
+        "text/csv",
+        "application/csv",
+        "text/plain",
       ];
-      if (allowed.includes(file.mimetype) || file.originalname.match(/\.xlsx?$/i)) {
+      const allowedExts = /\.(xlsx|xls|csv)$/i;
+      if (allowedMimes.includes(file.mimetype) || allowedExts.test(file.originalname)) {
         cb(null, true);
       } else {
-        cb(new Error("Only Excel files (.xls / .xlsx) are accepted"));
+        cb(new Error("Only spreadsheet files (.xls, .xlsx, .csv) are accepted"));
       }
     },
   });
@@ -2388,11 +2404,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(orgId)) return res.status(400).json({ message: "Invalid organisation ID" });
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
-      // Move/rename the temp file to a stable path keyed by orgId
+      // Move/rename the temp file to a stable path keyed by orgId, preserving extension
       const fs = await import("fs");
-      const destPath = path.join("uploads", "statements", `org-${orgId}.xlsx`);
-      // Remove existing statement if present
-      if (fs.existsSync(destPath)) fs.unlinkSync(destPath);
+      const origExt = (req.file.originalname.match(/\.(xlsx|xls|csv)$/i) || [".xlsx"])[0].toLowerCase();
+      // Remove any pre-existing statement file (any extension)
+      for (const ext of [".xlsx", ".xls", ".csv"]) {
+        const old = path.join("uploads", "statements", `org-${orgId}${ext}`);
+        if (fs.existsSync(old)) fs.unlinkSync(old);
+      }
+      const destPath = path.join("uploads", "statements", `org-${orgId}${origExt}`);
       fs.renameSync(req.file.path, destPath);
 
       // Record upload timestamp in a sidecar JSON
@@ -2417,9 +2437,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const orgId = parseInt(req.params.orgId, 10);
       if (isNaN(orgId)) return res.status(400).json({ message: "Invalid organisation ID" });
       const fs = await import("fs");
-      const destPath = path.join("uploads", "statements", `org-${orgId}.xlsx`);
+      for (const ext of [".xlsx", ".xls", ".csv"]) {
+        const p = path.join("uploads", "statements", `org-${orgId}${ext}`);
+        if (fs.existsSync(p)) fs.unlinkSync(p);
+      }
       const metaPath = path.join("uploads", "statements", `org-${orgId}.meta.json`);
-      if (fs.existsSync(destPath)) fs.unlinkSync(destPath);
       if (fs.existsSync(metaPath)) fs.unlinkSync(metaPath);
       return res.json({ message: "Statement removed" });
     } catch (error: any) {
@@ -2448,19 +2470,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const fs = await import("fs");
-      const filePath = path.join("uploads", "statements", `org-${orgId}.xlsx`);
+      const filePath = findStatementFile(orgId);
       const metaPath = path.join("uploads", "statements", `org-${orgId}.meta.json`);
 
-      if (!fs.existsSync(filePath)) {
+      if (!filePath) {
         return res.json({ exists: false });
       }
 
       const meta = fs.existsSync(metaPath) ? JSON.parse(fs.readFileSync(metaPath, "utf8")) : {};
 
-      // Use SheetJS (xlsx) — handles both .xls (BIFF) and .xlsx, exposes !rows for hidden detection
+      // Use SheetJS — handles .xls (BIFF), .xlsx, and .csv; read as buffer for format auto-detection
       const XLSXReadMod = await import("xlsx");
       const XLSXRead = (XLSXReadMod as any).default ?? XLSXReadMod;
-      const readWb = XLSXRead.readFile(filePath);
+      const readWb = XLSXRead.read(fs.readFileSync(filePath), { type: 'buffer', cellDates: true });
       const sheetName = readWb.SheetNames[0] || "Sheet";
       const readWs = readWb.Sheets[sheetName];
       const rowInfo: any[] = (readWs && readWs['!rows']) ? readWs['!rows'] : [];
@@ -2503,9 +2525,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const dir = path.join("uploads", "statements");
       if (!fs.existsSync(dir)) return res.json({ statements: [], orgIds: [] });
       const files = fs.readdirSync(dir);
-      const orgIds = files
-        .filter((f: string) => f.match(/^org-(\d+)\.xlsx$/))
-        .map((f: string) => parseInt(f.replace(/^org-/, "").replace(/\.xlsx$/, ""), 10));
+      const orgIds = [...new Set(files
+        .filter((f: string) => f.match(/^org-(\d+)\.(xlsx|xls|csv)$/i))
+        .map((f: string) => parseInt(f.replace(/^org-/, "").replace(/\.(xlsx|xls|csv)$/i, ""), 10))
+      )];
 
       const statements = await Promise.all(orgIds.map(async (orgId: number) => {
         const metaPath = path.join("uploads", "statements", `org-${orgId}.meta.json`);
@@ -2539,10 +2562,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const fs = await import("fs");
-      const filePath = path.join("uploads", "statements", `org-${orgId}.xlsx`);
+      const filePath = findStatementFile(orgId);
       const metaPath = path.join("uploads", "statements", `org-${orgId}.meta.json`);
 
-      if (!fs.existsSync(filePath)) {
+      if (!filePath) {
         return res.status(404).json({ message: "No statement uploaded for this organisation" });
       }
 
@@ -2580,10 +2603,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ sent: 0, failed: 0, message: "No non-admin users found in this organisation" });
       }
 
-      // Parse statement — SheetJS handles both .xls (BIFF) and .xlsx, uses !rows for hidden detection
+      // Parse statement — SheetJS handles .xls, .xlsx, .csv; buffer read for format auto-detection
       const XLSXReadMod2 = await import("xlsx");
       const XLSXRead2 = (XLSXReadMod2 as any).default ?? XLSXReadMod2;
-      const readWb2 = XLSXRead2.readFile(filePath);
+      const readWb2 = XLSXRead2.read(fs.readFileSync(filePath), { type: 'buffer', cellDates: true });
       const sheetName2 = readWb2.SheetNames[0] || "Sheet";
       const readWs2 = readWb2.Sheets[sheetName2];
       const rowInfo2: any[] = (readWs2 && readWs2['!rows']) ? readWs2['!rows'] : [];
