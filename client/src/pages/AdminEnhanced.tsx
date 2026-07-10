@@ -54,7 +54,7 @@ function StatementUploadButton({ orgId, orgName }: { orgId: number; orgName: str
       if (!res.ok) throw new Error("Failed");
       return res.json();
     },
-    staleTime: 30000,
+    staleTime: 0,
   });
 
   const { data: orgUsersData } = useQuery<any[]>({
