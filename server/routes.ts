@@ -2466,6 +2466,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sheetName = readWs ? readWs.name : "Sheet";
       const colCount = readWs ? readWs.columnCount : 0;
 
+      // DEBUG: sample the first 15 rows' hidden state so we can see what ExcelJS reads
+      if (readWs) {
+        const debugSample: string[] = [];
+        readWs.eachRow({ includeEmpty: true }, (row: any, rn: number) => {
+          if (rn <= 15) debugSample.push(`r${rn}:hidden=${row.hidden}`);
+        });
+        console.log("[stmt-debug] colCount:", colCount, "| row hidden sample:", debugSample.join(", "));
+        // Also read raw XML from the zip to check for hidden="1" directly
+        try {
+          const AdmZip = (await import("adm-zip" as any)).default ?? (await import("adm-zip" as any));
+          const zip = new AdmZip(filePath);
+          const sheetEntry = zip.getEntries().find((e: any) => e.entryName.match(/xl\/worksheets\/sheet\d+\.xml/));
+          if (sheetEntry) {
+            const xml = sheetEntry.getData().toString("utf8");
+            const hiddenMatches = xml.match(/<row[^>]*hidden="1"[^>]*>/g) || [];
+            console.log("[stmt-debug] raw XML hidden rows count:", hiddenMatches.length, "| first 3:", hiddenMatches.slice(0,3).join(" | "));
+          }
+        } catch(e: any) { console.log("[stmt-debug] zip read error:", e.message); }
+      }
+
       const rows: any[][] = [];
       if (readWs) {
         readWs.eachRow({ includeEmpty: false }, (row: any) => {
@@ -2482,6 +2502,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      console.log("[stmt-final] returning", rows.length, "rows for org", req.params.orgId);
       return res.json({
         exists: true,
         sheetName,
