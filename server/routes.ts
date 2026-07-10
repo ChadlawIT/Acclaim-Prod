@@ -2457,46 +2457,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const meta = fs.existsSync(metaPath) ? JSON.parse(fs.readFileSync(metaPath, "utf8")) : {};
 
-      // Use ExcelJS to read — it exposes row.hidden reliably for both manual hide and AutoFilter
-      const ExcelJSReadMod = await import("exceljs");
-      const ExcelJSRead = (ExcelJSReadMod as any).default ?? ExcelJSReadMod;
-      const readWb = new ExcelJSRead.Workbook();
-      await readWb.xlsx.readFile(filePath);
-      const readWs = readWb.worksheets[0];
-      const sheetName = readWs ? readWs.name : "Sheet";
-      const colCount = readWs ? (readWs.actualColumnCount || readWs.columnCount) : 0;
+      // Use SheetJS (xlsx) — handles both .xls (BIFF) and .xlsx, exposes !rows for hidden detection
+      const XLSXReadMod = await import("xlsx");
+      const XLSXRead = (XLSXReadMod as any).default ?? XLSXReadMod;
+      const readWb = XLSXRead.readFile(filePath);
+      const sheetName = readWb.SheetNames[0] || "Sheet";
+      const readWs = readWb.Sheets[sheetName];
+      const rowInfo: any[] = (readWs && readWs['!rows']) ? readWs['!rows'] : [];
 
-      const fmtCell = (cell: any): string => {
-        const v = cell.value;
-        if (v !== null && v !== undefined && typeof v === 'object' && typeof v.getTime === 'function') {
-          const dd = String(v.getDate()).padStart(2, '0');
-          const mm = String(v.getMonth() + 1).padStart(2, '0');
-          return `${dd}/${mm}/${v.getFullYear()}`;
-        }
-        // ExcelJS cell.text for dates gives the raw Date.toString() — use value directly for type 4
-        if (cell.type === 4 && v) {
-          const d = new Date(v);
-          if (!isNaN(d.getTime())) {
-            return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+      const allRows: any[][] = readWs
+        ? XLSXRead.utils.sheet_to_json(readWs, { header: 1, raw: false, dateNF: 'dd/mm/yyyy' })
+        : [];
+      const rows: any[][] = allRows
+        .filter((_: any, i: number) => !rowInfo[i]?.hidden)
+        .filter((r: any[]) => r.some((v: any) => v !== null && v !== undefined && String(v).trim() !== ""))
+        .map((r: any[]) => r.map((v: any) => {
+          const s = String(v ?? "");
+          // Fix US-format dates that SheetJS may output (M/D/YY → dd/mm/yyyy)
+          const usDate = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+          if (usDate) {
+            const [, m, d, y] = usDate;
+            const yr = y.length === 2 ? (parseInt(y) >= 50 ? `19${y}` : `20${y}`) : y;
+            return `${d.padStart(2,'0')}/${m.padStart(2,'0')}/${yr}`;
           }
-        }
-        const t = String(cell.text ?? "");
-        return t !== "" ? t : String(v ?? "");
-      };
-
-      const rows: any[][] = [];
-      if (readWs) {
-        readWs.eachRow({ includeEmpty: false }, (row: any) => {
-          if (row.hidden) return;
-          const cells: any[] = [];
-          for (let c = 1; c <= colCount; c++) {
-            cells.push(fmtCell(row.getCell(c)));
-          }
-          if (cells.some((v: any) => v !== "")) {
-            rows.push(cells);
-          }
-        });
-      }
+          return s;
+        }));
       res.setHeader('Cache-Control', 'no-store');
       res.removeHeader('ETag');
       return res.json({
@@ -2595,44 +2580,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ sent: 0, failed: 0, message: "No non-admin users found in this organisation" });
       }
 
-      // Parse statement — use ExcelJS so row.hidden catches AutoFilter-hidden rows reliably
-      const ExcelJSReadMod2 = await import("exceljs");
-      const ExcelJSRead2 = (ExcelJSReadMod2 as any).default ?? ExcelJSReadMod2;
-      const readWb2 = new ExcelJSRead2.Workbook();
-      await readWb2.xlsx.readFile(filePath);
-      const readWs2 = readWb2.worksheets[0];
-      const colCount2 = readWs2 ? (readWs2.actualColumnCount || readWs2.columnCount) : 0;
+      // Parse statement — SheetJS handles both .xls (BIFF) and .xlsx, uses !rows for hidden detection
+      const XLSXReadMod2 = await import("xlsx");
+      const XLSXRead2 = (XLSXReadMod2 as any).default ?? XLSXReadMod2;
+      const readWb2 = XLSXRead2.readFile(filePath);
+      const sheetName2 = readWb2.SheetNames[0] || "Sheet";
+      const readWs2 = readWb2.Sheets[sheetName2];
+      const rowInfo2: any[] = (readWs2 && readWs2['!rows']) ? readWs2['!rows'] : [];
 
-      const fmtCell2 = (cell: any): string => {
-        const v = cell.value;
-        if (v !== null && v !== undefined && typeof v === 'object' && typeof v.getTime === 'function') {
-          const dd = String(v.getDate()).padStart(2, '0');
-          const mm = String(v.getMonth() + 1).padStart(2, '0');
-          return `${dd}/${mm}/${v.getFullYear()}`;
-        }
-        if (cell.type === 4 && v) {
-          const d = new Date(v);
-          if (!isNaN(d.getTime())) {
-            return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+      const allRows2: any[][] = readWs2
+        ? XLSXRead2.utils.sheet_to_json(readWs2, { header: 1, raw: false, dateNF: 'dd/mm/yyyy' })
+        : [];
+      const rows: any[][] = allRows2
+        .filter((_: any, i: number) => !rowInfo2[i]?.hidden)
+        .filter((r: any[]) => r.some((v: any) => v !== null && v !== undefined && String(v).trim() !== ""))
+        .map((r: any[]) => r.map((v: any) => {
+          const s = String(v ?? "");
+          const usDate = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+          if (usDate) {
+            const [, m, d, y] = usDate;
+            const yr = y.length === 2 ? (parseInt(y) >= 50 ? `19${y}` : `20${y}`) : y;
+            return `${d.padStart(2,'0')}/${m.padStart(2,'0')}/${yr}`;
           }
-        }
-        const t = String(cell.text ?? "");
-        return t !== "" ? t : String(v ?? "");
-      };
-
-      const rows: any[][] = [];
-      if (readWs2) {
-        readWs2.eachRow({ includeEmpty: false }, (row: any) => {
-          if (row.hidden) return;
-          const cells: any[] = [];
-          for (let c = 1; c <= colCount2; c++) {
-            cells.push(fmtCell2(row.getCell(c)));
-          }
-          if (cells.some((v: any) => v !== "")) {
-            rows.push(cells);
-          }
-        });
-      }
+          return s;
+        }));
 
       const headers: any[] = rows[0] || [];
       const bodyRows: any[][] = rows.slice(1);
