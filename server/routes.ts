@@ -2404,20 +2404,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(orgId)) return res.status(400).json({ message: "Invalid organisation ID" });
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
-      // Convert any format (xls, xlsx, csv) to xlsx on the way in — everything stored as xlsx
+      // Store with original extension — converting to xlsx drops hidden-row metadata from AutoFilter
       const fs = await import("fs");
-      const XLSXConvMod = await import("xlsx");
-      const XLSXConv = (XLSXConvMod as any).default ?? XLSXConvMod;
-      const tempBuf = fs.readFileSync(req.file.path);
-      const convWb = XLSXConv.read(tempBuf, { type: 'buffer', cellDates: true });
-      const destPath = path.join("uploads", "statements", `org-${orgId}.xlsx`);
+      const origExt = (req.file.originalname.match(/\.(xlsx|xls|csv)$/i) || [".xlsx"])[0].toLowerCase();
       // Remove any pre-existing statement file (any extension)
       for (const ext of [".xlsx", ".xls", ".csv"]) {
         const old = path.join("uploads", "statements", `org-${orgId}${ext}`);
         if (fs.existsSync(old)) fs.unlinkSync(old);
       }
-      XLSXConv.writeFile(convWb, destPath);
-      fs.unlinkSync(req.file.path); // delete multer temp file
+      const destPath = path.join("uploads", "statements", `org-${orgId}${origExt}`);
+      fs.renameSync(req.file.path, destPath);
 
       // Record upload timestamp in a sidecar JSON
       const metaPath = path.join("uploads", "statements", `org-${orgId}.meta.json`);
@@ -2486,16 +2482,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use SheetJS — handles .xls (BIFF), .xlsx, and .csv; read as buffer for format auto-detection
       const XLSXReadMod = await import("xlsx");
       const XLSXRead = (XLSXReadMod as any).default ?? XLSXReadMod;
-      const readWb = XLSXRead.read(fs.readFileSync(filePath), { type: 'buffer', cellDates: true });
+      const fileBuf = fs.readFileSync(filePath);
+      const readWb = XLSXRead.read(fileBuf, { type: 'buffer', cellDates: true });
       const sheetName = readWb.SheetNames[0] || "Sheet";
       const readWs = readWb.Sheets[sheetName];
       const rowInfo: any[] = (readWs && readWs['!rows']) ? readWs['!rows'] : [];
+
+      // SheetJS v0.18.5 doesn't populate !rows.hidden on read for xlsx — parse XML directly instead
+      const hiddenRowNums = new Set<number>(); // 1-indexed Excel row numbers
+      if (filePath.endsWith('.xlsx')) {
+        try {
+          const fflateMod = await import("fflate");
+          const fflate = (fflateMod as any).default ?? fflateMod;
+          const unzipped = fflate.unzipSync(new Uint8Array(fileBuf));
+          const sheetKey = Object.keys(unzipped).find((k: string) =>
+            k.startsWith('xl/worksheets/sheet') && k.endsWith('.xml')
+          );
+          if (sheetKey) {
+            const xml = Buffer.from(unzipped[sheetKey]).toString('utf8');
+            const rowRe = /<row\s[^>]*>/g;
+            let rm: RegExpExecArray | null;
+            while ((rm = rowRe.exec(xml)) !== null) {
+              if (/hidden="1"/.test(rm[0])) {
+                const rM = rm[0].match(/\br="(\d+)"/);
+                if (rM) hiddenRowNums.add(parseInt(rM[1], 10));
+              }
+            }
+          }
+        } catch (_) { /* not a valid zip/xlsx — silently continue */ }
+      }
 
       const allRows: any[][] = readWs
         ? XLSXRead.utils.sheet_to_json(readWs, { header: 1, raw: false, dateNF: 'dd/mm/yyyy' })
         : [];
       const rows: any[][] = allRows
-        .filter((_: any, i: number) => !rowInfo[i]?.hidden)
+        // i is 0-indexed; XML rows are 1-indexed; !rows is also 0-indexed
+        .filter((_: any, i: number) => !hiddenRowNums.has(i + 1) && !rowInfo[i]?.hidden)
         .filter((r: any[]) => r.some((v: any) => v !== null && v !== undefined && String(v).trim() !== ""))
         .map((r: any[]) => r.map((v: any) => {
           const s = String(v ?? "");
@@ -2610,16 +2632,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Parse statement — SheetJS handles .xls, .xlsx, .csv; buffer read for format auto-detection
       const XLSXReadMod2 = await import("xlsx");
       const XLSXRead2 = (XLSXReadMod2 as any).default ?? XLSXReadMod2;
-      const readWb2 = XLSXRead2.read(fs.readFileSync(filePath), { type: 'buffer', cellDates: true });
+      const fileBuf2 = fs.readFileSync(filePath);
+      const readWb2 = XLSXRead2.read(fileBuf2, { type: 'buffer', cellDates: true });
       const sheetName2 = readWb2.SheetNames[0] || "Sheet";
       const readWs2 = readWb2.Sheets[sheetName2];
       const rowInfo2: any[] = (readWs2 && readWs2['!rows']) ? readWs2['!rows'] : [];
+
+      // SheetJS v0.18.5 doesn't populate !rows.hidden on read — parse xlsx XML directly
+      const hiddenRowNums2 = new Set<number>();
+      if (filePath.endsWith('.xlsx')) {
+        try {
+          const fflateMod2 = await import("fflate");
+          const fflate2 = (fflateMod2 as any).default ?? fflateMod2;
+          const unzipped2 = fflate2.unzipSync(new Uint8Array(fileBuf2));
+          const sheetKey2 = Object.keys(unzipped2).find((k: string) =>
+            k.startsWith('xl/worksheets/sheet') && k.endsWith('.xml')
+          );
+          if (sheetKey2) {
+            const xml2 = Buffer.from(unzipped2[sheetKey2]).toString('utf8');
+            const rowRe2 = /<row\s[^>]*>/g;
+            let rm2: RegExpExecArray | null;
+            while ((rm2 = rowRe2.exec(xml2)) !== null) {
+              if (/hidden="1"/.test(rm2[0])) {
+                const rM2 = rm2[0].match(/\br="(\d+)"/);
+                if (rM2) hiddenRowNums2.add(parseInt(rM2[1], 10));
+              }
+            }
+          }
+        } catch (_) { /* not a valid zip/xlsx */ }
+      }
 
       const allRows2: any[][] = readWs2
         ? XLSXRead2.utils.sheet_to_json(readWs2, { header: 1, raw: false, dateNF: 'dd/mm/yyyy' })
         : [];
       const rows: any[][] = allRows2
-        .filter((_: any, i: number) => !rowInfo2[i]?.hidden)
+        .filter((_: any, i: number) => !hiddenRowNums2.has(i + 1) && !rowInfo2[i]?.hidden)
         .filter((r: any[]) => r.some((v: any) => v !== null && v !== undefined && String(v).trim() !== ""))
         .map((r: any[]) => r.map((v: any) => {
           const s = String(v ?? "");
