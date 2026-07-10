@@ -2467,13 +2467,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const colCount = readWs ? readWs.columnCount : 0;
 
       const fmtCell = (cell: any): string => {
-        if (cell.value instanceof Date) {
-          const d: Date = cell.value;
-          const dd = String(d.getDate()).padStart(2, '0');
-          const mm = String(d.getMonth() + 1).padStart(2, '0');
-          return `${dd}/${mm}/${d.getFullYear()}`;
+        const v = cell.value;
+        if (v !== null && v !== undefined && typeof v === 'object' && typeof v.getTime === 'function') {
+          const dd = String(v.getDate()).padStart(2, '0');
+          const mm = String(v.getMonth() + 1).padStart(2, '0');
+          return `${dd}/${mm}/${v.getFullYear()}`;
         }
-        return cell.text !== undefined && cell.text !== "" ? String(cell.text) : String(cell.value ?? "");
+        // ExcelJS cell.text for dates gives the raw Date.toString() — use value directly for type 4
+        if (cell.type === 4 && v) {
+          const d = new Date(v);
+          if (!isNaN(d.getTime())) {
+            return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+          }
+        }
+        const t = String(cell.text ?? "");
+        return t !== "" ? t : String(v ?? "");
       };
 
       const rows: any[][] = [];
@@ -2595,13 +2603,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const colCount2 = readWs2 ? readWs2.columnCount : 0;
 
       const fmtCell2 = (cell: any): string => {
-        if (cell.value instanceof Date) {
-          const d: Date = cell.value;
-          const dd = String(d.getDate()).padStart(2, '0');
-          const mm = String(d.getMonth() + 1).padStart(2, '0');
-          return `${dd}/${mm}/${d.getFullYear()}`;
+        const v = cell.value;
+        if (v !== null && v !== undefined && typeof v === 'object' && typeof v.getTime === 'function') {
+          const dd = String(v.getDate()).padStart(2, '0');
+          const mm = String(v.getMonth() + 1).padStart(2, '0');
+          return `${dd}/${mm}/${v.getFullYear()}`;
         }
-        return cell.text !== undefined && cell.text !== "" ? String(cell.text) : String(cell.value ?? "");
+        if (cell.type === 4 && v) {
+          const d = new Date(v);
+          if (!isNaN(d.getTime())) {
+            return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+          }
+        }
+        const t = String(cell.text ?? "");
+        return t !== "" ? t : String(v ?? "");
       };
 
       const rows: any[][] = [];
