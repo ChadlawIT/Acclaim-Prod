@@ -2641,11 +2641,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .map((u: any) => ({ email: u.email, firstName: u.firstName || 'Client' }));
       }
 
-      // Add extra email if provided
+      // Add extra email if provided — flagged as external (no portal account)
       if (extraEmail && typeof extraEmail === 'string' && extraEmail.includes('@')) {
         const alreadyIncluded = recipients.some((r) => r.email.toLowerCase() === extraEmail.toLowerCase());
         if (!alreadyIncluded) {
-          recipients.push({ email: extraEmail.trim(), firstName: 'Client' });
+          recipients.push({ email: extraEmail.trim(), firstName: 'Client', isExternal: true });
         }
       }
 

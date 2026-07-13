@@ -3383,7 +3383,7 @@ You can disable these login notifications in your Profile Settings.
   async sendStatementNotification(data: {
     type: 'new' | 'reminder';
     orgName: string;
-    recipients: Array<{ email: string; firstName: string }>;
+    recipients: Array<{ email: string; firstName: string; isExternal?: boolean }>;
     customNote?: string;
     excelBase64: string;
     htmlBase64: string;
@@ -3428,11 +3428,13 @@ You can disable these login notifications in your Profile Settings.
       const greeting = `Dear ${recipient.firstName || 'Client'},`;
 
       const mainPara = isNew
-        ? `We are pleased to inform you that an updated Statement of Account is now available for <strong>${escapeHtml(data.orgName)}</strong>. The statement was prepared on <strong>${uploadedAtStr}</strong> and is attached to this email for your reference.`
+        ? `We are pleased to share the latest Statement of Account for <strong>${escapeHtml(data.orgName)}</strong>. The statement was prepared on <strong>${uploadedAtStr}</strong> and is attached to this email for your reference.`
         : `We are writing regarding outstanding invoices on your account with <strong>${escapeHtml(data.orgName)}</strong>. Please find your current Statement of Account attached, which details the invoices that remain unpaid as of <strong>${today}</strong>.`;
 
       const actionPara = isNew
-        ? `You can also view your statement online at any time by logging in to the Acclaim portal and navigating to your Profile &gt; Organisation tab.`
+        ? recipient.isExternal
+          ? `The statement is attached to this email as both an Excel spreadsheet and an HTML file. If you have any queries regarding the figures shown, please do not hesitate to contact us.`
+          : `You can also view your statement online at any time by logging in to the Acclaim portal and navigating to your Profile &gt; Organisation tab. The statement is also attached to this email as both an Excel spreadsheet and an HTML file for your convenience.`
         : `We kindly request that you review the attached statement and arrange payment for any overdue invoices at your earliest convenience. If you believe any of these invoices have already been settled, or if you have any queries, please do not hesitate to contact us.`;
 
       const customNoteHtml = data.customNote
@@ -3453,7 +3455,6 @@ You can disable these login notifications in your Profile Settings.
         <p style="margin:0 0 16px;color:#374151;font-size:15px;">${greeting}</p>
         <p style="margin:0 0 16px;color:#374151;font-size:15px;line-height:1.7;">${mainPara}</p>
         <p style="margin:0 0 16px;color:#374151;font-size:15px;line-height:1.7;">${actionPara}</p>
-        ${isNew ? `<p style="margin:0;color:#374151;font-size:15px;line-height:1.7;">The statement is also attached to this email as both an Excel spreadsheet and an HTML file for your convenience.</p>` : ''}
       </td></tr>
       ${customNoteHtml}
       <tr><td style="padding:0 40px 32px;">
@@ -3468,7 +3469,9 @@ You can disable these login notifications in your Profile Settings.
 </body></html>`;
 
       const textContent = `${greeting}\n\n${isNew
-        ? `An updated Statement of Account is now available for ${data.orgName}. The statement was prepared on ${uploadedAtStr} and is attached to this email.\n\nYou can also view your statement online at any time by logging in to the Acclaim portal and navigating to your Profile > Organisation tab.`
+        ? recipient.isExternal
+          ? `Please find the latest Statement of Account for ${data.orgName} attached to this email. The statement was prepared on ${uploadedAtStr}.\n\nThe statement is attached as both an Excel spreadsheet and an HTML file. If you have any queries regarding the figures shown, please do not hesitate to contact us.`
+          : `An updated Statement of Account is now available for ${data.orgName}. The statement was prepared on ${uploadedAtStr} and is attached to this email.\n\nYou can also view your statement online at any time by logging in to the Acclaim portal and navigating to your Profile > Organisation tab. The statement is also attached as both an Excel spreadsheet and an HTML file for your convenience.`
         : `We are writing regarding outstanding invoices on your account with ${data.orgName}. Please find your current Statement of Account attached, which details the invoices that remain unpaid as of ${today}.\n\nWe kindly request that you review the attached statement and arrange payment for any overdue invoices at your earliest convenience.`
       }${data.customNote ? `\n\n${data.customNote}` : ''}\n\nKind regards,\nAcclaim Credit Management & Recovery\nemail@acclaim.law`;
 
