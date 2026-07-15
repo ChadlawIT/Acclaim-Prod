@@ -2772,6 +2772,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? new Date(meta.uploadedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
         : new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
+      // Find "Total Outstanding" column for totals row
+      const totalOutstandingIdx = headers.findIndex((h: any) =>
+        String(h ?? "").toLowerCase().includes("total outstanding")
+      );
+      let totalOutstandingSum = 0;
+      if (totalOutstandingIdx >= 0) {
+        bodyRows.forEach((row: any[]) => {
+          const raw = String(row[totalOutstandingIdx] ?? "").replace(/[£,\s]/g, "");
+          const n = parseFloat(raw);
+          if (!isNaN(n)) totalOutstandingSum += n;
+        });
+      }
+      const totalRowHtml = totalOutstandingIdx >= 0
+        ? `<tr style="font-weight:bold;background:#0d9488;color:#fff;">${
+            headers.map((_: any, i: number) => {
+              if (i === totalOutstandingIdx) {
+                return `<td style="padding:8px 10px;">£${totalOutstandingSum.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>`;
+              }
+              if (i === 0) return `<td style="padding:8px 10px;">Total</td>`;
+              return `<td style="padding:8px 10px;"></td>`;
+            }).join("")
+          }</tr>`
+        : "";
+
       const headerHtml = headers.map((h: any) => `<th>${String(h ?? "").replace(/</g, "&lt;")}</th>`).join("");
       const bodyHtml = bodyRows.map((row: any[]) =>
         `<tr>${headers.map((_: any, i: number) => `<td>${String(row[i] ?? "").replace(/</g, "&lt;")}</td>`).join("")}</tr>`
@@ -2782,7 +2806,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 </head><body>
 <h1>Statement of Account</h1>
 <p class="meta">${org.name} &nbsp;·&nbsp; As at ${uploadedAtStr}</p>
-<table><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table>
+<table><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}${totalRowHtml}</tbody></table>
 </body></html>`;
       const htmlBase64 = Buffer.from(htmlContent).toString('base64');
 

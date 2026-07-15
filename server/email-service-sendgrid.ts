@@ -3429,7 +3429,7 @@ You can disable these login notifications in your Profile Settings.
 
       const mainPara = isNew
         ? `We are pleased to share the latest Statement of Account for <strong>${escapeHtml(data.orgName)}</strong>. The statement was prepared on <strong>${uploadedAtStr}</strong> and is attached to this email for your reference.`
-        : `We are writing regarding outstanding invoices on your account with <strong>${escapeHtml(data.orgName)}</strong>. Please find your current Statement of Account attached, which details the invoices that remain unpaid as of <strong>${today}</strong>.`;
+        : `We are writing regarding outstanding invoices on your account with <strong>${escapeHtml(data.orgName)}</strong>. Please find your current Statement of Account attached, which details the invoices that remain unpaid as of <strong>${uploadedAtStr}</strong>.`;
 
       const actionPara = isNew
         ? recipient.isExternal
@@ -3472,7 +3472,7 @@ You can disable these login notifications in your Profile Settings.
         ? recipient.isExternal
           ? `Please find the latest Statement of Account for ${data.orgName} attached to this email. The statement was prepared on ${uploadedAtStr}.\n\nThe statement is attached as both an Excel spreadsheet and an HTML file. If you have any queries regarding the figures shown, please do not hesitate to contact us.`
           : `An updated Statement of Account is now available for ${data.orgName}. The statement was prepared on ${uploadedAtStr} and is attached to this email.\n\nYou can also view your statement online at any time by logging in to the Acclaim portal and navigating to your Profile > Organisation tab. The statement is also attached as both an Excel spreadsheet and an HTML file for your convenience.`
-        : `We are writing regarding outstanding invoices on your account with ${data.orgName}. Please find your current Statement of Account attached, which details the invoices that remain unpaid as of ${today}.\n\nWe kindly request that you review the attached statement and arrange payment for any overdue invoices at your earliest convenience.`
+        : `We are writing regarding outstanding invoices on your account with ${data.orgName}. Please find your current Statement of Account attached, which details the invoices that remain unpaid as of ${uploadedAtStr}.\n\nWe kindly request that you review the attached statement and arrange payment for any overdue invoices at your earliest convenience.`
       }${data.customNote ? `\n\n${data.customNote}` : ''}\n\nKind regards,\nAcclaim Credit Management & Recovery\nemail@acclaim.law`;
 
       try {
