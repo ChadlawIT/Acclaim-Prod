@@ -1612,7 +1612,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/messages', isAuthenticated, upload.array('attachments', 10), async (req: any, res) => {
+  app.post('/api/messages', isAuthenticated, upload.single('attachment'), async (req: any, res) => {
     try {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
@@ -1703,12 +1703,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Handle multiple file uploads
-      const uploadedFiles: Express.Multer.File[] = Array.isArray(req.files) ? (req.files as Express.Multer.File[]) : [];
-      const firstFile = uploadedFiles[0];
-      let attachmentFinalFileName = firstFile?.originalname;
-      if (firstFile && req.body.customFileName && uploadedFiles.length === 1) {
-        const originalExtension = firstFile.originalname.split('.').pop();
+      // Handle custom filename for attachment
+      let attachmentFinalFileName = req.file?.originalname;
+      if (req.file && req.body.customFileName) {
+        const originalExtension = req.file.originalname.split('.').pop();
         attachmentFinalFileName = `${req.body.customFileName}.${originalExtension}`;
       }
 
@@ -1719,32 +1717,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         recipientType,
         recipientId,
         attachmentFileName: attachmentFinalFileName,
-        attachmentFilePath: firstFile?.path,
-        attachmentFileSize: firstFile?.size,
-        attachmentFileType: firstFile?.mimetype,
+        attachmentFilePath: req.file?.path,
+        attachmentFileSize: req.file?.size,
+        attachmentFileType: req.file?.mimetype,
       });
 
       const newMessage = await storage.createMessage(messageData);
-
-      // Save all uploaded files to messageAttachments table
-      for (const file of uploadedFiles) {
+      
+      // Save attachment as document if present
+      if (req.file) {
         try {
-          await storage.createMessageAttachment({
-            messageId: newMessage.id,
-            fileName: file.originalname,
-            filePath: file.path,
-            fileSize: file.size,
-            fileType: file.mimetype,
-          });
-        } catch (attErr) {
-          console.error('Failed to save message attachment record:', attErr);
-        }
-      }
-
-      // Save all attachments as documents if present
-      if (uploadedFiles.length > 0) {
-        try {
-          // Determine the organisation ID for the documents
+          // Determine the organisation ID for the document
           let documentOrgId: number | undefined;
           
           if (messageData.caseId) {
@@ -1768,22 +1751,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           if (documentOrgId) {
-            for (const file of uploadedFiles) {
-              await storage.createDocument({
-                caseId: messageData.caseId || null,
-                fileName: file.originalname,
-                fileSize: file.size,
-                fileType: file.mimetype,
-                filePath: file.path,
-                uploadedBy: userId,
-                organisationId: documentOrgId,
-              });
-            }
+            await storage.createDocument({
+              caseId: messageData.caseId || null,
+              fileName: attachmentFinalFileName || req.file.originalname,
+              fileSize: req.file.size,
+              fileType: req.file.mimetype,
+              filePath: req.file.path,
+              uploadedBy: userId,
+              organisationId: documentOrgId,
+            });
           } else {
-            console.warn("Could not determine organisation for document, attachments not saved as documents");
+            console.warn("Could not determine organisation for document, attachment not saved as document");
           }
         } catch (docError) {
-          console.error("Failed to save message attachments as documents:", docError);
+          console.error("Failed to save message attachment as document:", docError);
           // Don't fail the message creation if document save fails
         }
       }
@@ -1844,14 +1825,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Route to case handler's email if available, otherwise default
           const adminEmail = await getAdminEmailForCase(caseHandler);
 
-          // Prepare attachment data for all uploaded files
-          const attachmentsData = uploadedFiles.map(f => ({
-            fileName: f.originalname,
-            filePath: f.path,
-            fileSize: f.size,
-            fileType: f.mimetype,
-          }));
-          const attachmentData = attachmentsData[0];
+          // Prepare attachment data if present
+          let attachmentData = undefined;
+          if (messageData.attachmentFileName && messageData.attachmentFilePath) {
+            attachmentData = {
+              fileName: messageData.attachmentFileName,
+              filePath: messageData.attachmentFilePath,
+              fileSize: messageData.attachmentFileSize || 0,
+              fileType: messageData.attachmentFileType || 'application/octet-stream',
+            };
+          }
 
           // ── Pre-detect copy recipients so the handler email can name them ────
           // Safeguard 2: Reply detection — "From: Acclaim (Name)" in message body
@@ -1905,7 +1888,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
               caseDetails,
               organisationName,
               attachment: attachmentData,
-              attachments: attachmentsData.length > 0 ? attachmentsData : undefined,
               copyRecipients: copyRecipients.map(r => ({ name: r.name, reason: r.reason })),
             },
             adminEmail
@@ -2164,35 +2146,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error downloading file:", error);
       res.status(500).json({ message: "Failed to download file" });
-    }
-  });
-
-  // Get all attachments for a message
-  app.get('/api/messages/:id/attachments', isAuthenticated, async (req: any, res) => {
-    try {
-      const messageId = parseInt(req.params.id);
-      if (isNaN(messageId)) return res.status(400).json({ message: 'Invalid message ID' });
-      const attachments = await storage.getMessageAttachments(messageId);
-      return res.json(attachments);
-    } catch (error: any) {
-      console.error('Error fetching message attachments:', error);
-      return res.status(500).json({ message: error.message || 'Failed to get attachments' });
-    }
-  });
-
-  // Download a specific message attachment by ID
-  app.get('/api/messages/:id/attachments/:attId/download', isAuthenticated, async (req: any, res) => {
-    try {
-      const attId = parseInt(req.params.attId);
-      if (isNaN(attId)) return res.status(400).json({ message: 'Invalid attachment ID' });
-      const att = await storage.getMessageAttachmentById(attId);
-      if (!att) return res.status(404).json({ message: 'Attachment not found' });
-      const filePath = path.join(__dirname, '..', att.filePath);
-      if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'File not found on disk' });
-      return res.download(filePath, att.fileName);
-    } catch (error: any) {
-      console.error('Error downloading message attachment:', error);
-      return res.status(500).json({ message: error.message || 'Failed to download attachment' });
     }
   });
 

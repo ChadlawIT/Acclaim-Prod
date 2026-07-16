@@ -6,7 +6,6 @@ import {
   caseSubmissionDocuments,
   caseActivities,
   messages,
-  messageAttachments,
   documents,
   payments,
   userActivityLogs,
@@ -31,8 +30,6 @@ import {
   type InsertCaseActivity,
   type Message,
   type InsertMessage,
-  type MessageAttachment,
-  type InsertMessageAttachment,
   type Document,
   type InsertDocument,
   type Payment,
@@ -227,9 +224,6 @@ export interface IStorage {
   createMessage(message: InsertMessage): Promise<Message>;
   markMessageAsRead(messageId: number): Promise<void>;
   deleteMessage(id: number): Promise<void>; // Admin only - delete message by ID
-  createMessageAttachment(data: InsertMessageAttachment): Promise<MessageAttachment>;
-  getMessageAttachments(messageId: number): Promise<MessageAttachment[]>;
-  getMessageAttachmentById(id: number): Promise<MessageAttachment | undefined>;
 
   // Document operations
   getDocumentById(id: number): Promise<Document | undefined>;
@@ -1673,20 +1667,6 @@ export class DatabaseStorage implements IStorage {
   async deleteMessage(id: number): Promise<void> {
     // Admin only - delete message by ID
     await db.delete(messages).where(eq(messages.id, id));
-  }
-
-  async createMessageAttachment(data: InsertMessageAttachment): Promise<MessageAttachment> {
-    const [att] = await db.insert(messageAttachments).values(data).returning();
-    return att;
-  }
-
-  async getMessageAttachments(messageId: number): Promise<MessageAttachment[]> {
-    return db.select().from(messageAttachments).where(eq(messageAttachments.messageId, messageId)).orderBy(messageAttachments.createdAt);
-  }
-
-  async getMessageAttachmentById(id: number): Promise<MessageAttachment | undefined> {
-    const [att] = await db.select().from(messageAttachments).where(eq(messageAttachments.id, id)).limit(1);
-    return att;
   }
 
   async getMessage(id: number): Promise<Message | undefined> {

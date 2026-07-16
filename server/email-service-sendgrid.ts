@@ -142,12 +142,6 @@ interface EmailNotificationData {
     fileSize: number;
     fileType: string;
   };
-  attachments?: Array<{
-    fileName: string;
-    filePath: string;
-    fileSize: number;
-    fileType: string;
-  }>;
   copyRecipients?: Array<{ name: string; reason: 'reply' | 'name-mention' }>;
 }
 
@@ -852,26 +846,22 @@ Please log in to the Acclaim Portal to view and respond to this message.
         attachments.push(logoBase64);
       }
 
-      // Add all file attachments — prefer the attachments array if present, else fall back to single attachment
-      const allAttachments = (data.attachments && data.attachments.length > 0)
-        ? data.attachments
-        : data.attachment ? [data.attachment] : [];
-      for (const att of allAttachments) {
-        if (!att.filePath) continue;
-        if (isVideoFile(att.fileName, att.fileType)) {
-          console.log(`📎 Skipping video attachment in email (too large): ${att.fileName}`);
-          continue;
-        }
-        try {
-          const fileContent = fs.readFileSync(att.filePath);
-          attachments.push({
-            content: fileContent.toString('base64'),
-            filename: att.fileName,
-            type: att.fileType || 'application/octet-stream',
-            disposition: 'attachment'
-          });
-        } catch (error) {
-          console.error('Failed to read attachment file:', error);
+      // Add user attachment if present (convert to base64) - skip video files
+      if (data.attachment && data.attachment.filePath) {
+        if (isVideoFile(data.attachment.fileName, data.attachment.fileType)) {
+          console.log(`📎 Skipping video attachment in email (too large): ${data.attachment.fileName}`);
+        } else {
+          try {
+            const fileContent = fs.readFileSync(data.attachment.filePath);
+            attachments.push({
+              content: fileContent.toString('base64'),
+              filename: data.attachment.fileName,
+              type: data.attachment.fileType || 'application/octet-stream',
+              disposition: 'attachment'
+            });
+          } catch (error) {
+            console.error('Failed to read attachment file:', error);
+          }
         }
       }
 
