@@ -75,13 +75,7 @@ function StatementUploadButton({ orgId, orgName }: { orgId: number; orgName: str
 
   const orgUsers: any[] = (orgUsersData || []).filter((u: any) => !u.isAdmin && u.email);
 
-  // Default-select all non-admin users whenever the org user list first loads
-  useEffect(() => {
-    if (orgUsers.length > 0 && selectedUserIds.size === 0) {
-      setSelectedUserIds(new Set(orgUsers.map((u: any) => String(u.id))));
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orgUsersData]);
+  // Users start unselected — admin picks who to notify manually
 
   // Reset recipient state when dialog closes
   const handleViewOpenChange = (open: boolean) => {

