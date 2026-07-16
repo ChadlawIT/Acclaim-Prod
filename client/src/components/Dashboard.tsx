@@ -834,36 +834,8 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
                         e.target.value = '';
                       }}
                     />
-                    {replyFiles.length === 0 ? (
-                      <label
-                        htmlFor="reply-attachment"
-                        onDragOver={(e) => { e.preventDefault(); setIsDragOverAttachment(true); }}
-                        onDragLeave={() => setIsDragOverAttachment(false)}
-                        onDrop={(e) => {
-                          e.preventDefault(); setIsDragOverAttachment(false);
-                          const incoming = e.dataTransfer.files;
-                          if (!incoming || incoming.length === 0) return;
-                          const valid: File[] = [];
-                          for (let i = 0; i < incoming.length; i++) {
-                            const v = validateFile(incoming[i]);
-                            if (!v.isValid) { setReplyFileValidationError(v.error); return; }
-                            valid.push(incoming[i]);
-                          }
-                          setReplyFileValidationError(null);
-                          setReplyFiles(prev => { const names = new Set(prev.map(f => f.name)); return [...prev, ...valid.filter(f => !names.has(f.name))]; });
-                        }}
-                        className={`flex flex-col items-center justify-center gap-1.5 px-4 py-5 border-2 border-dashed rounded-xl cursor-pointer transition-all text-center ${
-                          isDragOverAttachment ? "border-teal-400 bg-teal-50 dark:bg-teal-900/20" : "border-gray-200 bg-gray-50 dark:bg-gray-800/50 hover:border-teal-300 hover:bg-teal-50/50"
-                        }`}
-                      >
-                        <Paperclip className={`h-5 w-5 transition-colors ${isDragOverAttachment ? "text-teal-600" : "text-gray-400"}`} />
-                        <span className={`text-sm transition-colors ${isDragOverAttachment ? "text-teal-700 dark:text-teal-300" : "text-gray-500"}`}>
-                          {isDragOverAttachment ? "Drop files here" : "Click to browse or drag files here"}
-                        </span>
-                        <span className="text-xs text-gray-400">{ACCEPTED_FILE_TYPES_DISPLAY} · {MAX_FILE_SIZE_MB}MB each</span>
-                      </label>
-                    ) : (
-                      <div className="space-y-1.5">
+                    {replyFiles.length > 0 && (
+                      <div className="space-y-1.5 mb-2">
                         {replyFiles.map((file, idx) => {
                           const ext = file.name.split('.').pop()?.toUpperCase() || '?';
                           const extColor = ext === 'PDF' ? 'bg-red-50 text-red-500 border-red-100' : ['DOC','DOCX'].includes(ext) ? 'bg-blue-50 text-blue-500 border-blue-100' : ['XLS','XLSX'].includes(ext) ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : ['PNG','JPG','JPEG','GIF','WEBP'].includes(ext) ? 'bg-green-50 text-green-600 border-green-100' : 'bg-gray-50 text-gray-500 border-gray-100';
@@ -879,9 +851,35 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
                           );
                         })}
                         {replyFiles.length > 1 && <p className="text-xs text-teal-600 dark:text-teal-400 flex items-center gap-1.5"><Paperclip className="h-3.5 w-3.5 shrink-0" />{replyFiles.length} files — each will be saved as a separate attachment</p>}
-                        <label htmlFor="reply-attachment" className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-teal-600 cursor-pointer transition-colors"><Paperclip className="h-3.5 w-3.5" />Add more files</label>
                       </div>
                     )}
+                    <label
+                      htmlFor="reply-attachment"
+                      onDragOver={(e) => { e.preventDefault(); setIsDragOverAttachment(true); }}
+                      onDragLeave={() => setIsDragOverAttachment(false)}
+                      onDrop={(e) => {
+                        e.preventDefault(); setIsDragOverAttachment(false);
+                        const incoming = e.dataTransfer.files;
+                        if (!incoming || incoming.length === 0) return;
+                        const valid: File[] = [];
+                        for (let i = 0; i < incoming.length; i++) {
+                          const v = validateFile(incoming[i]);
+                          if (!v.isValid) { setReplyFileValidationError(v.error); return; }
+                          valid.push(incoming[i]);
+                        }
+                        setReplyFileValidationError(null);
+                        setReplyFiles(prev => { const names = new Set(prev.map(f => f.name)); return [...prev, ...valid.filter(f => !names.has(f.name))]; });
+                      }}
+                      className={`flex items-center justify-center gap-2 border-2 border-dashed rounded-xl cursor-pointer transition-all text-center ${
+                        replyFiles.length > 0 ? "px-3 py-2" : "flex-col px-4 py-5"
+                      } ${isDragOverAttachment ? "border-teal-400 bg-teal-50 dark:bg-teal-900/20" : "border-gray-200 bg-gray-50 dark:bg-gray-800/50 hover:border-teal-300 hover:bg-teal-50/50"}`}
+                    >
+                      <Paperclip className={`h-4 w-4 transition-colors shrink-0 ${isDragOverAttachment ? "text-teal-600" : "text-gray-400"}`} />
+                      <span className={`text-sm transition-colors ${isDragOverAttachment ? "text-teal-700 dark:text-teal-300" : "text-gray-500"}`}>
+                        {isDragOverAttachment ? "Drop files here" : replyFiles.length > 0 ? "Drop or click to add more files" : "Click to browse or drag files here"}
+                      </span>
+                      {replyFiles.length === 0 && <span className="text-xs text-gray-400 w-full">{ACCEPTED_FILE_TYPES_DISPLAY} · {MAX_FILE_SIZE_MB}MB each</span>}
+                    </label>
                     {replyFileValidationError && (
                       <p className="text-xs text-red-600">{replyFileValidationError}</p>
                     )}
