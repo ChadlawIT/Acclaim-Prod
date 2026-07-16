@@ -255,6 +255,17 @@ export const messages = pgTable("messages", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Message attachments table — supports multiple files per message
+export const messageAttachments = pgTable("message_attachments", {
+  id: serial("id").primaryKey(),
+  messageId: integer("message_id").references(() => messages.id).notNull(),
+  fileName: varchar("file_name", { length: 255 }).notNull(),
+  filePath: varchar("file_path", { length: 500 }).notNull(),
+  fileSize: integer("file_size"),
+  fileType: varchar("file_type", { length: 100 }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Documents table (caseId is optional - documents can be general or case-specific)
 export const documents = pgTable("documents", {
   id: serial("id").primaryKey(),
@@ -480,6 +491,9 @@ export type InsertCaseActivity = typeof caseActivities.$inferInsert;
 
 export type Message = typeof messages.$inferSelect;
 export type InsertMessage = typeof messages.$inferInsert;
+
+export type MessageAttachment = typeof messageAttachments.$inferSelect;
+export type InsertMessageAttachment = typeof messageAttachments.$inferInsert;
 
 export type Document = typeof documents.$inferSelect;
 export type InsertDocument = typeof documents.$inferInsert;
