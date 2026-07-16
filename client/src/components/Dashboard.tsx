@@ -9,10 +9,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { FolderOpen, CheckCircle, PoundSterling, TrendingUp, User, Building, Clock, FileText, Check, AlertTriangle, Store, UserCheck, Plus, Info, Send, Paperclip, X } from "lucide-react";
+import { FolderOpen, CheckCircle, PoundSterling, TrendingUp, User, Building, Clock, FileText, Check, AlertTriangle, Store, UserCheck, Plus, Info, Send, Paperclip, X, Archive } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { validateFile, ACCEPTED_FILE_TYPES_STRING, MAX_FILE_SIZE_MB, ACCEPTED_FILE_TYPES_DISPLAY } from "@/lib/fileValidation";
+import { validateFile, zipFilesForAttachment, ACCEPTED_FILE_TYPES_STRING, MAX_FILE_SIZE_MB, ACCEPTED_FILE_TYPES_DISPLAY } from "@/lib/fileValidation";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -35,7 +35,7 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
   const [selectedMessage, setSelectedMessage] = useState<any>(null);
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
   const [dialogReplyMessage, setDialogReplyMessage] = useState("");
-  const [replyFile, setReplyFile] = useState<File | null>(null);
+  const [replyFiles, setReplyFiles] = useState<File[]>([]);
   const [replyCustomFileName, setReplyCustomFileName] = useState<string>("");
   const [replyFileValidationError, setReplyFileValidationError] = useState<string | null>(null);
   const [isDragOverAttachment, setIsDragOverAttachment] = useState(false);
@@ -161,9 +161,10 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
       formData.append("subject", data.subject);
       formData.append("content", data.content);
       formData.append("caseId", String(data.caseId));
-      if (replyFile) {
-        formData.append("attachment", replyFile);
-        if (replyCustomFileName.trim()) {
+      const attachFile = await zipFilesForAttachment(replyFiles);
+      if (attachFile) {
+        formData.append("attachment", attachFile);
+        if (replyCustomFileName.trim() && replyFiles.length === 1) {
           formData.append("customFileName", replyCustomFileName.trim());
         }
       }
@@ -185,7 +186,7 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
       queryClient.invalidateQueries({ queryKey: ["/api/cases"] });
       setDialogReplyMessage("");
-      setReplyFile(null);
+      setReplyFiles([]);
       setReplyCustomFileName("");
       setReplyFileValidationError(null);
       setMessageDialogOpen(false);
@@ -809,32 +810,42 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
                     <input
                       id="reply-attachment"
                       type="file"
+                      multiple
                       accept={ACCEPTED_FILE_TYPES_STRING}
                       className="sr-only"
                       data-testid="input-reply-attachment"
                       onChange={(e) => {
-                        const file = e.target.files?.[0] || null;
-                        setReplyCustomFileName("");
-                        if (file) {
-                          const validation = validateFile(file);
-                          if (!validation.isValid) { setReplyFileValidationError(validation.error); setReplyFile(null); e.target.value = ''; return; }
+                        const incoming = e.target.files;
+                        if (!incoming || incoming.length === 0) return;
+                        const valid: File[] = [];
+                        for (let i = 0; i < incoming.length; i++) {
+                          const v = validateFile(incoming[i]);
+                          if (!v.isValid) { setReplyFileValidationError(v.error); return; }
+                          valid.push(incoming[i]);
                         }
                         setReplyFileValidationError(null);
-                        setReplyFile(file);
+                        setReplyCustomFileName("");
+                        setReplyFiles(prev => { const names = new Set(prev.map(f => f.name)); return [...prev, ...valid.filter(f => !names.has(f.name))]; });
                         e.target.value = '';
                       }}
                     />
-                    {!replyFile ? (
+                    {replyFiles.length === 0 ? (
                       <label
                         htmlFor="reply-attachment"
                         onDragOver={(e) => { e.preventDefault(); setIsDragOverAttachment(true); }}
                         onDragLeave={() => setIsDragOverAttachment(false)}
                         onDrop={(e) => {
                           e.preventDefault(); setIsDragOverAttachment(false);
-                          const files = e.dataTransfer.files;
-                          if (files && files.length > 1) toast({ title: "One attachment per message", description: "Only one file can be attached to a message. The first file has been selected.", variant: "default" });
-                          const file = files?.[0];
-                          if (file) { const v = validateFile(file); if (!v.isValid) { setReplyFileValidationError(v.error); } else { setReplyFileValidationError(null); setReplyFile(file); } }
+                          const incoming = e.dataTransfer.files;
+                          if (!incoming || incoming.length === 0) return;
+                          const valid: File[] = [];
+                          for (let i = 0; i < incoming.length; i++) {
+                            const v = validateFile(incoming[i]);
+                            if (!v.isValid) { setReplyFileValidationError(v.error); return; }
+                            valid.push(incoming[i]);
+                          }
+                          setReplyFileValidationError(null);
+                          setReplyFiles(prev => { const names = new Set(prev.map(f => f.name)); return [...prev, ...valid.filter(f => !names.has(f.name))]; });
                         }}
                         className={`flex flex-col items-center justify-center gap-1.5 px-4 py-5 border-2 border-dashed rounded-xl cursor-pointer transition-all text-center ${
                           isDragOverAttachment ? "border-teal-400 bg-teal-50 dark:bg-teal-900/20" : "border-gray-200 bg-gray-50 dark:bg-gray-800/50 hover:border-teal-300 hover:bg-teal-50/50"
@@ -842,24 +853,28 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
                       >
                         <Paperclip className={`h-5 w-5 transition-colors ${isDragOverAttachment ? "text-teal-600" : "text-gray-400"}`} />
                         <span className={`text-sm transition-colors ${isDragOverAttachment ? "text-teal-700 dark:text-teal-300" : "text-gray-500"}`}>
-                          {isDragOverAttachment ? "Drop file here" : "Click to browse or drag a file here"}
+                          {isDragOverAttachment ? "Drop files here" : "Click to browse or drag files here"}
                         </span>
-                        <span className="text-xs text-gray-400">{ACCEPTED_FILE_TYPES_DISPLAY} · {MAX_FILE_SIZE_MB}MB</span>
+                        <span className="text-xs text-gray-400">{ACCEPTED_FILE_TYPES_DISPLAY} · {MAX_FILE_SIZE_MB}MB each</span>
                       </label>
                     ) : (
-                      <div className="flex items-center gap-3 px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl">
-                        {(() => {
-                          const ext = replyFile.name.split('.').pop()?.toUpperCase() || '?';
+                      <div className="space-y-1.5">
+                        {replyFiles.map((file, idx) => {
+                          const ext = file.name.split('.').pop()?.toUpperCase() || '?';
                           const extColor = ext === 'PDF' ? 'bg-red-50 text-red-500 border-red-100' : ['DOC','DOCX'].includes(ext) ? 'bg-blue-50 text-blue-500 border-blue-100' : ['XLS','XLSX'].includes(ext) ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : ['PNG','JPG','JPEG','GIF','WEBP'].includes(ext) ? 'bg-green-50 text-green-600 border-green-100' : 'bg-gray-50 text-gray-500 border-gray-100';
-                          return <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 border ${extColor}`}>{ext.slice(0,4)}</div>;
-                        })()}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{replyFile.name}</p>
-                          <p className="text-xs text-gray-400">{(replyFile.size / 1024 / 1024).toFixed(2)} MB</p>
-                        </div>
-                        <button onClick={() => { setReplyFile(null); setReplyFileValidationError(null); }} className="text-gray-300 hover:text-red-400 transition-colors shrink-0 p-1">
-                          <X className="h-4 w-4" />
-                        </button>
+                          return (
+                            <div key={idx} className="flex items-center gap-3 px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl">
+                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 border ${extColor}`}>{ext.slice(0,4)}</div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{file.name}</p>
+                                <p className="text-xs text-gray-400">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                              </div>
+                              <button onClick={() => { setReplyFiles(prev => prev.filter((_, i) => i !== idx)); setReplyFileValidationError(null); }} className="text-gray-300 hover:text-red-400 transition-colors shrink-0 p-1"><X className="h-4 w-4" /></button>
+                            </div>
+                          );
+                        })}
+                        {replyFiles.length > 1 && <p className="text-xs text-teal-600 dark:text-teal-400 flex items-center gap-1.5"><Archive className="h-3.5 w-3.5 shrink-0" />{replyFiles.length} files — will be bundled into attachments.zip</p>}
+                        <label htmlFor="reply-attachment" className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-teal-600 cursor-pointer transition-colors"><Paperclip className="h-3.5 w-3.5" />Add more files</label>
                       </div>
                     )}
                     {replyFileValidationError && (

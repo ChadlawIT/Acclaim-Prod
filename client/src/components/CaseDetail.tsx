@@ -26,7 +26,8 @@ import {
   Bell,
   Building2,
   X,
-  Paperclip
+  Paperclip,
+  Archive
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -37,7 +38,7 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import { formatDate } from "@/lib/utils";
-import { validateFile, ACCEPTED_FILE_TYPES_STRING, MAX_FILE_SIZE_MB, ACCEPTED_FILE_TYPES_DISPLAY } from "@/lib/fileValidation";
+import { validateFile, zipFilesForAttachment, ACCEPTED_FILE_TYPES_STRING, MAX_FILE_SIZE_MB, ACCEPTED_FILE_TYPES_DISPLAY } from "@/lib/fileValidation";
 
 interface CaseDetailProps {
   case: any;
@@ -52,7 +53,7 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [fileQueueErrors, setFileQueueErrors] = useState<Record<string, string>>({});
   const [isDragOver, setIsDragOver] = useState(false);
-  const [messageAttachment, setMessageAttachment] = useState<File | null>(null);
+  const [messageAttachments, setMessageAttachments] = useState<File[]>([]);
   const [messageAttachmentError, setMessageAttachmentError] = useState<string | null>(null);
   const [isDragOverAttachment, setIsDragOverAttachment] = useState(false);
   const [activeTab, setActiveTab] = useState("timeline");
@@ -62,7 +63,7 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
   const [selectedMessageForView, setSelectedMessageForView] = useState<any | null>(null);
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
   const [dialogReplyMessage, setDialogReplyMessage] = useState("");
-  const [dialogReplyFile, setDialogReplyFile] = useState<File | null>(null);
+  const [dialogReplyFiles, setDialogReplyFiles] = useState<File[]>([]);
   const [dialogReplyFileError, setDialogReplyFileError] = useState<string | null>(null);
   const [dialogReplyIsDragOver, setDialogReplyIsDragOver] = useState(false);
   const [orgDialogOpen, setOrgDialogOpen] = useState(false);
@@ -340,7 +341,8 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
 
   const sendMessageMutation = useMutation({
     mutationFn: async (messageData: any) => {
-      const attachFile = messageData.attachmentFile || messageAttachment;
+      const attachFilesArr: File[] = messageData.attachmentFiles ?? messageAttachments;
+      const attachFile = await zipFilesForAttachment(attachFilesArr);
       if (attachFile) {
         const formData = new FormData();
         formData.append("caseId", messageData.caseId);
@@ -372,8 +374,7 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
       setNewMessage("");
       setMessageSubject("");
-      setMessageAttachment(null);
-      // Reset message attachment file input
+      setMessageAttachments([]);
       const messageFileInput = document.getElementById("message-attachment") as HTMLInputElement;
       if (messageFileInput) messageFileInput.value = "";
       toast({
@@ -561,11 +562,11 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
       recipientId: "support",
       subject: `Re: ${selectedMessageForView.subject || 'Message'}`,
       content: replyContent,
-      attachmentFile: dialogReplyFile,
+      attachmentFiles: dialogReplyFiles,
     }, {
       onSuccess: () => {
         setDialogReplyMessage("");
-        setDialogReplyFile(null);
+        setDialogReplyFiles([]);
         setDialogReplyFileError(null);
         setMessageDialogOpen(false);
       }
@@ -1929,30 +1930,40 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
                   <input
                     id="message-attachment"
                     type="file"
+                    multiple
                     accept={ACCEPTED_FILE_TYPES_STRING}
                     className="sr-only"
                     onChange={(e) => {
-                      const file = e.target.files?.[0] || null;
-                      if (file) {
-                        const validation = validateFile(file);
-                        if (!validation.isValid) { setMessageAttachmentError(validation.error); setMessageAttachment(null); e.target.value = ''; return; }
+                      const incoming = e.target.files;
+                      if (!incoming || incoming.length === 0) return;
+                      const valid: File[] = [];
+                      for (let i = 0; i < incoming.length; i++) {
+                        const v = validateFile(incoming[i]);
+                        if (!v.isValid) { setMessageAttachmentError(v.error); return; }
+                        valid.push(incoming[i]);
                       }
                       setMessageAttachmentError(null);
-                      setMessageAttachment(file);
+                      setMessageAttachments(prev => { const names = new Set(prev.map(f => f.name)); return [...prev, ...valid.filter(f => !names.has(f.name))]; });
                       e.target.value = '';
                     }}
                   />
-                  {!messageAttachment ? (
+                  {messageAttachments.length === 0 ? (
                     <label
                       htmlFor="message-attachment"
                       onDragOver={(e) => { e.preventDefault(); setIsDragOverAttachment(true); }}
                       onDragLeave={() => setIsDragOverAttachment(false)}
                       onDrop={(e) => {
                         e.preventDefault(); setIsDragOverAttachment(false);
-                        const files = e.dataTransfer.files;
-                        if (files && files.length > 1) toast({ title: "One attachment per message", description: "Only one file can be attached to a message. The first file has been selected.", variant: "default" });
-                        const file = files?.[0];
-                        if (file) { const v = validateFile(file); if (!v.isValid) { setMessageAttachmentError(v.error); } else { setMessageAttachmentError(null); setMessageAttachment(file); } }
+                        const incoming = e.dataTransfer.files;
+                        if (!incoming || incoming.length === 0) return;
+                        const valid: File[] = [];
+                        for (let i = 0; i < incoming.length; i++) {
+                          const v = validateFile(incoming[i]);
+                          if (!v.isValid) { setMessageAttachmentError(v.error); return; }
+                          valid.push(incoming[i]);
+                        }
+                        setMessageAttachmentError(null);
+                        setMessageAttachments(prev => { const names = new Set(prev.map(f => f.name)); return [...prev, ...valid.filter(f => !names.has(f.name))]; });
                       }}
                       className={`flex flex-col items-center justify-center gap-1.5 px-4 py-5 border-2 border-dashed rounded-xl cursor-pointer transition-all text-center ${
                         isDragOverAttachment ? "border-teal-400 bg-teal-50 dark:bg-teal-900/20" : "border-gray-200 bg-gray-50 dark:bg-gray-800/50 hover:border-teal-300 hover:bg-teal-50/50"
@@ -1960,24 +1971,28 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
                     >
                       <Paperclip className={`h-5 w-5 transition-colors ${isDragOverAttachment ? "text-teal-600" : "text-gray-400"}`} />
                       <span className={`text-sm transition-colors ${isDragOverAttachment ? "text-teal-700 dark:text-teal-300" : "text-gray-500"}`}>
-                        {isDragOverAttachment ? "Drop file here" : "Click to browse or drag a file here"}
+                        {isDragOverAttachment ? "Drop files here" : "Click to browse or drag files here"}
                       </span>
-                      <span className="text-xs text-gray-400">{ACCEPTED_FILE_TYPES_DISPLAY} · {MAX_FILE_SIZE_MB}MB</span>
+                      <span className="text-xs text-gray-400">{ACCEPTED_FILE_TYPES_DISPLAY} · {MAX_FILE_SIZE_MB}MB each</span>
                     </label>
                   ) : (
-                    <div className="flex items-center gap-3 px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl">
-                      {(() => {
-                        const ext = messageAttachment.name.split('.').pop()?.toUpperCase() || '?';
+                    <div className="space-y-1.5">
+                      {messageAttachments.map((file, idx) => {
+                        const ext = file.name.split('.').pop()?.toUpperCase() || '?';
                         const extColor = ext === 'PDF' ? 'bg-red-50 text-red-500 border-red-100' : ['DOC','DOCX'].includes(ext) ? 'bg-blue-50 text-blue-500 border-blue-100' : ['XLS','XLSX'].includes(ext) ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : ['PNG','JPG','JPEG','GIF','WEBP'].includes(ext) ? 'bg-green-50 text-green-600 border-green-100' : 'bg-gray-50 text-gray-500 border-gray-100';
-                        return <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 border ${extColor}`}>{ext.slice(0,4)}</div>;
-                      })()}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{messageAttachment.name}</p>
-                        <p className="text-xs text-gray-400">{(messageAttachment.size / 1024 / 1024).toFixed(2)} MB</p>
-                      </div>
-                      <button onClick={() => setMessageAttachment(null)} className="text-gray-300 hover:text-red-400 transition-colors shrink-0 p-1">
-                        <X className="h-4 w-4" />
-                      </button>
+                        return (
+                          <div key={idx} className="flex items-center gap-3 px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 border ${extColor}`}>{ext.slice(0,4)}</div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{file.name}</p>
+                              <p className="text-xs text-gray-400">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                            </div>
+                            <button onClick={() => { setMessageAttachments(prev => prev.filter((_, i) => i !== idx)); setMessageAttachmentError(null); }} className="text-gray-300 hover:text-red-400 transition-colors shrink-0 p-1"><X className="h-4 w-4" /></button>
+                          </div>
+                        );
+                      })}
+                      {messageAttachments.length > 1 && <p className="text-xs text-teal-600 dark:text-teal-400 flex items-center gap-1.5"><Archive className="h-3.5 w-3.5 shrink-0" />{messageAttachments.length} files — will be bundled into attachments.zip</p>}
+                      <label htmlFor="message-attachment" className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-teal-600 cursor-pointer transition-colors"><Paperclip className="h-3.5 w-3.5" />Add more files</label>
                     </div>
                   )}
                   {messageAttachmentError && (
@@ -2090,7 +2105,7 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
         setMessageDialogOpen(open);
         if (!open) {
           setDialogReplyMessage("");
-          setDialogReplyFile(null);
+          setDialogReplyFiles([]);
           setDialogReplyFileError(null);
         }
       }}>
@@ -2156,29 +2171,39 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
                 <input
                   id="dialog-reply-attachment"
                   type="file"
+                  multiple
                   className="sr-only"
                   onChange={(e) => {
-                    const file = e.target.files?.[0] || null;
-                    if (file) {
-                      const v = validateFile(file);
+                    const incoming = e.target.files;
+                    if (!incoming || incoming.length === 0) return;
+                    const valid: File[] = [];
+                    for (let i = 0; i < incoming.length; i++) {
+                      const v = validateFile(incoming[i]);
                       if (!v.isValid) { setDialogReplyFileError(v.error!); return; }
+                      valid.push(incoming[i]);
                     }
                     setDialogReplyFileError(null);
-                    setDialogReplyFile(file);
+                    setDialogReplyFiles(prev => { const names = new Set(prev.map(f => f.name)); return [...prev, ...valid.filter(f => !names.has(f.name))]; });
                     e.target.value = '';
                   }}
                 />
-                {!dialogReplyFile ? (
+                {dialogReplyFiles.length === 0 ? (
                   <label
                     htmlFor="dialog-reply-attachment"
                     onDragOver={(e) => { e.preventDefault(); setDialogReplyIsDragOver(true); }}
                     onDragLeave={() => setDialogReplyIsDragOver(false)}
                     onDrop={(e) => {
                       e.preventDefault(); setDialogReplyIsDragOver(false);
-                      const files = e.dataTransfer.files;
-                      if (files && files.length > 1) toast({ title: "One attachment per message", description: "Only one file can be attached to a message. The first file has been selected.", variant: "default" });
-                      const file = files?.[0];
-                      if (file) { const v = validateFile(file); if (!v.isValid) { setDialogReplyFileError(v.error!); } else { setDialogReplyFileError(null); setDialogReplyFile(file); } }
+                      const incoming = e.dataTransfer.files;
+                      if (!incoming || incoming.length === 0) return;
+                      const valid: File[] = [];
+                      for (let i = 0; i < incoming.length; i++) {
+                        const v = validateFile(incoming[i]);
+                        if (!v.isValid) { setDialogReplyFileError(v.error!); return; }
+                        valid.push(incoming[i]);
+                      }
+                      setDialogReplyFileError(null);
+                      setDialogReplyFiles(prev => { const names = new Set(prev.map(f => f.name)); return [...prev, ...valid.filter(f => !names.has(f.name))]; });
                     }}
                     className={`flex flex-col items-center justify-center gap-1.5 px-4 py-5 border-2 border-dashed rounded-xl cursor-pointer transition-all text-center ${
                       dialogReplyIsDragOver ? "border-teal-400 bg-teal-50 dark:bg-teal-900/20" : "border-gray-200 bg-gray-50 dark:bg-gray-800/50 hover:border-teal-300 hover:bg-teal-50/50"
@@ -2186,24 +2211,28 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
                   >
                     <Paperclip className={`h-5 w-5 ${dialogReplyIsDragOver ? "text-teal-600" : "text-gray-400"}`} />
                     <span className={`text-sm ${dialogReplyIsDragOver ? "text-teal-700 dark:text-teal-300" : "text-gray-500"}`}>
-                      {dialogReplyIsDragOver ? "Drop file here" : "Click to browse or drag a file here"}
+                      {dialogReplyIsDragOver ? "Drop files here" : "Click to browse or drag files here"}
                     </span>
-                    <span className="text-xs text-gray-400">{ACCEPTED_FILE_TYPES_DISPLAY} · {MAX_FILE_SIZE_MB}MB</span>
+                    <span className="text-xs text-gray-400">{ACCEPTED_FILE_TYPES_DISPLAY} · {MAX_FILE_SIZE_MB}MB each</span>
                   </label>
                 ) : (
-                  <div className="flex items-center gap-3 px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl">
-                    {(() => {
-                      const ext = (dialogReplyFile.name.split('.').pop() || '').toUpperCase();
+                  <div className="space-y-1.5">
+                    {dialogReplyFiles.map((file, idx) => {
+                      const ext = (file.name.split('.').pop() || '').toUpperCase();
                       const extColor = ext === 'PDF' ? 'bg-red-50 text-red-500 border-red-100' : ['DOC','DOCX'].includes(ext) ? 'bg-blue-50 text-blue-500 border-blue-100' : ['XLS','XLSX'].includes(ext) ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : ['PNG','JPG','JPEG','GIF','WEBP'].includes(ext) ? 'bg-green-50 text-green-600 border-green-100' : 'bg-gray-50 text-gray-500 border-gray-100';
-                      return <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 border ${extColor}`}>{ext.slice(0,4)}</div>;
-                    })()}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{dialogReplyFile.name}</p>
-                      <p className="text-xs text-gray-400">{(dialogReplyFile.size / 1024 / 1024).toFixed(2)} MB</p>
-                    </div>
-                    <button onClick={() => { setDialogReplyFile(null); setDialogReplyFileError(null); }} className="text-gray-300 hover:text-red-400 transition-colors shrink-0 p-1">
-                      <X className="h-4 w-4" />
-                    </button>
+                      return (
+                        <div key={idx} className="flex items-center gap-3 px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 border ${extColor}`}>{ext.slice(0,4)}</div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{file.name}</p>
+                            <p className="text-xs text-gray-400">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                          </div>
+                          <button onClick={() => { setDialogReplyFiles(prev => prev.filter((_, i) => i !== idx)); setDialogReplyFileError(null); }} className="text-gray-300 hover:text-red-400 transition-colors shrink-0 p-1"><X className="h-4 w-4" /></button>
+                        </div>
+                      );
+                    })}
+                    {dialogReplyFiles.length > 1 && <p className="text-xs text-teal-600 dark:text-teal-400 flex items-center gap-1.5"><Archive className="h-3.5 w-3.5 shrink-0" />{dialogReplyFiles.length} files — will be bundled into attachments.zip</p>}
+                    <label htmlFor="dialog-reply-attachment" className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-teal-600 cursor-pointer transition-colors"><Paperclip className="h-3.5 w-3.5" />Add more files</label>
                   </div>
                 )}
                 {dialogReplyFileError && <p className="text-xs text-red-600">{dialogReplyFileError}</p>}

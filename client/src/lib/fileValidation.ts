@@ -52,3 +52,35 @@ export function validateFiles(files: File[]): FileValidationResult {
   }
   return { isValid: true, error: null };
 }
+
+/**
+ * If only one file is provided, returns it as-is.
+ * If multiple files are provided, zips them into a single "attachments.zip" File.
+ * Returns null if the array is empty.
+ */
+export async function zipFilesForAttachment(files: File[]): Promise<File | null> {
+  if (files.length === 0) return null;
+  if (files.length === 1) return files[0];
+
+  const fflateMod = await import('fflate');
+  const fflate = (fflateMod as any).default ?? fflateMod;
+
+  const entries: Record<string, Uint8Array> = {};
+  for (const file of files) {
+    const buf = await file.arrayBuffer();
+    // De-duplicate names
+    let name = file.name;
+    let n = 1;
+    while (name in entries) {
+      const parts = file.name.split('.');
+      const ext = parts.pop();
+      name = `${parts.join('.')} (${n}).${ext}`;
+      n++;
+    }
+    entries[name] = new Uint8Array(buf);
+  }
+
+  const zipped = fflate.zipSync(entries);
+  const blob = new Blob([zipped], { type: 'application/zip' });
+  return new File([blob], 'attachments.zip', { type: 'application/zip' });
+}

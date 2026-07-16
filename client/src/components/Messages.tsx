@@ -10,13 +10,13 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-import { Send, MessageSquare, Plus, User, Paperclip, Download, Trash2, Search, Filter, Calendar, X, FileSpreadsheet, History, Eye } from "lucide-react";
+import { Send, MessageSquare, Plus, User, Paperclip, Download, Trash2, Search, Filter, Calendar, X, FileSpreadsheet, History, Eye, Archive } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
-import { validateFile, ACCEPTED_FILE_TYPES_STRING, MAX_FILE_SIZE_MB, ACCEPTED_FILE_TYPES_DISPLAY } from "@/lib/fileValidation";
+import { validateFile, zipFilesForAttachment, ACCEPTED_FILE_TYPES_STRING, MAX_FILE_SIZE_MB, ACCEPTED_FILE_TYPES_DISPLAY } from "@/lib/fileValidation";
 import CaseDetail from "./CaseDetail";
 import acclaimRoseLogo from "@assets/acclaim_rose_transparent_1768474381340.png";
 
@@ -27,7 +27,7 @@ export default function Messages() {
   const [replyingTo, setReplyingTo] = useState<any>(null);
   const [viewingMessage, setViewingMessage] = useState<any>(null);
   const [messageViewOpen, setMessageViewOpen] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [fileValidationError, setFileValidationError] = useState<string | null>(null);
   const [customFileName, setCustomFileName] = useState<string>("");
   const [isDragOverAttachment, setIsDragOverAttachment] = useState(false);
@@ -40,7 +40,7 @@ export default function Messages() {
   const viewReplyRef = useRef<HTMLDivElement>(null);
   const viewDialogScrollRef = useRef<HTMLDivElement>(null);
   const [viewReplyText, setViewReplyText] = useState("");
-  const [viewReplyFile, setViewReplyFile] = useState<File | null>(null);
+  const [viewReplyFiles, setViewReplyFiles] = useState<File[]>([]);
   const [viewReplyFileError, setViewReplyFileError] = useState<string | null>(null);
   const [viewReplyIsDragOver, setViewReplyIsDragOver] = useState(false);
 
@@ -117,10 +117,11 @@ export default function Messages() {
         formData.append("caseId", messageData.caseId);
       }
 
-      const attachFile = messageData.attachmentFile || selectedFile;
+      const attachFilesArr: File[] = messageData.attachmentFiles ?? selectedFiles;
+      const attachFile = await zipFilesForAttachment(attachFilesArr);
       if (attachFile) {
         formData.append("attachment", attachFile);
-        if (customFileName.trim()) {
+        if (customFileName.trim() && attachFilesArr.length === 1) {
           formData.append("customFileName", customFileName.trim());
         }
       }
@@ -143,7 +144,7 @@ export default function Messages() {
       queryClient.invalidateQueries({ queryKey: ["/api/cases"] });
       setNewMessage("");
       setNewSubject("");
-      setSelectedFile(null);
+      setSelectedFiles([]);
       setLinkedCaseId("");
       setDialogOpen(false);
       toast({
@@ -281,7 +282,7 @@ const handleReply = (message: any) => {
     setReplyingTo(null);
     setNewMessage("");
     setNewSubject("");
-    setSelectedFile(null);
+    setSelectedFiles([]);
     setCustomFileName("");
     setLinkedCaseId("");
   };
@@ -310,7 +311,7 @@ const handleReply = (message: any) => {
     setViewingMessage(null);
     setShowViewReply(false);
     setViewReplyText("");
-    setViewReplyFile(null);
+    setViewReplyFiles([]);
     setViewReplyFileError(null);
   };
 
@@ -324,12 +325,12 @@ const handleReply = (message: any) => {
       subject: `Re: ${viewingMessage.subject}`,
       content,
       caseId: viewingMessage.caseId ? viewingMessage.caseId.toString() : undefined,
-      attachmentFile: viewReplyFile,
+      attachmentFiles: viewReplyFiles,
     }, {
       onSuccess: () => {
         setShowViewReply(false);
         setViewReplyText("");
-        setViewReplyFile(null);
+        setViewReplyFiles([]);
         setViewReplyFileError(null);
       }
     });
@@ -627,31 +628,41 @@ const handleReply = (message: any) => {
                         <input
                           id="attachment"
                           type="file"
+                          multiple
                           accept={ACCEPTED_FILE_TYPES_STRING}
                           className="sr-only"
                           onChange={(e) => {
-                            const file = e.target.files?.[0] || null;
-                            setCustomFileName("");
-                            if (file) {
-                              const validation = validateFile(file);
-                              if (!validation.isValid) { setFileValidationError(validation.error); setSelectedFile(null); e.target.value = ''; return; }
+                            const incoming = e.target.files;
+                            if (!incoming || incoming.length === 0) return;
+                            const valid: File[] = [];
+                            for (let i = 0; i < incoming.length; i++) {
+                              const v = validateFile(incoming[i]);
+                              if (!v.isValid) { setFileValidationError(v.error); return; }
+                              valid.push(incoming[i]);
                             }
                             setFileValidationError(null);
-                            setSelectedFile(file);
+                            setCustomFileName("");
+                            setSelectedFiles(prev => { const names = new Set(prev.map(f => f.name)); return [...prev, ...valid.filter(f => !names.has(f.name))]; });
                             e.target.value = '';
                           }}
                         />
-                        {!selectedFile ? (
+                        {selectedFiles.length === 0 ? (
                           <label
                             htmlFor="attachment"
                             onDragOver={(e) => { e.preventDefault(); setIsDragOverAttachment(true); }}
                             onDragLeave={() => setIsDragOverAttachment(false)}
                             onDrop={(e) => {
                               e.preventDefault(); setIsDragOverAttachment(false);
-                              const files = e.dataTransfer.files;
-                              if (files && files.length > 1) toast({ title: "One attachment per message", description: "Only one file can be attached to a message. The first file has been selected.", variant: "default" });
-                              const file = files?.[0];
-                              if (file) { const v = validateFile(file); if (!v.isValid) { setFileValidationError(v.error); } else { setFileValidationError(null); setSelectedFile(file); } }
+                              const incoming = e.dataTransfer.files;
+                              if (!incoming || incoming.length === 0) return;
+                              const valid: File[] = [];
+                              for (let i = 0; i < incoming.length; i++) {
+                                const v = validateFile(incoming[i]);
+                                if (!v.isValid) { setFileValidationError(v.error); return; }
+                                valid.push(incoming[i]);
+                              }
+                              setFileValidationError(null);
+                              setSelectedFiles(prev => { const names = new Set(prev.map(f => f.name)); return [...prev, ...valid.filter(f => !names.has(f.name))]; });
                             }}
                             className={`flex flex-col items-center justify-center gap-1.5 px-4 py-5 border-2 border-dashed rounded-xl cursor-pointer transition-all text-center ${
                               isDragOverAttachment ? "border-teal-400 bg-teal-50 dark:bg-teal-900/20" : "border-gray-200 bg-gray-50 dark:bg-gray-800/50 hover:border-teal-300 hover:bg-teal-50/50"
@@ -659,24 +670,28 @@ const handleReply = (message: any) => {
                           >
                             <Paperclip className={`h-5 w-5 transition-colors ${isDragOverAttachment ? "text-teal-600" : "text-gray-400"}`} />
                             <span className={`text-sm transition-colors ${isDragOverAttachment ? "text-teal-700 dark:text-teal-300" : "text-gray-500"}`}>
-                              {isDragOverAttachment ? "Drop file here" : "Click to browse or drag a file here"}
+                              {isDragOverAttachment ? "Drop files here" : "Click to browse or drag files here"}
                             </span>
-                            <span className="text-xs text-gray-400">{ACCEPTED_FILE_TYPES_DISPLAY} · {MAX_FILE_SIZE_MB}MB</span>
+                            <span className="text-xs text-gray-400">{ACCEPTED_FILE_TYPES_DISPLAY} · {MAX_FILE_SIZE_MB}MB each</span>
                           </label>
                         ) : (
-                          <div className="flex items-center gap-3 px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl">
-                            {(() => {
-                              const ext = selectedFile.name.split('.').pop()?.toUpperCase() || '?';
+                          <div className="space-y-1.5">
+                            {selectedFiles.map((file, idx) => {
+                              const ext = file.name.split('.').pop()?.toUpperCase() || '?';
                               const extColor = ext === 'PDF' ? 'bg-red-50 text-red-500 border-red-100' : ['DOC','DOCX'].includes(ext) ? 'bg-blue-50 text-blue-500 border-blue-100' : ['XLS','XLSX'].includes(ext) ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : ['PNG','JPG','JPEG','GIF','WEBP'].includes(ext) ? 'bg-green-50 text-green-600 border-green-100' : 'bg-gray-50 text-gray-500 border-gray-100';
-                              return <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 border ${extColor}`}>{ext.slice(0,4)}</div>;
-                            })()}
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{selectedFile.name}</p>
-                              <p className="text-xs text-gray-400">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
-                            </div>
-                            <button onClick={() => { setSelectedFile(null); setFileValidationError(null); }} className="text-gray-300 hover:text-red-400 transition-colors shrink-0 p-1">
-                              <X className="h-4 w-4" />
-                            </button>
+                              return (
+                                <div key={idx} className="flex items-center gap-3 px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl">
+                                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 border ${extColor}`}>{ext.slice(0,4)}</div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{file.name}</p>
+                                    <p className="text-xs text-gray-400">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                                  </div>
+                                  <button onClick={() => { setSelectedFiles(prev => prev.filter((_, i) => i !== idx)); setFileValidationError(null); }} className="text-gray-300 hover:text-red-400 transition-colors shrink-0 p-1"><X className="h-4 w-4" /></button>
+                                </div>
+                              );
+                            })}
+                            {selectedFiles.length > 1 && <p className="text-xs text-teal-600 dark:text-teal-400 flex items-center gap-1.5"><Archive className="h-3.5 w-3.5 shrink-0" />{selectedFiles.length} files — will be bundled into attachments.zip</p>}
+                            <label htmlFor="attachment" className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-teal-600 cursor-pointer transition-colors"><Paperclip className="h-3.5 w-3.5" />Add more files</label>
                           </div>
                         )}
                       </>
@@ -990,29 +1005,39 @@ const handleReply = (message: any) => {
                     <input
                       id="view-reply-attachment"
                       type="file"
+                      multiple
                       className="sr-only"
                       onChange={(e) => {
-                        const file = e.target.files?.[0] || null;
-                        if (file) {
-                          const v = validateFile(file);
+                        const incoming = e.target.files;
+                        if (!incoming || incoming.length === 0) return;
+                        const valid: File[] = [];
+                        for (let i = 0; i < incoming.length; i++) {
+                          const v = validateFile(incoming[i]);
                           if (!v.isValid) { setViewReplyFileError(v.error!); return; }
+                          valid.push(incoming[i]);
                         }
                         setViewReplyFileError(null);
-                        setViewReplyFile(file);
+                        setViewReplyFiles(prev => { const names = new Set(prev.map(f => f.name)); return [...prev, ...valid.filter(f => !names.has(f.name))]; });
                         e.target.value = '';
                       }}
                     />
-                    {!viewReplyFile ? (
+                    {viewReplyFiles.length === 0 ? (
                       <label
                         htmlFor="view-reply-attachment"
                         onDragOver={(e) => { e.preventDefault(); setViewReplyIsDragOver(true); }}
                         onDragLeave={() => setViewReplyIsDragOver(false)}
                         onDrop={(e) => {
                           e.preventDefault(); setViewReplyIsDragOver(false);
-                          const files = e.dataTransfer.files;
-                          if (files && files.length > 1) toast({ title: "One attachment per message", description: "Only one file can be attached to a message. The first file has been selected.", variant: "default" });
-                          const file = files?.[0];
-                          if (file) { const v = validateFile(file); if (!v.isValid) { setViewReplyFileError(v.error!); } else { setViewReplyFileError(null); setViewReplyFile(file); } }
+                          const incoming = e.dataTransfer.files;
+                          if (!incoming || incoming.length === 0) return;
+                          const valid: File[] = [];
+                          for (let i = 0; i < incoming.length; i++) {
+                            const v = validateFile(incoming[i]);
+                            if (!v.isValid) { setViewReplyFileError(v.error!); return; }
+                            valid.push(incoming[i]);
+                          }
+                          setViewReplyFileError(null);
+                          setViewReplyFiles(prev => { const names = new Set(prev.map(f => f.name)); return [...prev, ...valid.filter(f => !names.has(f.name))]; });
                         }}
                         className={`flex flex-col items-center justify-center gap-1.5 px-4 py-5 border-2 border-dashed rounded-xl cursor-pointer transition-all text-center ${
                           viewReplyIsDragOver ? "border-teal-400 bg-teal-50 dark:bg-teal-900/20" : "border-gray-200 bg-gray-50 dark:bg-gray-800/50 hover:border-teal-300 hover:bg-teal-50/50"
@@ -1020,24 +1045,28 @@ const handleReply = (message: any) => {
                       >
                         <Paperclip className={`h-5 w-5 ${viewReplyIsDragOver ? "text-teal-600" : "text-gray-400"}`} />
                         <span className={`text-sm ${viewReplyIsDragOver ? "text-teal-700 dark:text-teal-300" : "text-gray-500"}`}>
-                          {viewReplyIsDragOver ? "Drop file here" : "Click to browse or drag a file here"}
+                          {viewReplyIsDragOver ? "Drop files here" : "Click to browse or drag files here"}
                         </span>
-                        <span className="text-xs text-gray-400">{ACCEPTED_FILE_TYPES_DISPLAY} · {MAX_FILE_SIZE_MB}MB</span>
+                        <span className="text-xs text-gray-400">{ACCEPTED_FILE_TYPES_DISPLAY} · {MAX_FILE_SIZE_MB}MB each</span>
                       </label>
                     ) : (
-                      <div className="flex items-center gap-3 px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl">
-                        {(() => {
-                          const ext = (viewReplyFile.name.split('.').pop() || '').toUpperCase();
+                      <div className="space-y-1.5">
+                        {viewReplyFiles.map((file, idx) => {
+                          const ext = (file.name.split('.').pop() || '').toUpperCase();
                           const extColor = ext === 'PDF' ? 'bg-red-50 text-red-500 border-red-100' : ['DOC','DOCX'].includes(ext) ? 'bg-blue-50 text-blue-500 border-blue-100' : ['XLS','XLSX'].includes(ext) ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : ['PNG','JPG','JPEG','GIF','WEBP'].includes(ext) ? 'bg-green-50 text-green-600 border-green-100' : 'bg-gray-50 text-gray-500 border-gray-100';
-                          return <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 border ${extColor}`}>{ext.slice(0,4)}</div>;
-                        })()}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{viewReplyFile.name}</p>
-                          <p className="text-xs text-gray-400">{(viewReplyFile.size / 1024 / 1024).toFixed(2)} MB</p>
-                        </div>
-                        <button onClick={() => { setViewReplyFile(null); setViewReplyFileError(null); }} className="text-gray-300 hover:text-red-400 transition-colors shrink-0 p-1">
-                          <X className="h-4 w-4" />
-                        </button>
+                          return (
+                            <div key={idx} className="flex items-center gap-3 px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl">
+                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 border ${extColor}`}>{ext.slice(0,4)}</div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{file.name}</p>
+                                <p className="text-xs text-gray-400">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                              </div>
+                              <button onClick={() => { setViewReplyFiles(prev => prev.filter((_, i) => i !== idx)); setViewReplyFileError(null); }} className="text-gray-300 hover:text-red-400 transition-colors shrink-0 p-1"><X className="h-4 w-4" /></button>
+                            </div>
+                          );
+                        })}
+                        {viewReplyFiles.length > 1 && <p className="text-xs text-teal-600 dark:text-teal-400 flex items-center gap-1.5"><Archive className="h-3.5 w-3.5 shrink-0" />{viewReplyFiles.length} files — will be bundled into attachments.zip</p>}
+                        <label htmlFor="view-reply-attachment" className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-teal-600 cursor-pointer transition-colors"><Paperclip className="h-3.5 w-3.5" />Add more files</label>
                       </div>
                     )}
                     {viewReplyFileError && <p className="text-xs text-red-600">{viewReplyFileError}</p>}
