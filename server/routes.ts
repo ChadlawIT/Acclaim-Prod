@@ -1612,7 +1612,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/messages', isAuthenticated, upload.array('attachments', 20), async (req: any, res) => {
+  app.post('/api/messages', isAuthenticated, upload.any(), async (req: any, res) => {
     try {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
@@ -1703,12 +1703,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Support both single-field legacy ("attachment") and multi-field ("attachments[]")
-      const uploadedFiles: Express.Multer.File[] = Array.isArray(req.files)
-        ? (req.files as Express.Multer.File[])
-        : req.file
-          ? [req.file]
-          : [];
+      // Accept both "attachments" (new multi-file) and "attachment" (legacy single-file)
+      const allFiles: Express.Multer.File[] = Array.isArray(req.files) ? (req.files as Express.Multer.File[]) : [];
+      const uploadedFiles: Express.Multer.File[] = allFiles.filter(
+        f => f.fieldname === 'attachments' || f.fieldname === 'attachment'
+      );
       const primaryFile = uploadedFiles[0];
 
       // Handle custom filename — only meaningful when a single file is attached
