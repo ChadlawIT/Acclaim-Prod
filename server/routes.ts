@@ -1612,7 +1612,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/messages', isAuthenticated, upload.single('attachment'), async (req: any, res) => {
+  app.post('/api/messages', isAuthenticated, upload.array('attachments', 20), async (req: any, res) => {
     try {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
@@ -1703,10 +1703,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Handle custom filename for attachment
-      let attachmentFinalFileName = req.file?.originalname;
-      if (req.file && req.body.customFileName) {
-        const originalExtension = req.file.originalname.split('.').pop();
+      // Support both single-field legacy ("attachment") and multi-field ("attachments[]")
+      const uploadedFiles: Express.Multer.File[] = Array.isArray(req.files)
+        ? (req.files as Express.Multer.File[])
+        : req.file
+          ? [req.file]
+          : [];
+      const primaryFile = uploadedFiles[0];
+
+      // Handle custom filename — only meaningful when a single file is attached
+      let attachmentFinalFileName = primaryFile?.originalname;
+      if (primaryFile && uploadedFiles.length === 1 && req.body.customFileName) {
+        const originalExtension = primaryFile.originalname.split('.').pop();
         attachmentFinalFileName = `${req.body.customFileName}.${originalExtension}`;
       }
 
@@ -1717,33 +1725,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         recipientType,
         recipientId,
         attachmentFileName: attachmentFinalFileName,
-        attachmentFilePath: req.file?.path,
-        attachmentFileSize: req.file?.size,
-        attachmentFileType: req.file?.mimetype,
+        attachmentFilePath: primaryFile?.path,
+        attachmentFileSize: primaryFile?.size,
+        attachmentFileType: primaryFile?.mimetype,
       });
 
       const newMessage = await storage.createMessage(messageData);
       
-      // Save attachment as document if present
-      if (req.file) {
+      // Save each uploaded file as an individual Document
+      if (uploadedFiles.length > 0) {
         try {
-          // Determine the organisation ID for the document
+          // Determine the organisation ID for documents
           let documentOrgId: number | undefined;
           
           if (messageData.caseId) {
-            // Case-specific message - always use the case's organisation
             const messageCase = await storage.getCaseById(messageData.caseId);
             if (messageCase) {
               documentOrgId = messageCase.organisationId;
             }
           } else if (user.organisationId) {
-            // Regular user or admin with organisation - general message
             documentOrgId = user.organisationId;
           } else if (recipientType === 'organisation' && recipientId) {
-            // Admin sending to an organisation - use that organisation
             documentOrgId = parseInt(recipientId);
           } else if (recipientType === 'user' && recipientId) {
-            // Admin sending to a specific user - use the recipient's organisation
             const recipientUser = await storage.getUser(recipientId);
             if (recipientUser && recipientUser.organisationId) {
               documentOrgId = recipientUser.organisationId;
@@ -1751,20 +1755,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           if (documentOrgId) {
-            await storage.createDocument({
-              caseId: messageData.caseId || null,
-              fileName: attachmentFinalFileName || req.file.originalname,
-              fileSize: req.file.size,
-              fileType: req.file.mimetype,
-              filePath: req.file.path,
-              uploadedBy: userId,
-              organisationId: documentOrgId,
-            });
+            for (let fi = 0; fi < uploadedFiles.length; fi++) {
+              const f = uploadedFiles[fi];
+              // Apply customFileName only to the first (and only) file when a single file is uploaded
+              const docFileName = (fi === 0 && uploadedFiles.length === 1 && attachmentFinalFileName)
+                ? attachmentFinalFileName
+                : f.originalname;
+              await storage.createDocument({
+                caseId: messageData.caseId || null,
+                fileName: docFileName,
+                fileSize: f.size,
+                fileType: f.mimetype,
+                filePath: f.path,
+                uploadedBy: userId,
+                organisationId: documentOrgId,
+              });
+            }
           } else {
-            console.warn("Could not determine organisation for document, attachment not saved as document");
+            console.warn("Could not determine organisation for document, attachments not saved as documents");
           }
         } catch (docError) {
-          console.error("Failed to save message attachment as document:", docError);
+          console.error("Failed to save message attachments as documents:", docError);
           // Don't fail the message creation if document save fails
         }
       }

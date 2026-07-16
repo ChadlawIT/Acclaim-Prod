@@ -161,12 +161,11 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
       formData.append("subject", data.subject);
       formData.append("content", data.content);
       formData.append("caseId", String(data.caseId));
-      const attachFile = await zipFilesForAttachment(replyFiles);
-      if (attachFile) {
-        formData.append("attachment", attachFile);
-        if (replyCustomFileName.trim() && replyFiles.length === 1) {
-          formData.append("customFileName", replyCustomFileName.trim());
-        }
+      for (const f of replyFiles) {
+        formData.append("attachments", f);
+      }
+      if (replyFiles.length === 1 && replyCustomFileName.trim()) {
+        formData.append("customFileName", replyCustomFileName.trim());
       }
       const response = await fetch("/api/messages", {
         method: "POST",
@@ -873,7 +872,7 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
                             </div>
                           );
                         })}
-                        {replyFiles.length > 1 && <p className="text-xs text-teal-600 dark:text-teal-400 flex items-center gap-1.5"><Archive className="h-3.5 w-3.5 shrink-0" />{replyFiles.length} files — will be bundled into attachments.zip</p>}
+                        {replyFiles.length > 1 && <p className="text-xs text-teal-600 dark:text-teal-400 flex items-center gap-1.5"><Paperclip className="h-3.5 w-3.5 shrink-0" />{replyFiles.length} files — each will be saved as a separate attachment</p>}
                         <label htmlFor="reply-attachment" className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-teal-600 cursor-pointer transition-colors"><Paperclip className="h-3.5 w-3.5" />Add more files</label>
                       </div>
                     )}

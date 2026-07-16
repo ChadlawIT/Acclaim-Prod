@@ -118,12 +118,11 @@ export default function Messages() {
       }
 
       const attachFilesArr: File[] = messageData.attachmentFiles ?? selectedFiles;
-      const attachFile = await zipFilesForAttachment(attachFilesArr);
-      if (attachFile) {
-        formData.append("attachment", attachFile);
-        if (customFileName.trim() && attachFilesArr.length === 1) {
-          formData.append("customFileName", customFileName.trim());
-        }
+      for (const f of attachFilesArr) {
+        formData.append("attachments", f);
+      }
+      if (attachFilesArr.length === 1 && customFileName.trim()) {
+        formData.append("customFileName", customFileName.trim());
       }
 
       const response = await fetch("/api/messages", {
@@ -690,7 +689,7 @@ const handleReply = (message: any) => {
                                 </div>
                               );
                             })}
-                            {selectedFiles.length > 1 && <p className="text-xs text-teal-600 dark:text-teal-400 flex items-center gap-1.5"><Archive className="h-3.5 w-3.5 shrink-0" />{selectedFiles.length} files — will be bundled into attachments.zip</p>}
+                            {selectedFiles.length > 1 && <p className="text-xs text-teal-600 dark:text-teal-400 flex items-center gap-1.5"><Paperclip className="h-3.5 w-3.5 shrink-0" />{selectedFiles.length} files — each will be saved as a separate attachment</p>}
                             <label htmlFor="attachment" className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-teal-600 cursor-pointer transition-colors"><Paperclip className="h-3.5 w-3.5" />Add more files</label>
                           </div>
                         )}
@@ -1065,7 +1064,7 @@ const handleReply = (message: any) => {
                             </div>
                           );
                         })}
-                        {viewReplyFiles.length > 1 && <p className="text-xs text-teal-600 dark:text-teal-400 flex items-center gap-1.5"><Archive className="h-3.5 w-3.5 shrink-0" />{viewReplyFiles.length} files — will be bundled into attachments.zip</p>}
+                        {viewReplyFiles.length > 1 && <p className="text-xs text-teal-600 dark:text-teal-400 flex items-center gap-1.5"><Paperclip className="h-3.5 w-3.5 shrink-0" />{viewReplyFiles.length} files — each will be saved as a separate attachment</p>}
                         <label htmlFor="view-reply-attachment" className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-teal-600 cursor-pointer transition-colors"><Paperclip className="h-3.5 w-3.5" />Add more files</label>
                       </div>
                     )}

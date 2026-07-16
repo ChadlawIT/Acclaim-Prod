@@ -342,15 +342,16 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
   const sendMessageMutation = useMutation({
     mutationFn: async (messageData: any) => {
       const attachFilesArr: File[] = messageData.attachmentFiles ?? messageAttachments;
-      const attachFile = await zipFilesForAttachment(attachFilesArr);
-      if (attachFile) {
+      if (attachFilesArr.length > 0) {
         const formData = new FormData();
         formData.append("caseId", messageData.caseId);
         formData.append("recipientType", messageData.recipientType);
         formData.append("recipientId", messageData.recipientId);
         formData.append("subject", messageData.subject);
         formData.append("content", messageData.content);
-        formData.append("attachment", attachFile);
+        for (const f of attachFilesArr) {
+          formData.append("attachments", f);
+        }
         
         const response = await fetch("/api/messages", {
           method: "POST",
@@ -1991,7 +1992,7 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
                           </div>
                         );
                       })}
-                      {messageAttachments.length > 1 && <p className="text-xs text-teal-600 dark:text-teal-400 flex items-center gap-1.5"><Archive className="h-3.5 w-3.5 shrink-0" />{messageAttachments.length} files — will be bundled into attachments.zip</p>}
+                      {messageAttachments.length > 1 && <p className="text-xs text-teal-600 dark:text-teal-400 flex items-center gap-1.5"><Paperclip className="h-3.5 w-3.5 shrink-0" />{messageAttachments.length} files — each will be saved as a separate attachment</p>}
                       <label htmlFor="message-attachment" className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-teal-600 cursor-pointer transition-colors"><Paperclip className="h-3.5 w-3.5" />Add more files</label>
                     </div>
                   )}
@@ -2231,7 +2232,7 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
                         </div>
                       );
                     })}
-                    {dialogReplyFiles.length > 1 && <p className="text-xs text-teal-600 dark:text-teal-400 flex items-center gap-1.5"><Archive className="h-3.5 w-3.5 shrink-0" />{dialogReplyFiles.length} files — will be bundled into attachments.zip</p>}
+                    {dialogReplyFiles.length > 1 && <p className="text-xs text-teal-600 dark:text-teal-400 flex items-center gap-1.5"><Paperclip className="h-3.5 w-3.5 shrink-0" />{dialogReplyFiles.length} files — each will be saved as a separate attachment</p>}
                     <label htmlFor="dialog-reply-attachment" className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-teal-600 cursor-pointer transition-colors"><Paperclip className="h-3.5 w-3.5" />Add more files</label>
                   </div>
                 )}
