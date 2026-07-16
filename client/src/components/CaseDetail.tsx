@@ -1949,7 +1949,9 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
                       onDragLeave={() => setIsDragOverAttachment(false)}
                       onDrop={(e) => {
                         e.preventDefault(); setIsDragOverAttachment(false);
-                        const file = e.dataTransfer.files?.[0];
+                        const files = e.dataTransfer.files;
+                        if (files && files.length > 1) toast({ title: "One attachment per message", description: "Only one file can be attached to a message. The first file has been selected.", variant: "default" });
+                        const file = files?.[0];
                         if (file) { const v = validateFile(file); if (!v.isValid) { setMessageAttachmentError(v.error); } else { setMessageAttachmentError(null); setMessageAttachment(file); } }
                       }}
                       className={`flex flex-col items-center justify-center gap-1.5 px-4 py-5 border-2 border-dashed rounded-xl cursor-pointer transition-all text-center ${
@@ -2173,7 +2175,9 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
                     onDragLeave={() => setDialogReplyIsDragOver(false)}
                     onDrop={(e) => {
                       e.preventDefault(); setDialogReplyIsDragOver(false);
-                      const file = e.dataTransfer.files?.[0];
+                      const files = e.dataTransfer.files;
+                      if (files && files.length > 1) toast({ title: "One attachment per message", description: "Only one file can be attached to a message. The first file has been selected.", variant: "default" });
+                      const file = files?.[0];
                       if (file) { const v = validateFile(file); if (!v.isValid) { setDialogReplyFileError(v.error!); } else { setDialogReplyFileError(null); setDialogReplyFile(file); } }
                     }}
                     className={`flex flex-col items-center justify-center gap-1.5 px-4 py-5 border-2 border-dashed rounded-xl cursor-pointer transition-all text-center ${

@@ -831,7 +831,9 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
                         onDragLeave={() => setIsDragOverAttachment(false)}
                         onDrop={(e) => {
                           e.preventDefault(); setIsDragOverAttachment(false);
-                          const file = e.dataTransfer.files?.[0];
+                          const files = e.dataTransfer.files;
+                          if (files && files.length > 1) toast({ title: "One attachment per message", description: "Only one file can be attached to a message. The first file has been selected.", variant: "default" });
+                          const file = files?.[0];
                           if (file) { const v = validateFile(file); if (!v.isValid) { setReplyFileValidationError(v.error); } else { setReplyFileValidationError(null); setReplyFile(file); } }
                         }}
                         className={`flex flex-col items-center justify-center gap-1.5 px-4 py-5 border-2 border-dashed rounded-xl cursor-pointer transition-all text-center ${
