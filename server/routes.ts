@@ -1703,12 +1703,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Accept both "attachments" (new multi-file) and "attachment" (legacy single-file)
       const allFiles: Express.Multer.File[] = Array.isArray(req.files) ? (req.files as Express.Multer.File[]) : [];
-      const uploadedFiles: Express.Multer.File[] = allFiles.filter(
-        f => f.fieldname === 'attachments' || f.fieldname === 'attachment'
-      );
-      const primaryFile = uploadedFiles[0];
+      // "attachment" (singular) = the file to store on the message record (zip when multiple files)
+      // "attachments" (plural)  = individual originals to save as separate Documents
+      const primaryFile = allFiles.find(f => f.fieldname === 'attachment') || allFiles[0];
+      const individualFiles = allFiles.filter(f => f.fieldname === 'attachments');
+      // Files to save as Documents: individual originals if present, otherwise the primary file
+      const uploadedFiles: Express.Multer.File[] = individualFiles.length > 0 ? individualFiles : (primaryFile ? [primaryFile] : []);
 
       // Handle custom filename — only meaningful when a single file is attached
       let attachmentFinalFileName = primaryFile?.originalname;

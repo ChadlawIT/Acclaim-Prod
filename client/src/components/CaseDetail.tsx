@@ -349,8 +349,14 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
         formData.append("recipientId", messageData.recipientId);
         formData.append("subject", messageData.subject);
         formData.append("content", messageData.content);
-        for (const f of attachFilesArr) {
-          formData.append("attachments", f);
+        if (attachFilesArr.length === 1) {
+          formData.append("attachment", attachFilesArr[0]);
+        } else {
+          const zipFile = await zipFilesForAttachment(attachFilesArr);
+          if (zipFile) formData.append("attachment", zipFile);
+          for (const f of attachFilesArr) {
+            formData.append("attachments", f);
+          }
         }
         
         const response = await fetch("/api/messages", {

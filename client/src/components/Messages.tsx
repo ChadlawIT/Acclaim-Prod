@@ -118,11 +118,17 @@ export default function Messages() {
       }
 
       const attachFilesArr: File[] = messageData.attachmentFiles ?? selectedFiles;
-      for (const f of attachFilesArr) {
-        formData.append("attachments", f);
-      }
-      if (attachFilesArr.length === 1 && customFileName.trim()) {
-        formData.append("customFileName", customFileName.trim());
+      if (attachFilesArr.length === 1) {
+        formData.append("attachment", attachFilesArr[0]);
+        if (customFileName.trim()) {
+          formData.append("customFileName", customFileName.trim());
+        }
+      } else if (attachFilesArr.length > 1) {
+        const zipFile = await zipFilesForAttachment(attachFilesArr);
+        if (zipFile) formData.append("attachment", zipFile);
+        for (const f of attachFilesArr) {
+          formData.append("attachments", f);
+        }
       }
 
       const response = await fetch("/api/messages", {

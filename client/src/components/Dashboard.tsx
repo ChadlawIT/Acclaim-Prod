@@ -161,11 +161,17 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
       formData.append("subject", data.subject);
       formData.append("content", data.content);
       formData.append("caseId", String(data.caseId));
-      for (const f of replyFiles) {
-        formData.append("attachments", f);
-      }
-      if (replyFiles.length === 1 && replyCustomFileName.trim()) {
-        formData.append("customFileName", replyCustomFileName.trim());
+      if (replyFiles.length === 1) {
+        formData.append("attachment", replyFiles[0]);
+        if (replyCustomFileName.trim()) {
+          formData.append("customFileName", replyCustomFileName.trim());
+        }
+      } else if (replyFiles.length > 1) {
+        const zipFile = await zipFilesForAttachment(replyFiles);
+        if (zipFile) formData.append("attachment", zipFile);
+        for (const f of replyFiles) {
+          formData.append("attachments", f);
+        }
       }
       const response = await fetch("/api/messages", {
         method: "POST",
