@@ -545,7 +545,7 @@ export default function ChadwickLawrence() {
                         Book now
                       </button>
                       <button
-                        onClick={() => setSharingSeminar(s)}
+                        onClick={() => { trackEvent("link_click", `Share: ${s.name}`, s.bookUrl, "events"); setSharingSeminar(s); }}
                         className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors whitespace-nowrap"
                         data-testid={`button-seminar-share-${i}`}
                       >
@@ -711,7 +711,7 @@ export default function ChadwickLawrence() {
                 </button>
               )}
               <button
-                onClick={() => { if (selectedSeminar) { setSharingSeminar(selectedSeminar); setSelectedSeminar(null); } }}
+                onClick={() => { if (selectedSeminar) { trackEvent("link_click", `Share: ${selectedSeminar.name}`, selectedSeminar.bookUrl, "events"); setSharingSeminar(selectedSeminar); setSelectedSeminar(null); } }}
                 className="inline-flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 data-testid="button-seminar-share-modal"
               >
