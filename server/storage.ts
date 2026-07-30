@@ -3582,7 +3582,6 @@ export class DatabaseStorage implements IStorage {
         FROM cases c
         WHERE LOWER(c.status) = 'active'
           AND (c.is_archived = false OR c.is_archived IS NULL)
-          AND c.created_at >= ${activeFrom}
       )
       SELECT * FROM case_last_activity
       WHERE last_activity_date < ${cutoffDate}
