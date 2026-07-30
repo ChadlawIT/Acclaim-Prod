@@ -3574,14 +3574,15 @@ export class DatabaseStorage implements IStorage {
           c.status,
           c.stage,
           GREATEST(
-            (SELECT MAX(ca.created_at) FROM case_activities ca WHERE ca.case_id = c.id),
-            (SELECT MAX(m.created_at)  FROM messages m          WHERE m.case_id  = c.id),
-            (SELECT MAX(p.created_at)  FROM payments p          WHERE p.case_id  = c.id),
-            (SELECT MAX(d.created_at)  FROM documents d         WHERE d.case_id  = c.id)
+            (SELECT MAX(ca.created_at)    FROM case_activities ca WHERE ca.case_id = c.id),
+            (SELECT MAX(m.created_at)     FROM messages m          WHERE m.case_id  = c.id),
+            (SELECT MAX(p.payment_date)   FROM payments p          WHERE p.case_id  = c.id),
+            (SELECT MAX(d.created_at)     FROM documents d         WHERE d.case_id  = c.id)
           ) AS last_activity_date
         FROM cases c
         WHERE LOWER(c.status) = 'active'
           AND (c.is_archived = false OR c.is_archived IS NULL)
+          AND c.created_at >= ${activeFrom}
       )
       SELECT * FROM case_last_activity
       WHERE last_activity_date < ${cutoffDate}
