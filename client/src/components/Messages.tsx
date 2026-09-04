@@ -20,7 +20,12 @@ import { validateFile, zipFilesForAttachment, ACCEPTED_FILE_TYPES_STRING, MAX_FI
 import CaseDetail from "./CaseDetail";
 import acclaimRoseLogo from "@assets/acclaim_rose_transparent_1768474381340.png";
 
-export default function Messages() {
+interface MessagesProps {
+  initialMessageId?: number | null;
+  onInitialMessageOpened?: () => void;
+}
+
+export default function Messages({ initialMessageId, onInitialMessageOpened }: MessagesProps) {
   const [newMessage, setNewMessage] = useState("");
   const [newSubject, setNewSubject] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -224,6 +229,16 @@ export default function Messages() {
     },
   });
 
+  const markNotificationReadMutation = useMutation({
+    mutationFn: async (messageId: number) => {
+      await apiRequest("PUT", `/api/notifications/${messageId}/read`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
+    },
+  });
+
   // Query for message audit history (admin only)
   const { data: messageAuditLogs, isLoading: auditLoading } = useQuery({
     queryKey: ["/api/admin/audit/item/message", auditMessageId],
@@ -304,7 +319,17 @@ const handleReply = (message: any) => {
     setMessageViewOpen(true);
     // Track the view for read receipts
     trackViewMutation.mutate(message.id);
+    if (!message.isRead && message.senderId !== user?.id) {
+      markNotificationReadMutation.mutate(message.id);
+    }
   };
+
+  useEffect(() => {
+    if (!initialMessageId || !messages) return;
+    const message = messages.find((item: any) => item.id === initialMessageId);
+    if (message) handleMessageClick(message);
+    onInitialMessageOpened?.();
+  }, [initialMessageId, messages]);
 
   const handleOpenAuditDialog = (messageId: number) => {
     setAuditMessageId(messageId);

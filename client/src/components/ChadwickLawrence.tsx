@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Building2, Briefcase, Users, FileText, Gavel, AlertTriangle, Megaphone, Shield,
   Home, Trophy, ExternalLink, Calendar, Heart, Activity, ScrollText, Scale,
-  Stethoscope, Car, UserCog, Globe, MapPin, Clock, RefreshCw, X, Share2, Send, CheckCircle2,
+  Stethoscope, Car, UserCog, Globe, MapPin, Clock, RefreshCw, X, Share2, Send, CheckCircle2, Linkedin,
 } from "lucide-react";
 import chadwickLawrenceLogo from "@assets/CL_long_logo_1768312503635.png";
 import { apiRequest } from "@/lib/queryClient";
@@ -167,6 +167,139 @@ const PERSONAL_SERVICES: Service[] = [
 
 function trackEvent(eventType: string, linkTitle?: string, linkHref?: string, linkCategory?: string) {
   apiRequest("POST", "/api/cl-analytics", { eventType, linkTitle, linkHref, linkCategory }).catch(() => {});
+}
+
+const CL_LINKEDIN_POSTS_URL = "https://www.linkedin.com/company/chadwick-lawrence-llp/posts/?feedView=all";
+const ELFSIGHT_PLATFORM_URL = "https://static.elfsight.com/platform/platform.js";
+const ELFSIGHT_SCRIPT_ID = "elfsight-platform-script";
+const ELFSIGHT_WIDGET_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+let elfsightPlatformPromise: Promise<void> | null = null;
+
+function loadElfsightPlatform() {
+  if (elfsightPlatformPromise) return elfsightPlatformPromise;
+
+  elfsightPlatformPromise = new Promise((resolve, reject) => {
+    const existingScript = document.getElementById(ELFSIGHT_SCRIPT_ID) as HTMLScriptElement | null;
+    if (existingScript) {
+      if (existingScript.dataset.elfsightPlatformLoaded === "true") {
+        resolve();
+        return;
+      }
+      existingScript.addEventListener("load", () => resolve(), { once: true });
+      existingScript.addEventListener("error", () => reject(new Error("Elfsight platform could not be loaded.")), { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.id = ELFSIGHT_SCRIPT_ID;
+    script.src = ELFSIGHT_PLATFORM_URL;
+    script.async = true;
+    script.onload = () => {
+      script.dataset.elfsightPlatformLoaded = "true";
+      resolve();
+    };
+    script.onerror = () => {
+      script.remove();
+      elfsightPlatformPromise = null;
+      reject(new Error("Elfsight platform could not be loaded."));
+    };
+    document.head.appendChild(script);
+  });
+
+  return elfsightPlatformPromise;
+}
+
+function LinkedInUpdatesPanel() {
+  const widgetId = import.meta.env.VITE_CL_LINKEDIN_WIDGET_ID?.trim();
+  const hasValidWidgetId = !!widgetId && ELFSIGHT_WIDGET_ID_PATTERN.test(widgetId);
+  const widgetRef = useRef<HTMLDivElement>(null);
+  const [widgetReady, setWidgetReady] = useState(false);
+  const [useFallback, setUseFallback] = useState(!hasValidWidgetId);
+
+  useEffect(() => {
+    if (!hasValidWidgetId) return;
+
+    let cancelled = false;
+    let observer: MutationObserver | undefined;
+    const unavailableTimer = window.setTimeout(() => {
+      if (!cancelled) setUseFallback(true);
+    }, 8000);
+
+    loadElfsightPlatform()
+      .then(() => {
+        if (cancelled || !widgetRef.current) return;
+
+        const markReady = () => {
+          if (!cancelled && widgetRef.current?.childElementCount) {
+            window.clearTimeout(unavailableTimer);
+            setWidgetReady(true);
+          }
+        };
+
+        markReady();
+        observer = new MutationObserver(markReady);
+        observer.observe(widgetRef.current, { childList: true, subtree: true });
+      })
+      .catch(() => {
+        if (!cancelled) setUseFallback(true);
+      });
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(unavailableTimer);
+      observer?.disconnect();
+    };
+  }, [hasValidWidgetId]);
+
+  const fallback = useFallback || !widgetReady;
+
+  return (
+    <section aria-labelledby="cl-linkedin-updates-heading" className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+      <div className="p-5 bg-[#0a66c2] text-white">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-white/15 rounded-lg">
+            <Linkedin className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 id="cl-linkedin-updates-heading" className="text-base font-semibold">Latest from Chadwick Lawrence</h3>
+            <p className="text-xs text-white/80 mt-0.5">Updates from Chadwick Lawrence on LinkedIn</p>
+          </div>
+        </div>
+      </div>
+
+      {fallback ? (
+        <div className="p-6 bg-gradient-to-br from-[#f4f8fc] to-white dark:from-gray-900 dark:to-gray-800">
+          <div className="max-w-2xl">
+            <p className="font-medium text-gray-900 dark:text-gray-100">Keep up with the latest news, insights and events.</p>
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+              Visit Chadwick Lawrence&apos;s LinkedIn page to see their most recent posts.
+            </p>
+            <a
+              href={CL_LINKEDIN_POSTS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => trackEvent("link_click", "View Chadwick Lawrence LinkedIn updates", CL_LINKEDIN_POSTS_URL, "linkedin")}
+              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[#0a66c2] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#004182]"
+            >
+              View LinkedIn updates
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          </div>
+        </div>
+      ) : null}
+
+      {hasValidWidgetId && !useFallback && (
+        <div className="p-2">
+          <div
+            ref={widgetRef}
+            className={`elfsight-app-${widgetId}`}
+            data-elfsight-app-lazy
+          />
+        </div>
+      )}
+    </section>
+  );
 }
 
 function ServiceCard({ service, accentColor }: { service: Service; accentColor: string }) {
@@ -428,6 +561,9 @@ export default function ChadwickLawrence() {
               </a>
             </div>
           </div>
+
+          {/* LinkedIn updates — approved Elfsight integration with direct-link fallback */}
+          <LinkedInUpdatesPanel />
 
           {/* Events — live from chadwicklawrence.co.uk */}
           <div id="cl-seminars-section" className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">

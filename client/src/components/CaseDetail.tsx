@@ -541,6 +541,16 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
     },
   });
 
+  const markNotificationReadMutation = useMutation({
+    mutationFn: async (messageId: number) => {
+      await apiRequest("PUT", `/api/notifications/${messageId}/read`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
+    },
+  });
+
   // Helper to truncate message content for preview
   const truncateContent = (content: string, maxLength: number = 100) => {
     if (!content) return "";
@@ -554,6 +564,9 @@ export default function CaseDetail({ case: caseData }: CaseDetailProps) {
     setMessageDialogOpen(true);
     setDialogReplyMessage("");
     trackMessageViewMutation.mutate(message.id);
+    if (!message.isRead && message.senderId !== user?.id) {
+      markNotificationReadMutation.mutate(message.id);
+    }
   };
 
   // Handle reply from message dialog

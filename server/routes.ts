@@ -139,6 +139,16 @@ async function findAdminByMentionedName(mentionedName: string): Promise<any | nu
   return null;
 }
 
+// Keep message-derived features behind the same visibility rules as the Messages
+// screen. Notifications intentionally do not have their own persistence table.
+async function getAccessibleMessagesForUser(userId: string): Promise<any[]> {
+  const userMessages = await storage.getMessagesForUser(userId);
+  const blockedCaseIds = await storage.getBlockedCasesForUser(userId);
+  return userMessages.filter((message: any) =>
+    !message.caseId || !blockedCaseIds.includes(message.caseId)
+  );
+}
+
 const upload = multer({
   dest: "uploads/",
   limits: { fileSize: 25 * 1024 * 1024 }, // 25MB limit
@@ -1335,21 +1345,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/messages', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
-      const messages = await storage.getMessagesForUser(userId);
-      
-      // Filter out messages for cases the user is blocked from
-      const blockedCaseIds = await storage.getBlockedCasesForUser(userId);
-      const filteredMessages = messages.filter((m: any) => {
-        // If message has no caseId, it's a general message - always show
-        if (!m.caseId) return true;
-        // If user is blocked from this case, hide the message
-        return !blockedCaseIds.includes(m.caseId);
-      });
-      
-      res.json(filteredMessages);
+      res.json(await getAccessibleMessagesForUser(userId));
     } catch (error) {
       console.error("Error fetching messages:", error);
       res.status(500).json({ message: "Failed to fetch messages" });
+    }
+  });
+
+  // Message-derived notification centre. isRead is an existing message field, so
+  // this requires no schema migration. A notification is an accessible message
+  // sent by somebody other than the current user.
+  app.get('/api/notifications', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const notifications = (await getAccessibleMessagesForUser(userId))
+        .filter((message: any) => message.senderId !== userId);
+      const unreadCount = notifications.filter((message: any) => !message.isRead).length;
+      res.json({ unreadCount, items: notifications.slice(0, 10) });
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      res.status(500).json({ message: "Failed to fetch notifications" });
+    }
+  });
+
+  app.put('/api/notifications/:id/read', isAuthenticated, async (req: any, res) => {
+    try {
+      const messageId = parseInt(req.params.id);
+      if (isNaN(messageId)) return res.status(400).json({ message: "Invalid message ID" });
+      const notification = (await getAccessibleMessagesForUser(req.user.id))
+        .find((message: any) => message.id === messageId && message.senderId !== req.user.id);
+      if (!notification) return res.status(404).json({ message: "Notification not found or access denied" });
+      await storage.markMessageAsRead(messageId);
+      res.json({ message: "Notification marked as read" });
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+      res.status(500).json({ message: "Failed to mark notification as read" });
+    }
+  });
+
+  app.put('/api/notifications/read-all', isAuthenticated, async (req: any, res) => {
+    try {
+      const unreadIds = (await getAccessibleMessagesForUser(req.user.id))
+        .filter((message: any) => message.senderId !== req.user.id && !message.isRead)
+        .map((message: any) => message.id);
+      await Promise.all(unreadIds.map((messageId: number) => storage.markMessageAsRead(messageId)));
+      res.json({ message: "Notifications marked as read", count: unreadIds.length });
+    } catch (error) {
+      console.error("Error marking notifications as read:", error);
+      res.status(500).json({ message: "Failed to mark notifications as read" });
     }
   });
 
@@ -2119,7 +2162,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       
       // Verify the user has access to this message before marking as read
-      const userMessages = await storage.getMessagesForUser(userId);
+      const userMessages = await getAccessibleMessagesForUser(userId);
       const hasAccess = userMessages.some(m => m.id === messageId);
       
       if (!hasAccess) {

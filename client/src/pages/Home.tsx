@@ -11,9 +11,23 @@ import { Bell, Menu, X, ShieldCheck, BellOff } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { apiRequest } from "@/lib/queryClient";
+import { formatUKDateTime } from "@/lib/dateUtils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+
+type Notification = {
+  id: number;
+  subject: string | null;
+  content: string;
+  senderName?: string | null;
+  senderEmail?: string | null;
+  senderId: string;
+  createdAt: string;
+  isRead: boolean | null;
+};
 
 export default function Home() {
   const [activeSection, setActiveSection] = useState("dashboard");
@@ -21,6 +35,8 @@ export default function Home() {
   const [location] = useLocation();
   const isMobile = useIsMobile();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [messageToOpen, setMessageToOpen] = useState<number | null>(null);
+  const queryClient = useQueryClient();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try { return localStorage.getItem("sidebarCollapsed") === "true"; } catch { return false; }
   });
@@ -75,8 +91,34 @@ export default function Home() {
     queryKey: ["/api/user/auto-mute-preference"],
   });
 
+  const { data: notificationData } = useQuery<{ unreadCount: number; items: Notification[] }>({
+    queryKey: ["/api/notifications"],
+  });
+
+  const markNotificationReadMutation = useMutation({
+    mutationFn: (messageId: number) => apiRequest("PUT", `/api/notifications/${messageId}/read`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
+    },
+  });
+
+  const markAllNotificationsReadMutation = useMutation({
+    mutationFn: () => apiRequest("PUT", "/api/notifications/read-all"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
+    },
+  });
+
   // Handle notification bell click
   const handleNotificationClick = () => {
+    setActiveSection("messages");
+  };
+
+  const handleOpenNotification = (notification: Notification) => {
+    if (!notification.isRead) markNotificationReadMutation.mutate(notification.id);
+    setMessageToOpen(notification.id);
     setActiveSection("messages");
   };
 
@@ -98,7 +140,7 @@ export default function Home() {
       case "cases":
         return <Cases />;
       case "messages":
-        return <Messages />;
+        return <Messages initialMessageId={messageToOpen} onInitialMessageOpened={() => setMessageToOpen(null)} />;
       case "reports":
         return <Reports />;
       case "documents":
@@ -223,9 +265,62 @@ export default function Home() {
                   </TooltipContent>
                 </Tooltip>
               )}
-              <Button variant="ghost" size="icon" className="relative" onClick={handleNotificationClick}>
-                <Bell className="h-5 w-5" />
-              </Button>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="icon" className="relative" aria-label="Open notifications">
+                    <Bell className="h-5 w-5" />
+                    {(notificationData?.unreadCount ?? 0) > 0 && (
+                      <span className="absolute -right-1 -top-1 min-w-4 h-4 px-1 rounded-full bg-red-600 text-[10px] leading-4 text-white" aria-label={`${notificationData!.unreadCount} unread notifications`}>
+                        {notificationData!.unreadCount > 99 ? "99+" : notificationData!.unreadCount}
+                      </span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-[min(24rem,calc(100vw-2rem))] p-0">
+                  <div className="flex items-center justify-between border-b px-4 py-3">
+                    <div>
+                      <h2 className="font-semibold">Notifications</h2>
+                      <p className="text-xs text-muted-foreground">{notificationData?.unreadCount ?? 0} unread</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto px-2 text-xs"
+                      disabled={!notificationData?.unreadCount || markAllNotificationsReadMutation.isPending}
+                      onClick={() => markAllNotificationsReadMutation.mutate()}
+                    >
+                      Mark all read
+                    </Button>
+                  </div>
+                  <div className="max-h-96 overflow-y-auto" aria-label="Recent notifications">
+                    {notificationData?.items?.length ? notificationData.items.map((notification) => (
+                      <button
+                        key={notification.id}
+                        type="button"
+                        onClick={() => handleOpenNotification(notification)}
+                        className={`block w-full border-b px-4 py-3 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                          !notification.isRead ? "bg-acclaim-teal/5" : ""
+                        }`}
+                      >
+                        <div className="flex items-start gap-2">
+                          {!notification.isRead && <span className="mt-1.5 h-2 w-2 flex-none rounded-full bg-acclaim-teal" aria-label="Unread" />}
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium">{notification.subject || "New message"}</p>
+                            <p className="truncate text-xs text-muted-foreground">{notification.senderName || notification.senderEmail || "Acclaim"}</p>
+                            <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{notification.content}</p>
+                            <time className="mt-1 block text-xs text-muted-foreground" dateTime={notification.createdAt}>{formatUKDateTime(notification.createdAt)}</time>
+                          </div>
+                        </div>
+                      </button>
+                    )) : (
+                      <p className="px-4 py-8 text-center text-sm text-muted-foreground">No recent notifications</p>
+                    )}
+                  </div>
+                  <div className="border-t p-2">
+                    <Button variant="ghost" size="sm" className="w-full" onClick={handleNotificationClick}>View all messages</Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
           {/* Mobile description */}

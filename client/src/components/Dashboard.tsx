@@ -149,6 +149,16 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
     },
   });
 
+  const markNotificationReadMutation = useMutation({
+    mutationFn: async (messageId: number) => {
+      await apiRequest("PUT", `/api/notifications/${messageId}/read`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
+    },
+  });
+
   // Query client for cache invalidation
   const queryClient = useQueryClient();
 
@@ -329,6 +339,9 @@ export default function Dashboard({ setActiveSection }: DashboardProps) {
     setDialogReplyMessage("");
     // Track view for read receipts
     trackViewMutation.mutate(messageData.id);
+    if (!messageData.isRead && messageData.senderId !== user?.id) {
+      markNotificationReadMutation.mutate(messageData.id);
+    }
   };
 
   // Format date for display
