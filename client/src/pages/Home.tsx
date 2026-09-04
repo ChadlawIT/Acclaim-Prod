@@ -269,11 +269,6 @@ export default function Home() {
                 <PopoverTrigger asChild>
                   <Button variant="ghost" size="icon" className="relative" aria-label="Open notifications">
                     <Bell className="h-5 w-5" />
-                    {(notificationData?.unreadCount ?? 0) > 0 && (
-                      <span className="absolute -right-1 -top-1 min-w-4 h-4 px-1 rounded-full bg-red-600 text-[10px] leading-4 text-white" aria-label={`${notificationData!.unreadCount} unread notifications`}>
-                        {notificationData!.unreadCount > 99 ? "99+" : notificationData!.unreadCount}
-                      </span>
-                    )}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent align="end" className="w-[min(24rem,calc(100vw-2rem))] p-0">

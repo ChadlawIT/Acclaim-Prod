@@ -22,12 +22,6 @@ export default function Sidebar({ activeSection, setActiveSection, collapsed, on
     logoutMutation.mutate();
   };
 
-  const { data: notificationData } = useQuery<{ unreadCount: number }>({
-    queryKey: ["/api/notifications"],
-    retry: false,
-  });
-  const unreadMessageCount = notificationData?.unreadCount ?? 0;
-
   const { data: seminars } = useQuery<Array<unknown>>({
     queryKey: ["/api/cl-seminars"],
     staleTime: 5 * 60 * 1000,
@@ -37,7 +31,7 @@ export default function Sidebar({ activeSection, setActiveSection, collapsed, on
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: Home },
     { id: "cases", label: "Cases", icon: FolderOpen },
-    { id: "messages", label: "Messages", icon: MessageSquare, badge: unreadMessageCount },
+    { id: "messages", label: "Messages", icon: MessageSquare },
     { id: "documents", label: "Documents", icon: FileText },
     { id: "reports", label: "Reports", icon: BarChart3 },
     ...(user?.isAdmin ? [
@@ -99,14 +93,6 @@ export default function Sidebar({ activeSection, setActiveSection, collapsed, on
             >
               <Icon className={`w-5 h-5 flex-shrink-0 ${collapsed ? '' : 'mr-3'}`} />
               {!collapsed && <span className="truncate">{item.label}</span>}
-               {!collapsed && (item as any).badge > 0 && (
-                <span className="ml-auto bg-red-500 text-white text-xs rounded-full px-2 py-1 flex-shrink-0">
-                  {(item as any).badge}
-                </span>
-              )}
-               {collapsed && (item as any).badge > 0 && (
-                 <span className="absolute ml-5 -mt-5 h-2.5 w-2.5 rounded-full bg-red-500" aria-label={`${(item as any).badge} unread messages`} />
-               )}
             </button>
           );
         })}
