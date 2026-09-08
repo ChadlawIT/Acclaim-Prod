@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, Fragment } from "react";
+import { useState, useEffect, useRef, Fragment, useId } from "react";
 import { formatUKDateTime, formatUKDateTimeSecs } from "@/lib/dateUtils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,7 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import ExcelJS from "exceljs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useAuth } from "@/hooks/use-auth";
-import { Users, Building, Plus, Edit, Trash2, Shield, UserPlus, AlertTriangle, ShieldCheck, ShieldAlert, ArrowLeft, Activity, FileText, CreditCard, Archive, ArchiveRestore, Download, Check, Eye, EyeOff, Mail, Bell, BellOff, FilePlus, FileX, BarChart3, Search, Crown, Calendar, CalendarOff, Pencil, LogOut, RefreshCw, ChevronDown, ChevronUp, ChevronRight, Clock, Send, History, KeyRound, Copy, HelpCircle, X, ClipboardList, ClipboardX, MapPin, Phone, Banknote, User, FileImage, FileSpreadsheet, FileVideo, Receipt, Scale, Zap, CheckCircle2, XCircle, Trophy, MessageSquare, LogIn, Loader2 } from "lucide-react";
+import { Users, Building, Plus, Edit, Trash2, Shield, UserPlus, AlertTriangle, ShieldCheck, ShieldAlert, ArrowLeft, Activity, FileText, CreditCard, Archive, ArchiveRestore, Download, Check, Eye, EyeOff, Mail, Bell, BellOff, FilePlus, FileX, BarChart3, Search, Crown, Calendar, CalendarOff, Pencil, LogOut, RefreshCw, ChevronDown, ChevronUp, ChevronRight, Clock, Send, History, KeyRound, Copy, HelpCircle, X, ClipboardList, ClipboardX, MapPin, Phone, Banknote, User, FileImage, FileSpreadsheet, FileVideo, Receipt, Scale, Zap, CheckCircle2, XCircle, Trophy, MessageSquare, LogIn, Loader2, Menu, LayoutDashboard } from "lucide-react";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { createUserSchema, updateUserSchema, createOrganisationSchema, updateOrganisationSchema } from "@shared/schema";
@@ -3199,6 +3199,62 @@ export default function AdminEnhanced() {
   const isSuperAdmin = currentUser?.isSuperAdmin ?? false;
 
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
+  const [adminNavOpen, setAdminNavOpen] = useState(false);
+  const [systemToolsOpen, setSystemToolsOpen] = useState(true);
+  const adminDrawerId = useId();
+  const systemToolsId = useId();
+  const adminDrawerRef = useRef<HTMLElement>(null);
+  const adminNavOpenerRef = useRef<HTMLButtonElement>(null);
+  const adminNavCloseRef = useRef<HTMLButtonElement>(null);
+  const wasAdminDrawerOpen = useRef(false);
+
+  useEffect(() => {
+    if (adminNavOpen) {
+      adminNavCloseRef.current?.focus();
+    } else if (wasAdminDrawerOpen.current) {
+      adminNavOpenerRef.current?.focus();
+    }
+    wasAdminDrawerOpen.current = adminNavOpen;
+  }, [adminNavOpen]);
+
+  useEffect(() => {
+    if (!adminNavOpen) return;
+
+    const handleDrawerKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setAdminNavOpen(false);
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+      const focusable = Array.from(
+        adminDrawerRef.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        ) ?? []
+      ).filter((element) => !element.hasAttribute("hidden") && element.getAttribute("aria-hidden") !== "true");
+
+      if (focusable.length === 0) {
+        event.preventDefault();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleDrawerKeyDown);
+    return () => document.removeEventListener("keydown", handleDrawerKeyDown);
+  }, [adminNavOpen]);
+
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await queryClient.invalidateQueries();
@@ -4741,108 +4797,71 @@ export default function AdminEnhanced() {
   const reportsTotalPages = Math.ceil(sortedReports.length / reportsPageSize);
   const paginatedReports = sortedReports.slice((reportsPage - 1) * reportsPageSize, reportsPage * reportsPageSize);
 
-  return (
-    <div className="space-y-6 p-4 sm:p-6">
-      {/* Header */}
-      <div className="rounded-xl p-5 sm:p-6 shadow-sm teal-panel-gradient">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Link href="/">
-              <Button variant="secondary" size="sm" className="bg-white/15 hover:bg-white/25 text-white border-0 backdrop-blur-sm">
-                <ArrowLeft className="h-4 w-4 mr-1.5" />
-                <span className="hidden sm:inline">Back</span>
-              </Button>
-            </Link>
-            <div className="p-2.5 bg-white/15 rounded-lg">
-              <ShieldCheck className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-white">Admin Centre</h1>
-              <p className="text-teal-100 text-xs sm:text-sm">User, organisation &amp; system management</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              data-testid="button-admin-refresh"
-              className="bg-white/15 hover:bg-white/25 text-white border-0 backdrop-blur-sm"
-            >
-              <RefreshCw className={`h-4 w-4 mr-1.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">{isRefreshing ? 'Refreshing…' : 'Refresh'}</span>
-            </Button>
-          </div>
-        </div>
+  const selectAdminTab = (tab: string) => {
+    setActiveTab(tab);
+    setAdminNavOpen(false);
+  };
 
-        {/* Quick-access links */}
-        <div className="mt-4 pt-4 border-t border-white/20 flex flex-wrap gap-2">
-          <Link href="/system-monitoring">
-            <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs h-7">
-              <Activity className="h-3.5 w-3.5 mr-1.5" />
-              System Monitoring
-            </Button>
-          </Link>
-          <Link href="/admin-payment-performance-report">
-            <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs h-7">
-              <CreditCard className="h-3.5 w-3.5 mr-1.5" />
-              Payment Performance
-            </Button>
-          </Link>
-          <Link href="/recovery-analysis-report">
-            <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs h-7">
-              <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
-              Recovery Analysis
-            </Button>
-          </Link>
-          <Button
-            size="sm"
-            variant="secondary"
-            className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs h-7"
-            onClick={() => setShowRecoveryPerformance(true)}
-            data-testid="button-recovery-performance"
-          >
-            <Clock className="h-3.5 w-3.5 mr-1.5" />
-            Recovery Performance
-          </Button>
-          <Link href="/messages-report">
-            <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs h-7">
-              <Mail className="h-3.5 w-3.5 mr-1.5" />
-              Messages Report
-            </Button>
-          </Link>
-          <Link href="/portal-analytics">
-            <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs h-7">
-              <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
-              Portal Analytics
-            </Button>
-          </Link>
-          <Link href="/cl-analytics">
-            <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs h-7">
-              <Scale className="h-3.5 w-3.5 mr-1.5" />
-              CL Analytics
-            </Button>
-          </Link>
-          {isSuperAdmin && (
-            <Link href="/audit-management">
-              <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs h-7">
-                <Shield className="h-3.5 w-3.5 mr-1.5" />
-                Audit Management
-              </Button>
-            </Link>
-          )}
-          <Button
-            size="sm"
-            variant="secondary"
-            className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs h-7"
-            onClick={() => setShowClosedCaseManagement(true)}
-          >
-            <Archive className="h-3.5 w-3.5 mr-1.5" />
-            Closed Cases
-          </Button>
+  const navButtonClass = (tab: string) =>
+    `w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${activeTab === tab ? "bg-teal-700 text-white shadow-sm" : "text-teal-100 hover:bg-white/10 hover:text-white"}`;
+
+  return (
+    <div className="min-h-screen bg-muted/30 dark:bg-background lg:flex">
+      {adminNavOpen && <button className="fixed inset-0 z-40 bg-slate-950/50 lg:hidden" aria-label="Close admin navigation" onClick={() => setAdminNavOpen(false)} />}
+      <aside
+        ref={adminDrawerRef}
+        id={adminDrawerId}
+        role={adminNavOpen ? "dialog" : undefined}
+        aria-modal={adminNavOpen || undefined}
+        aria-label="Admin navigation"
+        className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-[#173e40] p-4 shadow-xl transition-transform lg:sticky lg:top-0 lg:h-screen lg:w-64 lg:translate-x-0 lg:shadow-none ${adminNavOpen ? "translate-x-0" : "-translate-x-full"}`}
+      >
+        <div className="flex items-center gap-3 border-b border-teal-100/20 px-2 pb-5">
+          <span className="grid h-9 w-9 place-items-center rounded-lg border border-teal-200/40 bg-teal-700 text-teal-50"><ShieldCheck className="h-5 w-5" /></span>
+          <div className="min-w-0"><p className="font-semibold text-white">Acclaim</p><p className="text-xs uppercase tracking-wider text-teal-200">Admin Centre</p></div>
+          <button ref={adminNavCloseRef} className="ml-auto text-teal-100 lg:hidden" aria-label="Close navigation" onClick={() => setAdminNavOpen(false)}><X className="h-5 w-5" /></button>
         </div>
-      </div>
+        <nav className="mt-5 flex-1 overflow-y-auto" aria-label="Admin navigation">
+          <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-teal-300">Workspace</p>
+          <button className={navButtonClass("overview")} onClick={() => selectAdminTab("overview")}><LayoutDashboard className="h-4 w-4" />Overview</button>
+          <button className={navButtonClass("users")} onClick={() => selectAdminTab("users")}><Users className="h-4 w-4" />Users <span className="ml-auto text-xs">{(users as User[]).length}</span></button>
+          <button className={navButtonClass("organisations")} onClick={() => selectAdminTab("organisations")}><Building className="h-4 w-4" />Organisations <span className="ml-auto text-xs">{organisations.length}</span></button>
+          <button className={navButtonClass("cases")} onClick={() => selectAdminTab("cases")}><FileText className="h-4 w-4" />Cases</button>
+          <button className={navButtonClass("case-submissions")} onClick={() => selectAdminTab("case-submissions")}><ClipboardList className="h-4 w-4" />Case submissions</button>
+          <p className="mt-6 px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-teal-300">Communications &amp; reporting</p>
+          {isSuperAdmin && <button className={navButtonClass("broadcast")} onClick={() => selectAdminTab("broadcast")}><Mail className="h-4 w-4" />Email broadcast</button>}
+          <button className={navButtonClass("statements")} onClick={() => selectAdminTab("statements")}><FileSpreadsheet className="h-4 w-4" />Statements</button>
+          <button className={navButtonClass("reports")} onClick={() => selectAdminTab("reports")}><Calendar className="h-4 w-4" />Scheduled reports <span className="ml-auto text-xs">{scheduledReports.length}</span></button>
+          <button type="button" className="mt-6 flex w-full items-center px-3 pb-2 text-left text-[10px] font-semibold uppercase tracking-[0.16em] text-teal-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-200" onClick={() => setSystemToolsOpen(!systemToolsOpen)} aria-expanded={systemToolsOpen} aria-controls={systemToolsId}>System tools <ChevronDown className={`ml-auto h-3.5 w-3.5 transition-transform ${systemToolsOpen ? "rotate-180" : ""}`} /></button>
+          {systemToolsOpen && <div id={systemToolsId} className="space-y-0.5">
+            {isSuperAdmin && <button className={navButtonClass("integration")} onClick={() => selectAdminTab("integration")}><Zap className="h-4 w-4" />Integrations</button>}
+            <Link href="/system-monitoring" className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-teal-100 hover:bg-white/10"><Activity className="h-4 w-4" />System monitoring</Link>
+            <Link href="/admin-payment-performance-report" className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-teal-100 hover:bg-white/10"><CreditCard className="h-4 w-4" />Payment performance</Link>
+            <Link href="/recovery-analysis-report" className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-teal-100 hover:bg-white/10"><BarChart3 className="h-4 w-4" />Recovery analysis</Link>
+            <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-left text-teal-100 hover:bg-white/10" onClick={() => { setShowRecoveryPerformance(true); setAdminNavOpen(false); }} data-testid="button-recovery-performance"><Clock className="h-4 w-4" />Recovery performance</button>
+            <Link href="/messages-report" className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-teal-100 hover:bg-white/10"><Mail className="h-4 w-4" />Messages report</Link>
+            <Link href="/portal-analytics" className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-teal-100 hover:bg-white/10"><BarChart3 className="h-4 w-4" />Portal analytics</Link>
+            <Link href="/cl-analytics" className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-teal-100 hover:bg-white/10"><Scale className="h-4 w-4" />CL analytics</Link>
+            {isSuperAdmin && <Link href="/audit-management" className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-teal-100 hover:bg-white/10"><Shield className="h-4 w-4" />Audit management</Link>}
+            <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-left text-teal-100 hover:bg-white/10" onClick={() => { setShowClosedCaseManagement(true); setAdminNavOpen(false); }}><Archive className="h-4 w-4" />Closed cases</button>
+          </div>}
+        </nav>
+      </aside>
+      <div className="min-w-0 flex-1">
+        <header className="flex h-16 items-center justify-between border-b bg-background px-4 sm:px-6">
+          <div className="flex items-center gap-3">
+            <button ref={adminNavOpenerRef} className="lg:hidden" aria-label="Open navigation" aria-expanded={adminNavOpen} aria-controls={adminDrawerId} onClick={() => setAdminNavOpen(true)}><Menu className="h-5 w-5" /></button>
+            <Link href="/"><Button variant="ghost" size="sm"><ArrowLeft className="mr-1.5 h-4 w-4" /><span className="hidden sm:inline">Back to Acclaim</span></Button></Link>
+          </div>
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing} data-testid="button-admin-refresh">
+            <RefreshCw className={`mr-1.5 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} /><span className="hidden sm:inline">{isRefreshing ? "Refreshing…" : "Refresh"}</span>
+          </Button>
+        </header>
+        <main className="space-y-6 p-4 sm:p-6">
+          <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-teal-700">Operations control centre</p><h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">{activeTab === "overview" ? "Admin overview" : activeTab.replace("-", " ")}</h1><p className="mt-1 text-sm text-muted-foreground">Manage access, activity and controls across the Acclaim portal.</p></div>
+            <div className="flex gap-2"><Button variant="outline" onClick={() => selectAdminTab("reports")}><FileText className="mr-2 h-4 w-4" />View activity</Button><Button onClick={() => selectAdminTab("users")} className="bg-acclaim-teal hover:bg-acclaim-teal/90"><UserPlus className="mr-2 h-4 w-4" />Create user</Button></div>
+          </section>
 
       {/* Closed Case Management View */}
       {showClosedCaseManagement ? (
@@ -5210,7 +5229,7 @@ export default function AdminEnhanced() {
       ) : (
       <>
       {/* Overview Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {activeTab === "overview" && <><div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white dark:bg-card rounded-xl border border-border shadow-sm p-4 flex items-center gap-4">
           <div className="p-3 rounded-lg bg-teal-50 dark:bg-teal-900/30 shrink-0">
             <Users className="h-5 w-5 text-teal-600 dark:text-teal-400" />
@@ -5259,11 +5278,22 @@ export default function AdminEnhanced() {
           </div>
         </div>
       </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card><CardHeader className="flex-row items-start justify-between space-y-0"><div><CardDescription className="uppercase tracking-wider text-[10px] text-teal-700">Needs attention</CardDescription><CardTitle className="mt-1">Keep work moving</CardTitle><CardDescription className="mt-1">Items using the latest admin data.</CardDescription></div><Button variant="ghost" size="sm" onClick={() => selectAdminTab("case-submissions")}>View all <ChevronRight className="ml-1 h-4 w-4" /></Button></CardHeader><CardContent className="space-y-3">
+          <button className="flex w-full items-center gap-3 rounded-lg border p-3 text-left hover:bg-muted/50" onClick={() => selectAdminTab("users")}><Users className="h-5 w-5 text-teal-600" /><span className="flex-1"><span className="block text-sm font-medium">Unassigned users</span><span className="text-xs text-muted-foreground">{(users as User[]).filter((u) => !u.organisationId).length} users need an organisation</span></span><ChevronRight className="h-4 w-4 text-muted-foreground" /></button>
+          <button className="flex w-full items-center gap-3 rounded-lg border p-3 text-left hover:bg-muted/50" onClick={() => selectAdminTab("reports")}><Calendar className="h-5 w-5 text-blue-600" /><span className="flex-1"><span className="block text-sm font-medium">Scheduled reports</span><span className="text-xs text-muted-foreground">{scheduledReports.length} configured reports to review</span></span><ChevronRight className="h-4 w-4 text-muted-foreground" /></button>
+        </CardContent></Card>
+        <Card><CardHeader><CardDescription className="uppercase tracking-wider text-[10px] text-teal-700">Shortcuts</CardDescription><CardTitle className="mt-1">Frequent work</CardTitle><CardDescription className="mt-1">Direct access to common admin tasks.</CardDescription></CardHeader><CardContent className="grid gap-2 sm:grid-cols-2">
+          <Button variant="outline" className="justify-start" onClick={() => selectAdminTab("users")}><UserPlus className="mr-2 h-4 w-4" />Create a user</Button><Button variant="outline" className="justify-start" onClick={() => selectAdminTab("organisations")}><Building className="mr-2 h-4 w-4" />Add organisation</Button>
+          {isSuperAdmin && <Button variant="outline" className="justify-start" onClick={() => selectAdminTab("broadcast")}><Mail className="mr-2 h-4 w-4" />Send broadcast</Button>}<Button variant="outline" className="justify-start" onClick={() => selectAdminTab("reports")}><Calendar className="mr-2 h-4 w-4" />Review reports</Button>
+        </CardContent></Card>
+      </div></>}
 
       {/* Main Content Tabs */}
-      <Tabs defaultValue="users" className="space-y-4">
-        <div className="overflow-x-auto rounded-xl border bg-muted/40 dark:bg-muted/20 p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <Tabs value={activeTab} onValueChange={selectAdminTab} className="space-y-4">
+        <div className="hidden overflow-x-auto rounded-xl border bg-muted/40 dark:bg-muted/20 p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <TabsList className="inline-flex w-max bg-transparent gap-0.5 h-auto">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-1.5 text-xs sm:text-sm px-3 py-2 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-card data-[state=active]:shadow-sm data-[state=active]:text-teal-700 dark:data-[state=active]:text-teal-400 font-medium whitespace-nowrap">
               <Users className="h-3.5 w-3.5 flex-none" />
               Users
@@ -8084,6 +8114,8 @@ export default function AdminEnhanced() {
 
       </>
       )}
+        </main>
+      </div>
     </div>
   );
 }
