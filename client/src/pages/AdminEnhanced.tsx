@@ -2130,10 +2130,10 @@ function CaseManagementTab({ isSuperAdmin = false }: { isSuperAdmin?: boolean })
   );
 }
 
-function CaseSubmissionsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
+function CaseSubmissionsTab({ isSuperAdmin, initialStatus = "all" }: { isSuperAdmin: boolean; initialStatus?: "all" | "pending" }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [selectedStatus, setSelectedStatus] = useState<string>(initialStatus);
   const [selectedSubmission, setSelectedSubmission] = useState<CaseSubmission | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [selectedSubmissions, setSelectedSubmissions] = useState<Set<number>>(new Set());
@@ -2141,6 +2141,11 @@ function CaseSubmissionsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
   const [currentPage, setCurrentPage] = useState(1);
   const submissionsTableTopRef = useRef<HTMLDivElement>(null);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+
+  useEffect(() => {
+    setSelectedStatus(initialStatus);
+    setCurrentPage(1);
+  }, [initialStatus]);
 
   // Fetch case submissions
   const { data: submissions = [], isLoading, error } = useQuery({
@@ -3200,6 +3205,7 @@ export default function AdminEnhanced() {
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+  const [caseSubmissionStatus, setCaseSubmissionStatus] = useState<"all" | "pending">("all");
   const [adminNavOpen, setAdminNavOpen] = useState(false);
   const [systemToolsOpen, setSystemToolsOpen] = useState(true);
   const adminDrawerId = useId();
@@ -3454,6 +3460,17 @@ export default function AdminEnhanced() {
   // Fetch organisations
   const { data: organisations = [], isLoading: orgsLoading, error: orgsError } = useQuery<Organisation[]>({
     queryKey: ["/api/admin/organisations"],
+    retry: false,
+  });
+
+  // The overview uses the same filtered admin endpoint as the submissions view,
+  // so this count always reflects the current pending queue.
+  const { data: pendingSubmissions = [] } = useQuery<any[]>({
+    queryKey: ["/api/admin/case-submissions", "pending"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/admin/case-submissions/pending");
+      return response.json();
+    },
     retry: false,
   });
 
@@ -4802,6 +4819,11 @@ export default function AdminEnhanced() {
     setAdminNavOpen(false);
   };
 
+  const selectCaseSubmissions = (status: "all" | "pending") => {
+    setCaseSubmissionStatus(status);
+    selectAdminTab("case-submissions");
+  };
+
   const navButtonClass = (tab: string) =>
     `w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${activeTab === tab ? "bg-teal-700 text-white shadow-sm" : "text-teal-100 hover:bg-white/10 hover:text-white"}`;
 
@@ -4837,7 +4859,6 @@ export default function AdminEnhanced() {
             {isSuperAdmin && <button className={navButtonClass("integration")} onClick={() => selectAdminTab("integration")}><Zap className="h-4 w-4" />Integrations</button>}
             <Link href="/system-monitoring" className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-teal-100 hover:bg-white/10"><Activity className="h-4 w-4" />System monitoring</Link>
             <Link href="/admin-payment-performance-report" className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-teal-100 hover:bg-white/10"><CreditCard className="h-4 w-4" />Payment performance</Link>
-            <Link href="/recovery-analysis-report" className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-teal-100 hover:bg-white/10"><BarChart3 className="h-4 w-4" />Recovery analysis</Link>
             <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-left text-teal-100 hover:bg-white/10" onClick={() => { setShowRecoveryPerformance(true); setAdminNavOpen(false); }} data-testid="button-recovery-performance"><Clock className="h-4 w-4" />Recovery performance</button>
             <Link href="/messages-report" className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-teal-100 hover:bg-white/10"><Mail className="h-4 w-4" />Messages report</Link>
             <Link href="/portal-analytics" className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-teal-100 hover:bg-white/10"><BarChart3 className="h-4 w-4" />Portal analytics</Link>
@@ -5279,8 +5300,9 @@ export default function AdminEnhanced() {
         </div>
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card><CardHeader className="flex-row items-start justify-between space-y-0"><div><CardDescription className="uppercase tracking-wider text-[10px] text-teal-700">Needs attention</CardDescription><CardTitle className="mt-1">Keep work moving</CardTitle><CardDescription className="mt-1">Items using the latest admin data.</CardDescription></div><Button variant="ghost" size="sm" onClick={() => selectAdminTab("case-submissions")}>View all <ChevronRight className="ml-1 h-4 w-4" /></Button></CardHeader><CardContent className="space-y-3">
+        <Card><CardHeader className="flex-row items-start justify-between space-y-0"><div><CardDescription className="uppercase tracking-wider text-[10px] text-teal-700">Needs attention</CardDescription><CardTitle className="mt-1">Keep work moving</CardTitle><CardDescription className="mt-1">Items using the latest admin data.</CardDescription></div><Button variant="ghost" size="sm" onClick={() => selectCaseSubmissions("all")}>View all <ChevronRight className="ml-1 h-4 w-4" /></Button></CardHeader><CardContent className="space-y-3">
           <button className="flex w-full items-center gap-3 rounded-lg border p-3 text-left hover:bg-muted/50" onClick={() => selectAdminTab("users")}><Users className="h-5 w-5 text-teal-600" /><span className="flex-1"><span className="block text-sm font-medium">Unassigned users</span><span className="text-xs text-muted-foreground">{(users as User[]).filter((u) => !u.organisationId).length} users need an organisation</span></span><ChevronRight className="h-4 w-4 text-muted-foreground" /></button>
+          <button className="flex w-full items-center gap-3 rounded-lg border p-3 text-left hover:bg-muted/50" onClick={() => selectCaseSubmissions("pending")}><ClipboardList className="h-5 w-5 text-amber-600" /><span className="flex-1"><span className="block text-sm font-medium">Pending case submissions</span><span className="text-xs text-muted-foreground">{pendingSubmissions.length} submission{pendingSubmissions.length === 1 ? "" : "s"} awaiting review</span></span><ChevronRight className="h-4 w-4 text-muted-foreground" /></button>
           <button className="flex w-full items-center gap-3 rounded-lg border p-3 text-left hover:bg-muted/50" onClick={() => selectAdminTab("reports")}><Calendar className="h-5 w-5 text-blue-600" /><span className="flex-1"><span className="block text-sm font-medium">Scheduled reports</span><span className="text-xs text-muted-foreground">{scheduledReports.length} configured reports to review</span></span><ChevronRight className="h-4 w-4 text-muted-foreground" /></button>
         </CardContent></Card>
         <Card><CardHeader><CardDescription className="uppercase tracking-wider text-[10px] text-teal-700">Shortcuts</CardDescription><CardTitle className="mt-1">Frequent work</CardTitle><CardDescription className="mt-1">Direct access to common admin tasks.</CardDescription></CardHeader><CardContent className="grid gap-2 sm:grid-cols-2">
@@ -6384,7 +6406,7 @@ export default function AdminEnhanced() {
         <AdminCaseTabPanels
           isSuperAdmin={isSuperAdmin}
           caseManagement={<CaseManagementTab isSuperAdmin={isSuperAdmin} />}
-          caseSubmissions={<CaseSubmissionsTab isSuperAdmin={isSuperAdmin} />}
+          caseSubmissions={<CaseSubmissionsTab isSuperAdmin={isSuperAdmin} initialStatus={caseSubmissionStatus} />}
         />
 
 
