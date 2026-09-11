@@ -7,10 +7,10 @@ export const modules: ModuleMap = {
   "./components/mockups/case-detail/CommandCentre.tsx": () => import("../components/mockups/case-detail/CommandCentre.tsx"),
   "./components/mockups/case-detail/Digest.tsx": () => import("../components/mockups/case-detail/Digest.tsx"),
   "./components/mockups/case-detail/Redesign.tsx": () => import("../components/mockups/case-detail/Redesign.tsx"),
-  "./components/mockups/cases-cards/CasesCards.tsx": () => import("../components/mockups/cases-cards/CasesCards.tsx"),
   "./components/mockups/cl-page/CLPageBranded.tsx": () => import("../components/mockups/cl-page/CLPageBranded.tsx"),
-  "./components/mockups/login-redesign/LoginRedesign.tsx": () => import("../components/mockups/login-redesign/LoginRedesign.tsx"),
+  "./components/mockups/cases-cards/CasesCards.tsx": () => import("../components/mockups/cases-cards/CasesCards.tsx"),
   "./components/mockups/inactive-report/InactiveCasesReport.tsx": () => import("../components/mockups/inactive-report/InactiveCasesReport.tsx"),
+  "./components/mockups/login-redesign/LoginRedesign.tsx": () => import("../components/mockups/login-redesign/LoginRedesign.tsx"),
   "./components/mockups/submit-case/Redesign.tsx": () => import("../components/mockups/submit-case/Redesign.tsx"),
   "./components/mockups/user-management/UserCards.tsx": () => import("../components/mockups/user-management/UserCards.tsx")
 };
