@@ -17,3 +17,11 @@ There is intentionally **no `azureId` (Microsoft SSO) requirement** on either do
 **Why:** all these flows originally also required `azureId`, which silently skipped users who had never signed in via Microsoft SSO — so local-auth users never heard about new documents/messages or received scheduled reports even when configured. The SSO gate was removed from **document** notifications, then **message** notifications, then **scheduled reports**, all on 16 June 2026 at the user's request. No notification/report flow requires SSO any more.
 
 **How to apply:** do NOT reintroduce an `azureId` gate on any document, message, or scheduled-report flow. Recipient eligibility is now toggle/config + non-admin + email + mute/block only.
+
+## Shared mailbox accounts and individual users
+
+Clients may use a shared mailbox account alongside individual user accounts. Admins need to be able to initialise individual accounts with notifications off, without preventing those users from enabling notifications later in Profile.
+
+**Why:** The user wants routine updates to reach the shared mailbox without duplicate notifications to each individual's inbox.
+
+**How to apply:** Treat notification-off at creation as an initial preference, not an enforced restriction or an organisation-wide change. Preserve normal defaults when the option is not selected. Account invitations and password/security workflows are separate from routine notification preferences.

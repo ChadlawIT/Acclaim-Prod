@@ -292,6 +292,7 @@ export interface IStorage {
     phone?: string;
     organisationId?: number;
     isAdmin?: boolean;
+    disableNotifications?: boolean;
   }): Promise<{ user: User; tempPassword: string }>;
 
   updateUser(userId: string, userData: {
@@ -2176,6 +2177,7 @@ export class DatabaseStorage implements IStorage {
     organisationId?: number;
     isAdmin?: boolean;
     canSubmitCases?: boolean;
+    disableNotifications?: boolean;
   }): Promise<{ user: User; tempPassword: string }> {
     const tempPassword = nanoid(12); // Generate temporary password
     const hashedPassword = await bcrypt.hash(tempPassword, 10);
@@ -2200,6 +2202,10 @@ export class DatabaseStorage implements IStorage {
         tempPassword,
         mustChangePassword: true,
         canSubmitCases: userData.canSubmitCases ?? false,
+        emailNotifications: !userData.disableNotifications,
+        documentNotifications: !userData.disableNotifications,
+        pushNotifications: !userData.disableNotifications,
+        loginNotifications: !userData.disableNotifications,
       })
       .returning();
 

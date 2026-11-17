@@ -3333,6 +3333,7 @@ export default function AdminEnhanced() {
     organisationIds: [],
     isAdmin: false,
     canSubmitCases: false,
+    disableNotifications: false,
   });
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [createdUserId, setCreatedUserId] = useState<string | null>(null);
@@ -4203,6 +4204,7 @@ export default function AdminEnhanced() {
         organisationIds: [],
         isAdmin: false,
         canSubmitCases: false,
+        disableNotifications: false,
       });
       setOrgSearchTerm("");
       setShowCreateUser(false);
@@ -5509,6 +5511,27 @@ export default function AdminEnhanced() {
                         />
                         <Label htmlFor="isAdmin">Admin privileges</Label>
                       </div>
+                      <div className="rounded-lg border p-3">
+                        <div className="flex items-start gap-3">
+                          <Checkbox
+                            id="disableNotifications"
+                            data-testid="checkbox-create-user-disable-notifications"
+                            checked={userFormData.disableNotifications}
+                            onCheckedChange={(checked) => setUserFormData({ ...userFormData, disableNotifications: checked === true })}
+                            aria-describedby="disableNotificationsDescription"
+                          />
+                          <div className="space-y-1">
+                            <Label htmlFor="disableNotifications" className="cursor-pointer">
+                              Start with all notifications off
+                            </Label>
+                            <p id="disableNotificationsDescription" className="text-xs text-muted-foreground">
+                              Useful for individual accounts when notifications should go to a shared mailbox instead.
+                              The user can turn notifications on later in Profile → Notifications.
+                              Account invitations and password emails are unaffected.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                       {userFormData.isAdmin && (
                         <div className="bg-amber-50 border border-amber-200 rounded p-3">
                           <div className="flex items-center space-x-2">
@@ -5600,6 +5623,12 @@ export default function AdminEnhanced() {
                         <div className="flex justify-between">
                           <span className="text-sm text-gray-600">Admin:</span>
                           <span className="text-sm font-medium">{userFormData.isAdmin ? "Yes" : "No"}</span>
+                        </div>
+                        <div className="flex justify-between gap-2">
+                          <span className="text-sm text-gray-600">Notifications:</span>
+                          <span className="text-sm font-medium text-right" data-testid="text-create-user-notifications">
+                            {userFormData.disableNotifications ? "All off initially" : "On by default"}
+                          </span>
                         </div>
                       </div>
                       <p className="text-sm text-gray-600">
